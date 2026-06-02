@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.types import InlineKeyboardMarkup, Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from sqlalchemy import select
 
 from backend.app.db.models import AIModel
@@ -34,4 +34,10 @@ async def build_video_menu() -> tuple[str, InlineKeyboardMarkup]:
             select(AIModel).where(AIModel.code.in_(VIDEO_MODEL_CODES), AIModel.is_active.is_(True)).order_by(AIModel.sort_order)
         )
         items = [(model.title, model.code) for model in result.scalars().all()]
+    if not items:
+        return (
+            "🎬 Видео-модели скоро появятся\n\n"
+            "Мы уже готовим Kling / Seedance / Veo / image-to-video модели.",
+            InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🏠 Главное меню", callback_data="main:home")]]),
+        )
     return "🎥 Выберите модель генерации видео:", webapp_models_keyboard(items)

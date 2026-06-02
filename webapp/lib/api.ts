@@ -2,19 +2,35 @@ import { getInitData } from "./telegram";
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 const TELEGRAM_OPEN_ERROR = "Откройте WebApp через Telegram-бота";
+const REQUEST_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const initData = getInitData();
   if (!initData) throw new Error(TELEGRAM_OPEN_ERROR);
-  const response = await fetch(`${API_URL}/api${path}`, {
-    ...options,
-    headers: {
-      ...(options.headers || {}),
-      "Content-Type": "application/json",
-      "X-Telegram-Init-Data": initData,
-    },
-    cache: "no-store"
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(`${API_URL}/api${path}`, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        "Content-Type": "application/json",
+        "X-Telegram-Init-Data": initData,
+      },
+      cache: "no-store"
+    });
+  } catch {
+    throw new Error("Не удалось подключиться к API. Попробуйте ещё раз.");
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     const detail = String(error.detail || "");
@@ -31,12 +47,17 @@ async function uploadFile(file: globalThis.File): Promise<{ file_id: number; url
   if (!initData) throw new Error(TELEGRAM_OPEN_ERROR);
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(`${API_URL}/api/files/upload`, {
-    method: "POST",
-    headers: { "X-Telegram-Init-Data": initData },
-    body: formData,
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(`${API_URL}/api/files/upload`, {
+      method: "POST",
+      headers: { "X-Telegram-Init-Data": initData },
+      body: formData,
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("Не удалось загрузить файл. Проверьте соединение и попробуйте ещё раз.");
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(String(error.detail || "Ошибка загрузки файла"));

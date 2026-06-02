@@ -57,7 +57,7 @@ services:
     working_dir: /app/webapp
     env_file: .env
     environment:
-      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+      NEXT_PUBLIC_BACKEND_URL: https://api.hubicx.ru
     ports:
       - "3000:3000"
     command: sh -c "npm install && npm run dev"
