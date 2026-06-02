@@ -79,15 +79,15 @@ export default function ModelForm({ modelCode }: { modelCode: string }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const auth = await initTelegram();
-      if (cancelled) return;
-      if (!auth.hasTelegramWebApp || !auth.initData) {
-        if (showDebug) setDebug(getTelegramDebugState());
-        setError("Откройте WebApp через Telegram-бота");
-        return;
-      }
-      setAuthReady(true);
       try {
+        const auth = await initTelegram();
+        if (cancelled) return;
+        if (!auth.hasTelegramWebApp || !auth.initData) {
+          if (showDebug) setDebug(getTelegramDebugState());
+          setError("Откройте WebApp через Telegram-бота");
+          return;
+        }
+        setAuthReady(true);
         const [m, u] = await Promise.all([api.model(modelCode), api.me()]);
         if (!cancelled) {
           setModel(m as AIModel);
@@ -96,7 +96,9 @@ export default function ModelForm({ modelCode }: { modelCode: string }) {
           if (ms) setFormValues(getDefaults(ms));
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Не удалось загрузить модель");
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Не удалось загрузить модель");
+        }
       }
     }
     void load();

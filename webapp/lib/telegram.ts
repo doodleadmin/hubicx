@@ -39,8 +39,12 @@ export async function waitForTelegramWebApp(timeoutMs = 3000): Promise<TelegramW
   while (Date.now() - startedAt < timeoutMs) {
     if (typeof window !== "undefined" && window.Telegram?.WebApp) {
       const webApp = window.Telegram.WebApp;
-      webApp.ready();
-      webApp.expand();
+      try {
+        webApp.ready();
+        webApp.expand();
+      } catch {
+        // Outside real Telegram WebApp these calls can fail; auth handling below will show a clear error.
+      }
       return webApp;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
