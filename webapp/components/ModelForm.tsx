@@ -73,11 +73,13 @@ export default function ModelForm({ modelCode }: { modelCode: string }) {
   const [pricePreview, setPricePreview] = useState<PricePreview>();
   const [pricePreviewLoading, setPricePreviewLoading] = useState(false);
   const [pricePreviewError, setPricePreviewError] = useState(false);
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
 
   const schema = model?.form_schema as FormSchema | undefined;
 
   useEffect(() => {
     let cancelled = false;
+    setLoadingTimedOut(false);
     async function load() {
       try {
         const auth = await initTelegram();
@@ -104,6 +106,12 @@ export default function ModelForm({ modelCode }: { modelCode: string }) {
     void load();
     return () => { cancelled = true; };
   }, [modelCode]);
+
+  useEffect(() => {
+    if (error || (authReady && model && user)) return;
+    const timer = setTimeout(() => setLoadingTimedOut(true), 5000);
+    return () => clearTimeout(timer);
+  }, [authReady, error, model, user]);
 
   useEffect(() => {
     if (!authReady || !task || !["queued", "processing", "created"].includes(task.status)) return;
@@ -200,6 +208,7 @@ export default function ModelForm({ modelCode }: { modelCode: string }) {
   }
 
   if (error) return <div className="space-y-3"><div className="rounded-3xl bg-red-500/15 p-4 text-red-200">{error}</div>{debug ? <TelegramDebugBlock debug={debug} /> : null}</div>;
+  if (loadingTimedOut) return <div className="space-y-3"><div className="rounded-3xl bg-red-500/15 p-4 text-red-200">Не удалось подключиться к WebApp. Откройте его через Telegram-бота или попробуйте ещё раз.</div><button className="rounded-2xl bg-card px-4 py-3 text-sm" onClick={() => window.location.reload()}>Повторить</button>{showDebug ? <TelegramDebugBlock debug={getTelegramDebugState()} /> : null}</div>;
   if (!authReady || !model || !user) return <p className="text-muted">Подключаем Telegram WebApp...</p>;
 
   const isProcessing = !!task && ["created", "queued", "processing"].includes(task.status);
