@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 from urllib.parse import parse_qsl
 
 from fastapi import Header
@@ -11,6 +12,8 @@ from backend.app.config import settings
 from backend.app.db.models import User
 from backend.app.services.users import get_or_create_user
 from backend.app.utils.errors import AppError
+
+logger = logging.getLogger(__name__)
 
 
 def validate_init_data(init_data: str) -> dict:
@@ -44,6 +47,7 @@ async def get_current_user(
     if authorization and authorization.lower().startswith("tma "):
         init_data = authorization[4:]
     if not init_data:
+        logger.warning("Telegram auth failed: initData header is missing")
         raise AppError("invalid_init_data", "Telegram initData header is required", 401)
     tg_user = get_telegram_user_from_init_data(init_data)
     return await get_or_create_user(session, tg_user)

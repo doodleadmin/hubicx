@@ -6,7 +6,7 @@ from typing import Any
 from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.types import Message, TelegramObject
 
-from bot.config import BOT_TOKEN
+from bot.config import BACKEND_URL, BOT_TOKEN, WEBAPP_URL
 from bot.handlers import admin, balance, history, language, menu, photo, start, templates, text, video
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,8 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO)
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is required to run bot")
+    logger.info("BOT WEBAPP_URL=%s", WEBAPP_URL)
+    logger.info("BOT BACKEND_URL=%s", BACKEND_URL)
     bot = Bot(BOT_TOKEN)
     dp = Dispatcher()
     dp.message.middleware(IncomingTextLoggingMiddleware())

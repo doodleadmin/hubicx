@@ -32,7 +32,11 @@ MVP Telegram AI-агрегатора по типу Syntx AI / Yes AI: Telegram B
 - `REDIS_URL` - Redis broker/backend для Celery.
 - `OPENROUTER_API_KEY` - ключ OpenRouter. Если пустой, сервис стартует, но генерация вернёт понятную ошибку.
 - `FAL_KEY` - ключ Fal.ai. Если пустой, сервис стартует, но генерация вернёт понятную ошибку.
-- `S3_*` - зарезервировано под Cloudflare R2/S3, в MVP используется storage-заглушка.
+- `S3_ENDPOINT` - endpoint S3-compatible storage, например Cloudflare R2 `https://<account_id>.r2.cloudflarestorage.com`.
+- `S3_ACCESS_KEY` - access key для bucket.
+- `S3_SECRET_KEY` - secret key для bucket.
+- `S3_BUCKET` - bucket для generated files.
+- `S3_PUBLIC_URL` - публичная база URL bucket/custom domain, например `https://files.example.com`.
 
 ## Миграции И Seed
 
@@ -100,6 +104,50 @@ curl http://localhost:8000/api/debug/models
 - Создаётся transaction `generation_charge` с отрицательной суммой.
 - Если worker получает ошибку провайдера, вызывается `refund_generation`.
 - Создаётся transaction `refund`, задача получает статус `refunded`, баланс не уходит в минус.
+
+## Постоянное Хранение Файлов
+
+Worker сохраняет generated files из provider URL в S3-compatible storage, если заполнены все env:
+
+```env
+S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
+S3_ACCESS_KEY=...
+S3_SECRET_KEY=...
+S3_BUCKET=ai-aggregator-generated
+S3_PUBLIC_URL=https://files.example.com
+```
+
+Для Cloudflare R2:
+
+1. Создайте bucket в R2.
+2. Создайте R2 API token с правами Object Read/Write для bucket.
+3. Настройте public access или custom domain для bucket.
+4. Укажите custom/public URL в `S3_PUBLIC_URL` без trailing slash.
+
+После успешной генерации worker:
+
+1. Скачивает `output_file_url` провайдера через `httpx`.
+2. Определяет `Content-Type` и расширение файла.
+3. Загружает bytes в ключ `generations/{user_id}/{task_id}/{uuid}.{ext}`.
+4. Сохраняет публичный storage URL в `generation_tasks.output_file_url`.
+5. Создаёт запись в таблице `files`.
+
+Если storage не настроен или upload не удался, генерация не падает: worker логирует warning/error и оставляет provider URL как fallback.
+
+Проверка после генерации:
+
+```sql
+select id, output_file_url
+from generation_tasks
+where output_file_url is not null
+order by id desc
+limit 5;
+
+select storage_url, mime_type, size_bytes
+from files
+order by id desc
+limit 5;
+```
 
 ## Telegram WebApp Auth
 

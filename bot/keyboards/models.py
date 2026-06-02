@@ -1,11 +1,23 @@
+import logging
+
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 from bot.config import WEBAPP_URL
 
+logger = logging.getLogger(__name__)
+
 
 def app_button(title: str, url: str) -> InlineKeyboardButton:
-    if url.startswith("https://"):
+    is_https = url.startswith("https://")
+    if is_https:
+        logger.info(
+            "Creating WebApp button url=%s is_https=%s using_web_app_info=%s",
+            url,
+            is_https,
+            True,
+        )
         return InlineKeyboardButton(text=title, web_app=WebAppInfo(url=url))
+    logger.warning("WEBAPP_URL is not HTTPS, WebAppInfo disabled. WEBAPP_URL=%s", WEBAPP_URL)
     return InlineKeyboardButton(text=title, callback_data="webapp_unavailable")
 
 
@@ -16,7 +28,7 @@ def webapp_models_keyboard(items: list[tuple[str, str]], route: str = "generate"
         for title, code in items[index:index + 2]:
             row.append(app_button(title, f"{WEBAPP_URL}/{route}?{param}={code}"))
         rows.append(row)
-    rows.append([InlineKeyboardButton(text="Домой", callback_data="home")])
+    rows.append([InlineKeyboardButton(text="Домой", callback_data="main:home")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -25,5 +37,5 @@ def balance_keyboard(ref_link: str) -> InlineKeyboardMarkup:
         [app_button("Пополнить баланс", f"{WEBAPP_URL}/balance")],
         [InlineKeyboardButton(text="Моя команда", callback_data="team")],
         [InlineKeyboardButton(text="Скопировать личную ссылку", url=ref_link)],
-        [InlineKeyboardButton(text="Домой", callback_data="home")],
+        [InlineKeyboardButton(text="Домой", callback_data="main:home")],
     ])

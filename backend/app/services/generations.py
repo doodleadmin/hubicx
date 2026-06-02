@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 from typing import Any
 
 from sqlalchemy import desc, select
@@ -7,7 +8,19 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.db.models import AIModel, GenerationTask, Template, User
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
+from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
+from backend.app.services.pricing import calculate_generation_cost
 from backend.app.utils.errors import AppError
+
+MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
+logger = logging.getLogger(__name__)
+
+
+def _provider_prompt_preview(provider_input: dict[str, Any]) -> str | None:
+    prompt = provider_input.get("prompt")
+    if not isinstance(prompt, str):
+        return None
+    return prompt[:80]
 
 
 async def create_generation_task(
@@ -18,19 +31,40 @@ async def create_generation_task(
     prompt: str | None,
     input_file_url: str | None,
     params: dict[str, Any] | None,
+    inputs: dict[str, Any] | None = None,
 ) -> GenerationTask:
     model = None
     template = None
     if model_code:
-        model = await session.scalar(select(AIModel).where(AIModel.code == model_code))
+        actual_code = MODEL_ALIASES.get(model_code, model_code)
+        model = await session.scalar(select(AIModel).where(AIModel.code == actual_code))
         if not model:
             raise AppError("model_not_found", "Модель не найдена", 404)
         if not model.is_active:
             raise AppError("model_inactive", "Модель временно отключена")
-        price = model.price_credits
         provider = model.provider
         task_type = model.task_type
-        task_params = {**(model.default_params or {}), **(params or {})}
+
+        if inputs and model.form_schema and model.form_schema.get("fields"):
+            validated_inputs, provider_input = validate_inputs_against_schema(model.form_schema, inputs, model.default_params)
+            resolved_inputs = await resolve_input_files(session, user.id, validated_inputs, model.form_schema)
+            provider_input = build_provider_input_from_resolved(resolved_inputs, model.form_schema)
+            if prompt and "prompt" not in provider_input:
+                provider_input["prompt"] = prompt
+            logger.info(
+                "VALIDATED_PROVIDER_INPUT model_code=%s keys=%s prompt_preview=%s",
+                model.code,
+                sorted(provider_input.keys()),
+                _provider_prompt_preview(provider_input),
+            )
+            task_params = {**(model.default_params or {}), **provider_input}
+        else:
+            validated_inputs = inputs or {}
+            provider_input = inputs or {}
+            task_params = {**(model.default_params or {}), **(params or {})}
+            if prompt:
+                task_params["prompt"] = prompt
+        price = calculate_generation_cost(model, validated_inputs)
     else:
         template = await session.scalar(select(Template).where(Template.code == template_code))
         if not template:
@@ -41,10 +75,25 @@ async def create_generation_task(
         price = template.price_credits
         provider = model.provider if model else "fal"
         task_type = model.task_type if model else template.template_type
+        validated_inputs = {}
+        provider_input = {}
         task_params = {**((model.default_params if model else {}) or {}), **(template.default_params or {}), **(params or {})}
 
     if not await has_enough_balance(session, user.id, price):
         raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
+
+    resolved_file_url = input_file_url
+    if not resolved_file_url and provider_input:
+        for key in ("image_url", "image_urls"):
+            if key in provider_input:
+                val = provider_input[key]
+                resolved_file_url = val[0] if isinstance(val, list) and val else (val if isinstance(val, str) else None)
+                break
+
+    task_prompt = prompt
+    if not task_prompt and provider_input and isinstance(provider_input.get("prompt"), str):
+        task_prompt = provider_input["prompt"]
+
     task = GenerationTask(
         user_id=user.id,
         model_id=model.id if model else None,
@@ -52,9 +101,11 @@ async def create_generation_task(
         provider=provider,
         task_type=task_type,
         status="created",
-        prompt=prompt,
-        input_file_url=input_file_url,
+        prompt=task_prompt,
+        input_file_url=resolved_file_url,
         params=task_params,
+        input_payload=validated_inputs if validated_inputs else None,
+        provider_input=provider_input if provider_input else None,
         cost_credits=price,
     )
     session.add(task)

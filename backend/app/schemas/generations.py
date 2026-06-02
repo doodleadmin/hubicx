@@ -12,6 +12,7 @@ class GenerationCreate(BaseModel):
     prompt: str | None = None
     input_file_url: str | None = None
     params: dict[str, Any] | None = None
+    inputs: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def validate_target(self):
@@ -20,6 +21,11 @@ class GenerationCreate(BaseModel):
         if self.model_code and self.template_code:
             raise ValueError("Use either model_code or template_code")
         return self
+
+
+class FileUploadOut(BaseModel):
+    file_id: int
+    url: str
 
 
 class GenerationOut(BaseModel):

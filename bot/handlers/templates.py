@@ -1,7 +1,7 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardMarkup, Message
 from sqlalchemy import select
 
 from backend.app.db.models import Template
@@ -28,11 +28,20 @@ TEMPLATE_CODES = [
 @router.message(F.text.regexp(r".*Шаблоны.*"))
 async def templates(message: Message) -> None:
     logger.info("TEMPLATES HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    await show_templates_menu(message)
+
+
+async def show_templates_menu(message: Message) -> None:
     try:
-        async with async_session() as session:
-            result = await session.execute(select(Template).where(Template.code.in_(TEMPLATE_CODES), Template.is_active.is_(True)).order_by(Template.sort_order))
-            items = [(template.title, template.code) for template in result.scalars().all()]
-        await message.answer("🧩 Шаблоны\n\nКаждый пресет уже настроен с оптимальными параметрами.", reply_markup=webapp_models_keyboard(items, route="template", param="code"))
+        text, reply_markup = await build_templates_menu()
+        await message.answer(text, reply_markup=reply_markup)
     except Exception:
         logger.exception("Templates handler failed")
         await message.answer("Ошибка при открытии раздела Шаблоны")
+
+
+async def build_templates_menu() -> tuple[str, InlineKeyboardMarkup]:
+    async with async_session() as session:
+        result = await session.execute(select(Template).where(Template.code.in_(TEMPLATE_CODES), Template.is_active.is_(True)).order_by(Template.sort_order))
+        items = [(template.title, template.code) for template in result.scalars().all()]
+    return "🧩 Шаблоны\n\nКаждый пресет уже настроен с оптимальными параметрами.", webapp_models_keyboard(items, route="template", param="code")

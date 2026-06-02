@@ -1,14 +1,21 @@
+import logging
+
 from fastapi import APIRouter, Depends
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from backend.app.api.deps import current_user
 from backend.app.db.models import GenerationTask, User
 from backend.app.db.session import get_session
 from backend.app.schemas.generations import GenerationCreate, GenerationOut, GenerationQueued
 from backend.app.services.generations import create_generation_task, get_user_task, history
+from backend.app.services.telegram_sender import send_generation_result_to_chat
+from backend.app.utils.errors import AppError
 from worker.generation_worker import process_generation_task
 
 router = APIRouter(prefix="/generations", tags=["generations"])
+logger = logging.getLogger(__name__)
 
 
 def serialize_task(task: GenerationTask) -> GenerationOut:
@@ -33,7 +40,7 @@ def serialize_task(task: GenerationTask) -> GenerationOut:
 
 @router.post("", response_model=GenerationQueued)
 async def create_generation(payload: GenerationCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> GenerationQueued:
-    task = await create_generation_task(session, user, payload.model_code, payload.template_code, payload.prompt, payload.input_file_url, payload.params)
+    task = await create_generation_task(session, user, payload.model_code, payload.template_code, payload.prompt, payload.input_file_url, payload.params, payload.inputs)
     process_generation_task.delay(task.id)
     return GenerationQueued(task_id=task.id, status=task.status)
 
@@ -46,3 +53,29 @@ async def generation_history(user: User = Depends(current_user), session: AsyncS
 @router.get("/{task_id}", response_model=GenerationOut)
 async def generation_status(task_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> GenerationOut:
     return serialize_task(await get_user_task(session, user, task_id))
+
+
+@router.post("/{task_id}/send-to-chat")
+async def send_generation_to_chat(task_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+    task = await session.scalar(
+        select(GenerationTask)
+        .where(GenerationTask.id == task_id)
+        .options(selectinload(GenerationTask.model), selectinload(GenerationTask.template))
+    )
+    if not task:
+        raise AppError("task_not_found", "Generation task not found", 404)
+    if task.user_id != user.id:
+        raise AppError("forbidden", "Access denied", 403)
+    if task.status != "completed":
+        raise AppError("generation_not_completed", "Generation is not completed")
+    if not task.output_file_url and not task.output_text:
+        raise AppError("generation_has_no_result", "Generation has no result")
+
+    logger.info("SEND_TO_CHAT requested task_id=%s user_id=%s telegram_id=%s", task.id, user.id, user.telegram_id)
+    try:
+        await send_generation_result_to_chat(user.telegram_id, task)
+    except Exception:
+        logger.exception("SEND_TO_CHAT failed task_id=%s", task.id)
+        raise
+    logger.info("SEND_TO_CHAT success task_id=%s", task.id)
+    return {"ok": True, "message": "Результат отправлен в Telegram-чат"}

@@ -2,16 +2,79 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import CallbackQuery, Message
+from sqlalchemy import select
 
+from backend.app.db.models import User
+from backend.app.db.session import async_session
+from bot.config import settings
+from bot.handlers.balance import build_balance_menu
+from bot.handlers.history import build_history_menu
+from bot.handlers.photo import build_photo_menu
+from bot.handlers.templates import build_templates_menu
+from bot.handlers.text import build_text_menu
+from bot.handlers.video import build_video_menu
+from bot.keyboards.language import language_keyboard
 from bot.keyboards.main_menu import main_menu_keyboard
+from bot.services.menu_messages import edit_current_menu, send_or_replace_menu
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-@router.callback_query(F.data == "home")
-async def home_callback(callback: CallbackQuery) -> None:
-    await callback.message.answer("Главное меню", reply_markup=main_menu_keyboard())
+async def get_user_language(telegram_id: int) -> str:
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.telegram_id == telegram_id))
+        return user.language_code if user else "ru"
+
+
+async def show_main_menu(message: Message, language_code: str = "ru") -> None:
+    await message.answer("Главное меню", reply_markup=main_menu_keyboard(language_code))
+
+
+async def render_callback_menu(callback: CallbackQuery, text: str, reply_markup) -> None:
+    if await edit_current_menu(callback, text, reply_markup):
+        return
+    if not callback.message:
+        return
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.telegram_id == callback.from_user.id))
+        if user:
+            await send_or_replace_menu(callback.message, session, user, text, reply_markup)
+
+
+@router.callback_query(F.data.startswith("main:"))
+async def main_menu_callback(callback: CallbackQuery) -> None:
+    action = callback.data.split(":", 1)[1]
+    logger.info("MAIN MENU CALLBACK action=%s user_id=%s", action, callback.from_user.id)
+    if not callback.message:
+        await callback.answer()
+        return
+
+    if action == "home":
+        language_code = await get_user_language(callback.from_user.id)
+        await render_callback_menu(callback, "Главное меню", main_menu_keyboard(language_code))
+    elif action == "language":
+        await render_callback_menu(callback, "🌐 Выбор языка\n\nВыберите язык интерфейса:", language_keyboard())
+    elif action == "photo":
+        text, reply_markup = await build_photo_menu()
+        await render_callback_menu(callback, text, reply_markup)
+    elif action == "video":
+        text, reply_markup = await build_video_menu()
+        await render_callback_menu(callback, text, reply_markup)
+    elif action == "templates":
+        text, reply_markup = await build_templates_menu()
+        await render_callback_menu(callback, text, reply_markup)
+    elif action == "text":
+        text, reply_markup = build_text_menu()
+        await render_callback_menu(callback, text, reply_markup)
+    elif action == "balance":
+        text, reply_markup = await build_balance_menu(callback.from_user.id)
+        if reply_markup:
+            await render_callback_menu(callback, text, reply_markup)
+    elif action == "history":
+        text, reply_markup = await build_history_menu(callback.from_user.id)
+        if reply_markup:
+            await render_callback_menu(callback, text, reply_markup)
     await callback.answer()
 
 
@@ -23,10 +86,12 @@ async def webapp_unavailable(callback: CallbackQuery) -> None:
 @router.message(F.text.regexp(r".*Домой.*"))
 async def home_message(message: Message) -> None:
     logger.info("MENU HOME HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
-    await message.answer("Главное меню", reply_markup=main_menu_keyboard())
+    await show_main_menu(message, await get_user_language(message.from_user.id))
 
 
 @router.message()
 async def debug_unhandled(message: Message) -> None:
+    if not settings.debug:
+        return
     logger.warning("MENU FALLBACK TRIGGERED text=%s user_id=%s", message.text, message.from_user.id if message.from_user else None)
     await message.answer(f"DEBUG: получил сообщение: {message.text}")

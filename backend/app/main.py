@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.app.api.routes import admin, auth, debug, generations, models, payments, templates, users, webhooks
+from backend.app.api.routes import admin, auth, debug, files, generations, models, payments, templates, users, webhooks
 from backend.app.config import settings
 from backend.app.utils.errors import AppError
 
@@ -26,7 +26,7 @@ async def health() -> dict:
     return {"ok": True}
 
 
-for router in (auth.router, users.router, models.router, templates.router, generations.router, payments.router, webhooks.router, admin.router):
+for router in (auth.router, users.router, models.router, templates.router, generations.router, files.router, payments.router, webhooks.router, admin.router):
     app.include_router(router, prefix="/api")
 
 if settings.debug:

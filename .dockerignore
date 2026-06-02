@@ -1,0 +1,9 @@
+**/__pycache__/
+**/*.pyc
+webapp/node_modules/
+webapp/.next/
+webapp/.turbo/
+node_modules/
+.git/
+.env
+*.log

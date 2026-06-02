@@ -45,15 +45,22 @@ class FalProvider(BaseProvider):
                 if isinstance(result, dict):
                     result.setdefault("request_id", data.get("request_id"))
                     return result
+            if response.status_code == 400 and "still in progress" in response.text.lower():
+                continue
             if response.status_code not in {202, 404}:
                 response.raise_for_status()
         raise TimeoutError("Fal result timeout")
 
     async def generate_image(self, model_id: str, prompt: str | None, input_file_url: str | None, params: dict[str, Any] | None = None) -> ProviderResult:
-        payload = {"prompt": prompt or "", **(params or {})}
-        if input_file_url:
+        payload = {"prompt": prompt or ""}
+        if params:
+            payload.update(params)
+        if input_file_url and "image_url" not in payload and "image_urls" not in payload:
             payload["image_url"] = input_file_url
         return await self._submit(model_id, payload)
+
+    async def generate_image_v2(self, model_id: str, provider_input: dict[str, Any]) -> ProviderResult:
+        return await self._submit(model_id, provider_input)
 
     async def generate_video(self, model_id: str, prompt: str | None, input_file_url: str | None, params: dict[str, Any] | None = None) -> ProviderResult:
         payload = {"prompt": prompt or "", **(params or {})}
