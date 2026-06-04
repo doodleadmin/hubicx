@@ -1,15 +1,23 @@
+import logging
+
 from aiogram import Router
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, ReplyKeyboardRemove, WebAppInfo
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import selectinload
 
 from backend.app.db.models import GenerationTask, User
 from backend.app.db.session import async_session
 from backend.app.services.balance import admin_add_balance
-from bot.config import ADMIN_IDS
+from bot.config import ADMIN_IDS, WEBAPP_URL
+from bot.custom_emoji import emoji_icon
+from bot.i18n import t
+from bot.services.language import get_user_language
 
 router = Router()
+logger = logging.getLogger(__name__)
+
+ADMIN_URL = f"{WEBAPP_URL}/admin"
 
 
 def is_admin(message: Message) -> bool:
@@ -18,12 +26,22 @@ def is_admin(message: Message) -> bool:
 
 @router.message(Command("admin"))
 async def admin(message: Message) -> None:
+    lang = await get_user_language(message.from_user.id if message.from_user else None)
     if not is_admin(message):
+        await message.answer(t(lang, "admin.forbidden"))
         return
     async with async_session() as session:
         users_count = await session.scalar(select(func.count(User.id)))
         tasks_count = await session.scalar(select(func.count(GenerationTask.id)))
-    await message.answer(f"Админ-панель\nПользователей: {users_count or 0}\nГенераций: {tasks_count or 0}\n\nКоманды: /add_balance, /user, /tasks, /errors")
+    await message.answer(t(lang, "admin.opening"), reply_markup=ReplyKeyboardRemove())
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=t(lang, "admin.open_button"), web_app=WebAppInfo(url=ADMIN_URL), **emoji_icon("admin"))]
+    ])
+    logger.info("ADMIN_WEBAPP_BUTTON created mode=inline_web_app url=%s admin_telegram_id=%s", ADMIN_URL, message.from_user.id)
+    await message.answer(
+        t(lang, "admin.panel", users=users_count or 0, tasks=tasks_count or 0),
+        reply_markup=keyboard,
+    )
 
 
 @router.message(Command("add_balance"))
