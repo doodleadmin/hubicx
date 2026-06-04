@@ -106,7 +106,8 @@ export function formatOptionLabel(locale: Locale, value: string | number): strin
 }
 
 export function localizeField(field: FormFieldDef, locale: Locale): FormFieldDef {
-  const key = field.label_key || field.provider_key || field.name;
+  const labelKey = (field as FormFieldDef & { label_key?: string }).label_key;
+  const key = labelKey || field.provider_key || field.name;
   return {
     ...field,
     label: dictionaries[locale][`field.${key}`] || field.label,
