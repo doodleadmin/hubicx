@@ -8,7 +8,8 @@ import type { User } from "@/lib/types";
 
 function getTelegramLanguageCode(): string | null {
   if (typeof window === "undefined") return null;
-  return window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || null;
+  const user = window.Telegram?.WebApp?.initDataUnsafe?.user as { language_code?: string } | undefined;
+  return user?.language_code || null;
 }
 
 export default function DocsPage() {
