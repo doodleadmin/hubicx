@@ -15,10 +15,10 @@ router = Router()
 logger = logging.getLogger(__name__)
 VIDEO_MODEL_CODES = ["seedance_2_t2v", "seedance_2_i2v_fast", "seedance_2_i2v", "kling_21_i2v"]
 VIDEO_BUTTON_TITLES = {
-    "seedance_2_t2v": "🎬 Seedance 2 Text",
-    "seedance_2_i2v_fast": "⚡ Seedance 2 Fast I2V",
-    "seedance_2_i2v": "🎥 Seedance 2 I2V",
-    "kling_21_i2v": "🎞 Kling 2.1 I2V",
+    "seedance_2_t2v": "Seedance 2 Text",
+    "seedance_2_i2v_fast": "Seedance 2 Fast I2V",
+    "seedance_2_i2v": "Seedance 2 I2V",
+    "kling_21_i2v": "Kling 2.1 I2V",
 }
 VIDEO_ICON_MAP = {
     "seedance_2_t2v": "seedance_2_t2v",

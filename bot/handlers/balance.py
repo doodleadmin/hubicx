@@ -7,7 +7,9 @@ from sqlalchemy import func, select
 from backend.app.db.models import ReferralReward, User
 from backend.app.db.session import async_session
 from bot.config import BOT_USERNAME
+from bot.i18n import t
 from bot.keyboards.models import balance_keyboard
+from bot.services.language import get_user_language
 from bot.services.menu_messages import edit_current_menu
 
 router = Router()
@@ -21,30 +23,28 @@ async def balance(message: Message) -> None:
 
 
 async def show_balance_menu(message: Message, user_id: int | None = None) -> None:
+    lang = await get_user_language(user_id or (message.from_user.id if message.from_user else None))
     try:
         telegram_id = user_id or message.from_user.id
-        text, reply_markup = await build_balance_menu(telegram_id)
+        text, reply_markup = await build_balance_menu(telegram_id, lang)
         if reply_markup is None:
             await message.answer(text)
             return
         await message.answer(text, reply_markup=reply_markup)
     except Exception:
         logger.exception("Balance handler failed")
-        await message.answer("Ошибка при открытии раздела Баланс")
+        await message.answer(t(lang, "common.error.balance"))
 
 
-async def build_balance_menu(telegram_id: int) -> tuple[str, InlineKeyboardMarkup | None]:
+async def build_balance_menu(telegram_id: int, lang: str | None = None) -> tuple[str, InlineKeyboardMarkup | None]:
     async with async_session() as session:
         user = await session.scalar(select(User).where(User.telegram_id == telegram_id))
         if not user:
-            return "Сначала отправьте /start", None
+            return t(lang, "common.start_first"), None
+        lang = lang or user.language_code
         ref_link = f"https://t.me/{BOT_USERNAME}?start={user.ref_code}" if BOT_USERNAME else ""
-        text = (
-            f"💰 Баланс: {user.balance_credits} 🪙\n\n"
-            "💰 Для продолжения использования пополните баланс ниже:\n\n"
-            "🔗 Приглашайте друзей по ссылке ниже и получайте 10% от их пополнений."
-        )
-    return text, balance_keyboard(ref_link)
+        text = t(lang, "balance.title", balance=user.balance_credits)
+    return text, balance_keyboard(ref_link, lang)
 
 
 @router.callback_query(F.data == "team")
@@ -56,6 +56,6 @@ async def team(callback: CallbackQuery) -> None:
     await callback.answer()
     await edit_current_menu(
         callback,
-        f"👥 Моя команда\n\nПриглашено: {invited or 0}\nНачислено бонусов: {rewards or 0} 🪙",
-        balance_keyboard(f"https://t.me/{BOT_USERNAME}?start={user.ref_code}" if user and BOT_USERNAME else ""),
+        f"Моя команда\n\nПриглашено: {invited or 0}\nНачислено бонусов: {rewards or 0}",
+        balance_keyboard(f"https://t.me/{BOT_USERNAME}?start={user.ref_code}" if user and BOT_USERNAME else "", user.language_code if user else "ru"),
     )

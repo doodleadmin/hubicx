@@ -5,10 +5,10 @@ from bot.i18n import t
 
 
 LANGUAGE_BUTTONS = {
-    "ru": "🇷🇺 Русский",
-    "en": "🇬🇧 English",
-    "es": "🇪🇸 Español",
-    "pt": "🇵🇹 Português",
+    "ru": "Русский",
+    "en": "English",
+    "es": "Español",
+    "pt": "Português",
 }
 
 

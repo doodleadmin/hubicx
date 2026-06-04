@@ -57,7 +57,7 @@ async def build_history_menu(telegram_id: int, lang: str | None = None) -> tuple
     buttons = []
     for task in tasks:
         title = task.model.title if task.model else task.template.title if task.template else task.task_type
-        lines.append(f"#{task.id} · {title} · {task.status} · {task.cost_credits} 🪙 · {task.created_at:%d.%m %H:%M}")
+        lines.append(f"#{task.id} · {title} · {task.status} · {task.cost_credits} cr · {task.created_at:%d.%m %H:%M}")
         buttons.append([app_button(t(lang, "history.open", id=task.id), f"{WEBAPP_URL}/history?task={task.id}", icon_key="open_file")])
     buttons.append([InlineKeyboardButton(text=t(lang, "menu.home"), callback_data="main:home", **emoji_icon("home"))])
     return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=buttons)

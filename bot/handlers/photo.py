@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 
 PHOTO_MODEL_CODES = ["nano_banana_2", "nano_banana_pro", "nano_banana_edit", "flux_schnell", "gpt_image_2", "seedream", "grok_image", "z_image"]
 PHOTO_BUTTON_TITLES = {
-    "nano_banana_2": "🍌 Nano Banana 2",
-    "nano_banana": "🍌 Nano Banana",
-    "nano_banana_pro": "🍌 Nano Banana Pro",
-    "nano_banana_edit": "🖼 Nano Banana Edit",
-    "flux_schnell": "⚡ Fast Image",
-    "seedream": "🌱 Seedream",
-    "grok_image": "🧠 Grok Imagine",
-    "z_image": "⚡ Z-Image",
+    "nano_banana_2": "Nano Banana 2",
+    "nano_banana": "Nano Banana",
+    "nano_banana_pro": "Nano Banana Pro",
+    "nano_banana_edit": "Nano Banana Edit",
+    "flux_schnell": "Fast Image",
+    "seedream": "Seedream",
+    "grok_image": "Grok Imagine",
+    "z_image": "Z-Image",
 }
 PHOTO_ICON_MAP = {
     "nano_banana_2": "nano_banana_2",

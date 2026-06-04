@@ -65,7 +65,7 @@ async def add_balance(message: Message) -> None:
         await admin_add_balance(session, user.id, amount, f"Admin {message.from_user.id}")
         await session.commit()
         await session.refresh(user)
-    await message.answer(f"Баланс обновлён: {user.balance_credits} 🪙")
+    await message.answer(f"Баланс обновлён: {user.balance_credits}")
 
 
 @router.message(Command("user"))
