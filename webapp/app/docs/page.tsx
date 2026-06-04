@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import Layout from "@/components/Layout";
 import { getLocale, Locale, t } from "@/lib/i18n";
 import { api } from "@/lib/api";
-import { getTelegramLanguageCode } from "@/lib/telegram";
 import type { User } from "@/lib/types";
+
+function getTelegramLanguageCode(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || null;
+}
 
 export default function DocsPage() {
   const [locale, setLocale] = useState<Locale>("ru");
