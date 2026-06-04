@@ -13,22 +13,19 @@ from bot.handlers.photo import build_photo_menu
 from bot.handlers.templates import build_templates_menu
 from bot.handlers.text import build_text_menu
 from bot.handlers.video import build_video_menu
+from bot.i18n import t
 from bot.keyboards.language import language_keyboard
 from bot.keyboards.main_menu import main_menu_keyboard
+from bot.services.language import get_user_language
 from bot.services.menu_messages import edit_current_menu, send_or_replace_menu
+from bot.services.start_message import send_start_menu
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
-async def get_user_language(telegram_id: int) -> str:
-    async with async_session() as session:
-        user = await session.scalar(select(User).where(User.telegram_id == telegram_id))
-        return user.language_code if user else "ru"
-
-
 async def show_main_menu(message: Message, language_code: str = "ru") -> None:
-    await message.answer("Главное меню", reply_markup=main_menu_keyboard(language_code))
+    await message.answer(t(language_code, "menu.main"), reply_markup=main_menu_keyboard(language_code))
 
 
 async def render_callback_menu(callback: CallbackQuery, text: str, reply_markup) -> None:
@@ -51,21 +48,24 @@ async def main_menu_callback(callback: CallbackQuery) -> None:
         return
 
     if action == "home":
-        language_code = await get_user_language(callback.from_user.id)
-        await render_callback_menu(callback, "Главное меню", main_menu_keyboard(language_code))
+        async with async_session() as session:
+            user = await session.scalar(select(User).where(User.telegram_id == callback.from_user.id))
+            if user:
+                await send_start_menu(callback.message, session, user)
     elif action == "language":
-        await render_callback_menu(callback, "🌐 Выбор языка\n\nВыберите язык интерфейса:", language_keyboard())
+        language_code = await get_user_language(callback.from_user.id)
+        await render_callback_menu(callback, t(language_code, "language.choose"), language_keyboard())
     elif action == "photo":
-        text, reply_markup = await build_photo_menu()
+        text, reply_markup = await build_photo_menu(await get_user_language(callback.from_user.id))
         await render_callback_menu(callback, text, reply_markup)
     elif action == "video":
-        text, reply_markup = await build_video_menu()
+        text, reply_markup = await build_video_menu(await get_user_language(callback.from_user.id))
         await render_callback_menu(callback, text, reply_markup)
     elif action == "templates":
-        text, reply_markup = await build_templates_menu()
+        text, reply_markup = await build_templates_menu(await get_user_language(callback.from_user.id))
         await render_callback_menu(callback, text, reply_markup)
     elif action == "text":
-        text, reply_markup = build_text_menu()
+        text, reply_markup = build_text_menu(await get_user_language(callback.from_user.id))
         await render_callback_menu(callback, text, reply_markup)
     elif action == "balance":
         text, reply_markup = await build_balance_menu(callback.from_user.id)
@@ -86,6 +86,11 @@ async def webapp_unavailable(callback: CallbackQuery) -> None:
 @router.message(F.text.regexp(r".*Домой.*"))
 async def home_message(message: Message) -> None:
     logger.info("MENU HOME HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    async with async_session() as session:
+        user = await session.scalar(select(User).where(User.telegram_id == message.from_user.id))
+        if user:
+            await send_start_menu(message, session, user)
+            return
     await show_main_menu(message, await get_user_language(message.from_user.id))
 
 

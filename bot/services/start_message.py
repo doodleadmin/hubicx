@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from aiogram.exceptions import TelegramBadRequest
@@ -9,6 +10,9 @@ from backend.app.db.models import User
 from bot.i18n import t
 from bot.keyboards.main_menu import main_menu_keyboard
 from bot.services.menu_messages import delete_active_menu, save_active_menu
+
+
+logger = logging.getLogger(__name__)
 
 
 START_IMAGE_PATHS = {
@@ -34,10 +38,16 @@ async def remove_reply_keyboard(message: Message) -> None:
 async def send_start_menu(message: Message, session: AsyncSession, user: User) -> Message:
     await delete_active_menu(message.bot, user)
     await remove_reply_keyboard(message)
-    sent = await message.answer_photo(
-        photo=FSInputFile(get_start_image_path(user.language_code)),
-        caption=t(user.language_code, "start.caption"),
-        reply_markup=main_menu_keyboard(user.language_code),
-    )
+    caption = t(user.language_code, "start.caption")
+    reply_markup = main_menu_keyboard(user.language_code)
+    try:
+        sent = await message.answer_photo(
+            photo=FSInputFile(get_start_image_path(user.language_code)),
+            caption=caption,
+            reply_markup=reply_markup,
+        )
+    except Exception:
+        logger.exception("Failed to send start image user_id=%s", user.id)
+        sent = await message.answer(caption, reply_markup=reply_markup)
     await save_active_menu(session, user, sent.chat.id, sent.message_id)
     return sent

@@ -40,6 +40,22 @@ async def send_or_replace_menu(message: Message, session: AsyncSession, user: Us
 async def edit_current_menu(callback: CallbackQuery, text: str, reply_markup: InlineKeyboardMarkup) -> bool:
     if not callback.message:
         return False
+    if callback.message.photo:
+        try:
+            await callback.message.edit_caption(caption=text, reply_markup=reply_markup)
+            return True
+        except TelegramBadRequest as exc:
+            message = str(exc).lower()
+            if "message is not modified" in message:
+                return True
+            if "message can't be edited" in message or "message to edit not found" in message:
+                logger.warning("Photo menu message cannot be edited user_id=%s error=%s", callback.from_user.id, exc)
+                return False
+            logger.warning("Failed to edit photo menu user_id=%s error=%s", callback.from_user.id, exc)
+            return False
+        except Exception:
+            logger.exception("Failed to edit photo menu user_id=%s", callback.from_user.id)
+            return False
     try:
         await callback.message.edit_text(text, reply_markup=reply_markup)
         return True
