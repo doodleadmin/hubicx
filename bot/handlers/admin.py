@@ -12,12 +12,13 @@ from backend.app.services.balance import admin_add_balance
 from bot.config import ADMIN_IDS, WEBAPP_URL
 from bot.custom_emoji import emoji_icon
 from bot.i18n import t
+from bot.keyboards.models import versioned_webapp_url
 from bot.services.language import get_user_language
 
 router = Router()
 logger = logging.getLogger(__name__)
 
-ADMIN_URL = f"{WEBAPP_URL}/admin"
+ADMIN_URL = versioned_webapp_url(f"{WEBAPP_URL}/admin")
 
 
 def is_admin(message: Message) -> bool:

@@ -6,10 +6,18 @@ declare global {
         initDataUnsafe?: {
           user?: {
             id?: number;
+            language_code?: string;
           };
         };
         ready: () => void;
         expand: () => void;
+        isFullscreen?: boolean;
+        requestFullscreen?: () => void;
+        exitFullscreen?: () => void;
+        setHeaderColor?: (color: string) => void;
+        setBackgroundColor?: (color: string) => void;
+        setBottomBarColor?: (color: string) => void;
+        onEvent?: (eventType: string, eventHandler: (event?: { error?: string }) => void) => void;
         MainButton?: { hide: () => void };
       };
     };
@@ -34,17 +42,53 @@ export type TelegramDebugState = {
 
 type TelegramWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
 
+let telegramUiInitialized = false;
+
+function initializeTelegramUi(webApp: TelegramWebApp) {
+  try {
+    webApp.ready();
+    webApp.expand();
+  } catch {
+    // Outside real Telegram WebApp these calls can fail; auth handling below will show a clear error.
+  }
+
+  if (telegramUiInitialized) return;
+  telegramUiInitialized = true;
+
+  try {
+    webApp.setHeaderColor?.("#FFFFFF");
+    webApp.setBackgroundColor?.("#F7FAFE");
+    webApp.setBottomBarColor?.("#FFFFFF");
+  } catch {
+    // Older Telegram clients can ignore theme API calls.
+  }
+
+  try {
+    webApp.onEvent?.("fullscreenChanged", () => undefined);
+    webApp.onEvent?.("fullscreenFailed", (event) => {
+      if (event?.error !== "UNSUPPORTED") {
+        console.warn("Telegram fullscreen failed", event?.error);
+      }
+    });
+  } catch {
+    // Fullscreen events are optional in older clients.
+  }
+
+  try {
+    if (typeof webApp.requestFullscreen === "function" && !webApp.isFullscreen) {
+      webApp.requestFullscreen();
+    }
+  } catch (error) {
+    console.warn("fullscreen request failed", error);
+  }
+}
+
 export async function waitForTelegramWebApp(timeoutMs = 3000): Promise<TelegramWebApp | null> {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
     if (typeof window !== "undefined" && window.Telegram?.WebApp) {
       const webApp = window.Telegram.WebApp;
-      try {
-        webApp.ready();
-        webApp.expand();
-      } catch {
-        // Outside real Telegram WebApp these calls can fail; auth handling below will show a clear error.
-      }
+      initializeTelegramUi(webApp);
       return webApp;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -94,4 +138,9 @@ export function initTelegram(): Promise<TelegramAuthState> {
 export function getInitData(): string {
   if (typeof window === "undefined") return "";
   return window.Telegram?.WebApp?.initData || "";
+}
+
+export function getTelegramLanguageCode(): string {
+  if (typeof window === "undefined") return "";
+  return window.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || "";
 }

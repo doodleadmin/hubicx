@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return <main className="mx-auto min-h-screen max-w-md bg-app px-4 py-4 text-white">{children}</main>;
+  return <main className="page-shell mx-auto min-h-screen w-full max-w-md px-4 text-ink-primary">{children}</main>;
 }

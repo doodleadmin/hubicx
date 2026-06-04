@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
@@ -7,10 +8,19 @@ from bot.custom_emoji import emoji_icon
 from bot.i18n import t
 
 logger = logging.getLogger(__name__)
+WEBAPP_VERSION = "20260604_ui_fix"
+
+
+def versioned_webapp_url(url: str) -> str:
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query["v"] = WEBAPP_VERSION
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 def app_button(title: str, url: str, icon_key: str | None = None) -> InlineKeyboardButton:
     extra = emoji_icon(icon_key)
+    url = versioned_webapp_url(url)
     is_https = url.startswith("https://")
     if is_https:
         logger.info(

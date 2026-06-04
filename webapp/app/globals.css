@@ -1,12 +1,78 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --brand-primary: #0084f0;
+  --brand-primary-dark: #006fdb;
+  --brand-primary-soft: #eaf4ff;
+  --brand-primary-glow: rgba(0, 132, 240, 0.12);
+  --text-primary: #16325c;
+  --text-secondary: #5e7391;
+  --text-muted: #8fa1b8;
+  --border-soft: #e5eef8;
+  --surface: #ffffff;
+  --surface-soft: #f7fafe;
+  --surface-blue: #f2f8ff;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --hero-gradient: linear-gradient(135deg, #f8fbff 0%, #eaf4ff 55%, #d9ecff 100%);
+  --brand-gradient: linear-gradient(135deg, #0084f0 0%, #33a0ff 100%);
+  --hubicx-telegram-top-offset: 100px;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+}
+
 html, body {
-  background: #07111f;
-  color: #eef6ff;
+  min-height: 100%;
+  color-scheme: light;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(0, 132, 240, 0.12), transparent 30%),
+    radial-gradient(circle at 85% 12%, rgba(51, 160, 255, 0.16), transparent 34%),
+    linear-gradient(180deg, #fbfdff 0%, #f2f8ff 45%, #f7fafe 100%);
+  color: var(--text-primary);
+  font-family: Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 button, input, textarea, select {
   font: inherit;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .page-shell,
+  .hubicx-page-shell {
+    padding-top: calc(var(--hubicx-telegram-top-offset) + var(--safe-top));
+    padding-bottom: max(24px, var(--safe-bottom));
+  }
+
+  .hubicx-card {
+    @apply rounded-card border border-border-soft bg-white shadow-soft-sm;
+  }
+
+  .hubicx-input {
+    @apply w-full rounded-input border border-border-soft bg-white px-4 py-3 text-ink-primary outline-none transition placeholder:text-ink-muted focus:border-brand-primary focus:ring-4 focus:ring-brand-glow;
+  }
+
+  .hubicx-primary-button {
+    @apply rounded-button bg-brand-primary px-5 py-3 font-bold text-white shadow-soft-sm transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .hubicx-secondary-button {
+    @apply rounded-button border border-border-soft bg-white px-5 py-3 font-bold text-brand-primary shadow-soft-sm transition hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .hubicx-badge {
+    @apply rounded-pill bg-brand-soft px-3 py-1 text-xs font-bold text-brand-primary;
+  }
 }

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.db.models import User
 from bot.i18n import t
 from bot.keyboards.main_menu import main_menu_keyboard
-from bot.services.menu_messages import delete_active_menu, save_active_menu
+from bot.services.menu_messages import delete_active_menu
 
 
 logger = logging.getLogger(__name__)
@@ -49,5 +49,4 @@ async def send_start_menu(message: Message, session: AsyncSession, user: User) -
     except Exception:
         logger.exception("Failed to send start image user_id=%s", user.id)
         sent = await message.answer(caption, reply_markup=reply_markup)
-    await save_active_menu(session, user, sent.chat.id, sent.message_id)
     return sent

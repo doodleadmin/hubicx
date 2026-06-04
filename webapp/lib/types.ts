@@ -2,10 +2,11 @@ export type FormFieldDef = {
   name: string;
   provider_key?: string;
   label: string;
+  label_key?: string;
   type: "textarea" | "text" | "select" | "number" | "switch" | "file" | "files" | "hidden";
   required?: boolean;
   default?: unknown;
-  options?: string[];
+  options?: Array<string | number | { label?: string; value: string | number }>;
   min?: number;
   max?: number;
   step?: number;
@@ -13,6 +14,8 @@ export type FormFieldDef = {
   helper_text?: string;
   accept?: string;
   max_files?: number;
+  min_files?: number;
+  maps_to?: string;
   advanced?: boolean;
 };
 
@@ -38,6 +41,7 @@ export type User = {
   first_name?: string;
   language_code: string;
   balance_credits: number;
+  is_admin: boolean;
   ref_code: string;
 };
 
@@ -89,4 +93,71 @@ export type PricePreview = {
   final_price_credits: number;
   currency: "credits";
   breakdown: Record<string, unknown>[];
+};
+
+export type AdminUser = {
+  id: number;
+  telegram_id: number;
+  username?: string;
+  first_name?: string;
+  balance_credits: number;
+  is_admin: boolean;
+  ref_code: string;
+  created_at?: string;
+};
+
+export type AdminTask = {
+  id: number;
+  user_id: number;
+  model_id?: number;
+  task_type: string;
+  status: string;
+  prompt?: string;
+  cost_credits: number;
+  error_message?: string;
+  output_file_url?: string;
+  created_at?: string;
+  completed_at?: string;
+};
+
+export type AdminTransaction = {
+  id: number;
+  user_id: number;
+  type: string;
+  amount_credits: number;
+  status: string;
+  generation_task_id?: number;
+  payment_id?: number;
+  comment?: string;
+  created_at?: string;
+};
+
+export type AdminFile = {
+  id: number;
+  user_id: number;
+  file_type: string;
+  purpose: string;
+  storage_url: string;
+  mime_type?: string;
+  size_bytes?: number;
+  created_at?: string;
+};
+
+export type AdminModelItem = {
+  id: number;
+  code: string;
+  title: string;
+  category: string;
+  provider: string;
+  task_type: string;
+  price_credits: number;
+  is_active: boolean;
+  form_schema?: Record<string, unknown> | null;
+};
+
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
 };
