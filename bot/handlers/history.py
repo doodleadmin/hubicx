@@ -2,10 +2,9 @@ import logging
 
 from aiogram import F, Router
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
-from sqlalchemy import desc, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
-from backend.app.db.models import GenerationTask, User
+from backend.app.db.models import User
 from backend.app.db.session import async_session
 from bot.config import WEBAPP_URL
 from bot.custom_emoji import emoji_icon
@@ -43,21 +42,8 @@ async def build_history_menu(telegram_id: int, lang: str | None = None) -> tuple
         if not user:
             return t(lang, "common.start_first"), None
         lang = lang or user.language_code
-        result = await session.execute(
-            select(GenerationTask)
-            .where(GenerationTask.user_id == user.id)
-            .options(selectinload(GenerationTask.model), selectinload(GenerationTask.template))
-            .order_by(desc(GenerationTask.created_at))
-            .limit(10)
-        )
-        tasks = result.scalars().all()
-    if not tasks:
-        return t(lang, "history.empty"), InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text=t(lang, "menu.home"), callback_data="main:home", **emoji_icon("home"))]])
-    lines = [t(lang, "history.title")]
-    buttons = []
-    for task in tasks:
-        title = task.model.title if task.model else task.template.title if task.template else task.task_type
-        lines.append(f"#{task.id} · {title} · {task.status} · {task.cost_credits} cr · {task.created_at:%d.%m %H:%M}")
-        buttons.append([app_button(t(lang, "history.open", id=task.id), f"{WEBAPP_URL}/history?task={task.id}", icon_key="open_file")])
-    buttons.append([InlineKeyboardButton(text=t(lang, "menu.home"), callback_data="main:home", **emoji_icon("home"))])
-    return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=buttons)
+    buttons = [
+        [app_button(t(lang, "history.open_webapp"), f"{WEBAPP_URL}/history", icon_key="open_file")],
+        [InlineKeyboardButton(text=t(lang, "menu.home"), callback_data="main:home", **emoji_icon("home"))],
+    ]
+    return f"{t(lang, 'history.title')}\n\n{t(lang, 'history.description')}", InlineKeyboardMarkup(inline_keyboard=buttons)

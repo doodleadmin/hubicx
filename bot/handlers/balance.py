@@ -1,16 +1,14 @@
 import logging
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
-from sqlalchemy import func, select
+from aiogram.types import InlineKeyboardMarkup, Message
+from sqlalchemy import select
 
-from backend.app.db.models import ReferralReward, User
+from backend.app.db.models import User
 from backend.app.db.session import async_session
-from bot.config import BOT_USERNAME
 from bot.i18n import t
 from bot.keyboards.models import balance_keyboard
 from bot.services.language import get_user_language
-from bot.services.menu_messages import edit_current_menu
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -42,20 +40,5 @@ async def build_balance_menu(telegram_id: int, lang: str | None = None) -> tuple
         if not user:
             return t(lang, "common.start_first"), None
         lang = lang or user.language_code
-        ref_link = f"https://t.me/{BOT_USERNAME}?start={user.ref_code}" if BOT_USERNAME else ""
-        text = t(lang, "balance.title", balance=user.balance_credits)
-    return text, balance_keyboard(ref_link, lang)
-
-
-@router.callback_query(F.data == "team")
-async def team(callback: CallbackQuery) -> None:
-    async with async_session() as session:
-        user = await session.scalar(select(User).where(User.telegram_id == callback.from_user.id))
-        invited = await session.scalar(select(func.count(User.id)).where(User.referrer_id == user.id)) if user else 0
-        rewards = await session.scalar(select(func.coalesce(func.sum(ReferralReward.reward_credits), 0)).where(ReferralReward.referrer_id == user.id)) if user else 0
-    await callback.answer()
-    await edit_current_menu(
-        callback,
-        f"Моя команда\n\nПриглашено: {invited or 0}\nНачислено бонусов: {rewards or 0}",
-        balance_keyboard(f"https://t.me/{BOT_USERNAME}?start={user.ref_code}" if user and BOT_USERNAME else "", user.language_code if user else "ru"),
-    )
+        text = f"{t(lang, 'balance.title', balance=user.balance_credits)}\n\n{t(lang, 'balance.description')}"
+    return text, balance_keyboard(lang)

@@ -36,10 +36,9 @@ def webapp_models_keyboard(items: list[tuple[str, str]], route: str = "generate"
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def balance_keyboard(ref_link: str, lang: str = "ru") -> InlineKeyboardMarkup:
+def balance_keyboard(lang: str = "ru") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [app_button(t(lang, "balance.top_up"), f"{WEBAPP_URL}/balance", icon_key="top_up")],
-        [InlineKeyboardButton(text=t(lang, "balance.team"), callback_data="team", **emoji_icon("team"))],
-        [InlineKeyboardButton(text=t(lang, "balance.copy_ref"), url=ref_link, **emoji_icon("copy_link"))],
+        [app_button(t(lang, "balance.open_balance"), f"{WEBAPP_URL}/balance", icon_key="top_up")],
+        [app_button(t(lang, "docs.open"), f"{WEBAPP_URL}/docs", icon_key="open_file")],
         [InlineKeyboardButton(text=t(lang, "menu.home"), callback_data="main:home", **emoji_icon("home"))],
     ])
