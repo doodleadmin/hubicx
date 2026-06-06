@@ -68,7 +68,7 @@ img{display:block}
 /* hide scrollbars everywhere — touch/swipe only */
 .scroll,.rail,.hero-rail,.chiprow,.segmented,textarea{scrollbar-width:none;-ms-overflow-style:none}
 .scroll::-webkit-scrollbar,.rail::-webkit-scrollbar,.hero-rail::-webkit-scrollbar,.chiprow::-webkit-scrollbar,.segmented::-webkit-scrollbar,textarea::-webkit-scrollbar{display:none;width:0;height:0;background:transparent}
-.scroll{flex:1;height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;padding-bottom:calc(131px + env(safe-area-inset-bottom))}
+.scroll{flex:1;height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;padding-bottom:calc(116px + env(safe-area-inset-bottom))}
 .page{padding:0 18px calc(108px + env(safe-area-inset-bottom)) 18px;animation:fade .42s cubic-bezier(.2,.7,.2,1)}
 @keyframes fade{from{transform:translateY(10px)}to{transform:none}}
 
@@ -127,7 +127,7 @@ img{display:block}
 .segmented button.on{background:var(--surface);color:var(--blue);box-shadow:var(--sh-sm)}
 
 /* ---- Bottom nav (raised center) ---- */
-.tabbar-wrap{position:fixed;left:50%;right:auto;bottom:calc(max(12px, env(safe-area-inset-bottom)) + 35px);transform:translateX(-50%);width:min(430px, calc(100vw - 24px));padding:0;pointer-events:none;z-index:100}
+.tabbar-wrap{position:fixed;left:50%;right:auto;bottom:calc(max(12px, env(safe-area-inset-bottom)) + 20px);transform:translateX(-50%);width:min(430px, calc(100vw - 24px));padding:0;pointer-events:none;z-index:100}
 .tabbar{pointer-events:auto;position:relative;height:68px;background:var(--tabbar-bg);backdrop-filter:blur(18px);
   border:1px solid var(--border);border-radius:26px;box-shadow:0 -2px 14px rgba(20,70,140,.06),0 16px 30px rgba(20,70,140,.16);
   display:flex;align-items:center;justify-content:space-around;padding:0 8px}
