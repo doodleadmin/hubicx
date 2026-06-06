@@ -1,5 +1,5 @@
-import { PrototypeRoute } from "@/components/new-ui/PrototypeApp";
+import TemplatesSoon from "@/components/new-ui/TemplatesSoon";
 
 export default function TemplatePage({ searchParams }: { searchParams?: { code?: string } }) {
-  return <PrototypeRoute route="template" code={searchParams?.code} />;
+  return <TemplatesSoon code={searchParams?.code} />;
 }

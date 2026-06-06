@@ -21,10 +21,15 @@ export function toText(value: Localized, lang: string) {
 
 export const TASKS = [
   { id: "create-image", cat: "image", model: "nano_banana_2", icon: "nano_image", cost: 40, title: { en: "Create Image", ru: "Создать изображение" }, desc: { en: "Generate from a text prompt", ru: "Генерация по текстовому описанию" } },
+  { id: "fast-image", cat: "image", model: "flux_schnell", icon: "image_flash", cost: 30, title: { en: "Fast Image", ru: "Быстрое изображение" }, desc: { en: "Fast clean image generation", ru: "Быстрая генерация изображения" } },
+  { id: "seedream", cat: "image", model: "seedream", icon: "swirl", cost: 35, title: { en: "Seedream", ru: "Seedream" }, desc: { en: "Sharp images, fast", ru: "Чёткие изображения, быстро" } },
+  { id: "z-image", cat: "image", model: "z_image", icon: "nano_image", cost: 25, title: { en: "Z-Image", ru: "Z-Image" }, desc: { en: "Fast images", ru: "Быстрые изображения" } },
   { id: "premium-image", cat: "image", model: "nano_banana_pro", icon: "nano_star", cost: 80, pro: true, title: { en: "Premium Image", ru: "Премиум изображение" }, desc: { en: "Highest detail, up to 4K", ru: "Максимум деталей, до 4K" } },
   { id: "edit-photo", cat: "image", model: "nano_banana_edit", icon: "nano_edit", cost: 60, title: { en: "Edit Photo", ru: "Редактировать фото" }, desc: { en: "Retouch & restyle your photo", ru: "Ретушь и стилизация фото" } },
   { id: "create-video", cat: "video", model: "seedance_2_t2v", icon: "videocam", cost: 250, title: { en: "Create Video", ru: "Создать видео" }, desc: { en: "Text-to-video clip", ru: "Видео по описанию" } },
   { id: "animate-photo", cat: "video", model: "seedance_2_i2v_fast", icon: "image_planet", cost: 180, title: { en: "Animate Photo", ru: "Оживить фото" }, desc: { en: "Bring a still image to life", ru: "Оживите статичное фото" } },
+  { id: "seedance-i2v", cat: "video", model: "seedance_2_i2v", icon: "img2video", cost: 250, title: { en: "Seedance I2V", ru: "Seedance I2V" }, desc: { en: "Image-to-video with 1080p option", ru: "Оживление фото с опцией 1080p" } },
+  { id: "kling-i2v", cat: "video", model: "kling_21_i2v", icon: "videocam", cost: 220, title: { en: "Kling 2.1 I2V", ru: "Kling 2.1 I2V" }, desc: { en: "Bring any photo to life", ru: "Оживить любое фото" } },
   { id: "ai-chat", cat: "text", model: "ai_chat", icon: "chat_pencil", cost: 2, title: { en: "AI Chat", ru: "AI-чат" }, desc: { en: "Ask, write, brainstorm", ru: "Спросить, написать, обсудить" } },
   { id: "prompt-helper", cat: "prompt", model: "prompt_helper", icon: "swirl", cost: 2, title: { en: "Prompt Helper", ru: "Помощник промптов" }, desc: { en: "Craft the perfect prompt", ru: "Соберем идеальный промпт" } },
 ];
@@ -51,18 +56,18 @@ export const AGENTS = [
 export const MODELS = [
   { id: "veo3", name: "Veo 3", cat: "video", task: "create-video", cost: 250, badge: "new", cov: "m1", accent: "#5B8CFF", tagline: { en: "Cinematic video with sound", ru: "Кино-видео со звуком" } },
   { id: "sora2", name: "Sora 2", cat: "video", task: "create-video", cost: 250, badge: "new", cov: "m2", accent: "#C07BFF", tagline: { en: "Hyper-real scenes up to 20s", ru: "Гиперреализм до 20 секунд" } },
-  { id: "nano2", name: "Nano Banana 2", cat: "image", task: "edit-photo", cost: 60, badge: "hot", cov: "m3", accent: "#34C7D6", tagline: { en: "Edit photos with a sentence", ru: "Фото-редактор одной фразой" } },
-  { id: "seed4", name: "Seedream 4", cat: "image", task: "create-image", cost: 35, badge: "new", cov: "m4", accent: "#FF7A45", tagline: { en: "Sharp images, fast", ru: "Четкие картинки, быстро" } },
-  { id: "kling", name: "Kling 2.1", cat: "video", task: "animate-photo", cost: 220, badge: null, cov: "m5", accent: "#3BD17A", tagline: { en: "Bring any photo to life", ru: "Оживи любое фото" } },
-  { id: "flux2", name: "Flux", cat: "image", task: "premium-image", cost: 30, badge: null, cov: "m6", accent: "#FF5BA6", tagline: { en: "Pro-grade detail & realism", ru: "Профи-детали и реализм" } },
+  { id: "nano2", name: "Nano Banana 2", cat: "image", task: "create-image", cost: 40, badge: "hot", cov: "m3", accent: "#34C7D6", tagline: { en: "Generate images from text", ru: "Генерация фото по описанию" } },
+  { id: "seed4", name: "Seedream 4", cat: "image", task: "seedream", cost: 35, badge: "new", cov: "m4", accent: "#FF7A45", tagline: { en: "Sharp images, fast", ru: "Четкие картинки, быстро" } },
+  { id: "kling", name: "Kling 2.1", cat: "video", task: "kling-i2v", cost: 220, badge: null, cov: "m5", accent: "#3BD17A", tagline: { en: "Bring any photo to life", ru: "Оживи любое фото" } },
+  { id: "flux2", name: "Flux", cat: "image", task: "fast-image", cost: 30, badge: null, cov: "m6", accent: "#FF5BA6", tagline: { en: "Pro-grade detail & realism", ru: "Профи-детали и реализм" } },
   { id: "hailuo", name: "Seedance", cat: "video", task: "create-video", cost: 180, badge: null, cov: "m7", accent: "#4F97F2", tagline: { en: "Smooth motion", ru: "Плавное движение" } },
-  { id: "recr3", name: "Z-Image", cat: "image", task: "create-image", cost: 25, badge: "hot", cov: "m8", accent: "#FFB02E", tagline: { en: "Fast images", ru: "Быстрые изображения" } },
+  { id: "recr3", name: "Z-Image", cat: "image", task: "z-image", cost: 25, badge: "hot", cov: "m8", accent: "#FFB02E", tagline: { en: "Fast images", ru: "Быстрые изображения" } },
 ];
 
 export const FEATURED = [
   { id: "veo3", name: "Veo 3", cov: "hero1", task: "create-video", cost: 250, accent: "#5B8CFF", kicker: { en: "Just dropped · Video", ru: "Новинка · Видео" }, title: { en: "Cinematic video, now with sound", ru: "Кино-видео — теперь со звуком" }, desc: { en: "Clips with synced audio, camera moves and dialogue.", ru: "Клипы со звуком, движением камеры и репликами." } },
   { id: "sora2", name: "Sora 2", cov: "hero2", task: "create-video", cost: 250, accent: "#C07BFF", kicker: { en: "Just dropped · Video", ru: "Новинка · Видео" }, title: { en: "Hyper-real scenes from one line", ru: "Гиперреализм из одной строки" }, desc: { en: "Physically accurate, film-grade motion.", ru: "Физически точное кино-движение." } },
-  { id: "nano2", name: "Nano Banana 2", cov: "hero3", task: "edit-photo", cost: 60, accent: "#34C7D6", kicker: { en: "Trending · Image", ru: "В тренде · Фото" }, title: { en: "Edit any photo with a sentence", ru: "Редактируй фото одной фразой" }, desc: { en: "Swap backgrounds, restyle and retouch.", ru: "Замена фона, рестайл и ретушь." } },
+  { id: "nano2", name: "Nano Banana 2", cov: "hero3", task: "create-image", cost: 40, accent: "#34C7D6", kicker: { en: "Trending · Image", ru: "В тренде · Фото" }, title: { en: "Create images with one sentence", ru: "Создавай изображения одной фразой" }, desc: { en: "Clean product-ready image generation.", ru: "Быстрая генерация готовых изображений." } },
 ];
 
 export const TRENDING = [
@@ -72,11 +77,11 @@ export const TRENDING = [
 ];
 
 export const MOTION = [
-  { id: "mc1", cov: "port1", pip: "m2" }, { id: "mc2", cov: "port2", pip: "m6" }, { id: "mc3", cov: "port3", pip: "m3" }, { id: "mc4", cov: "m4", pip: "m8" },
+  { id: "mc1", cov: "port1", pip: "m2" }, { id: "mc2", cov: "port2", pip: "m6" }, { id: "mc3", cov: "port3", pip: "m3" }, { id: "mc4", cov: "land1", pip: "m8" },
 ];
 
 export const ACTORS = [
-  { id: "susan", cov: "port1", name: "Susan", model: "Gemini 3.0 + Kling 2.6" }, { id: "mira", cov: "port2", name: "Mira", model: "Nano Banana + Veo 3.1" }, { id: "leo", cov: "port3", name: "Leo", model: "Seedream 4 + Kling 2.5" }, { id: "nova", cov: "m6", name: "Nova", model: "Flux 2 + Hailuo 02" },
+  { id: "susan", cov: "port1", name: "Susan", model: "Gemini 3.0 + Kling 2.6" }, { id: "mira", cov: "port2", name: "Mira", model: "Nano Banana + Veo 3.1" }, { id: "leo", cov: "port3", name: "Leo", model: "Seedream 4 + Kling 2.5" }, { id: "nova", cov: "sq4", name: "Nova", model: "Flux 2 + Hailuo 02" },
 ];
 
 export const TEMPLATES = [
@@ -97,7 +102,7 @@ export const RECENT = [
   { id: "r1", cov: "m3", type: "image", icon: "nano_image", name: { en: "Neon city street", ru: "Неоновый город" } },
   { id: "r2", cov: "m8", type: "image", icon: "g7x", name: { en: "Portrait · G7X", ru: "Портрет · G7X" } },
   { id: "r3", cov: "w1", type: "video", icon: "videocam", name: { en: "Ocean flythrough", ru: "Полет над океаном" } },
-  { id: "r4", cov: "m6", type: "image", icon: "nano_star", name: { en: "Product hero", ru: "Геро продукта" } },
+  { id: "r4", cov: "sq4", type: "image", icon: "nano_star", name: { en: "Product hero", ru: "Геро продукта" } },
 ];
 
 export const HISTORY = [

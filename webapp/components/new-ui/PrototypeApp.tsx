@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { api } from "@/lib/api";
+import { initTelegram } from "@/lib/telegram";
+import type { User } from "@/lib/types";
 import BottomNav from "./BottomNav";
 import TopBar from "./TopBar";
 import Hero from "./Hero";
@@ -11,23 +14,51 @@ import { Badge, FieldLabel, GlossTile, PillGroup, PlaceholderSlot, ScreenHead, T
 type Tab = "home" | "create" | "agents" | "history" | "balance" | "templates";
 type Sub = { screen: "image-form" | "video-form" | "chat" | "template-run"; task?: (typeof TASKS)[number]; agent?: (typeof AGENTS)[number]; tpl?: (typeof TEMPLATES)[number] } | null;
 
-function usePrototypeState(initialTab: Tab, initialSub?: Sub) {
+function taskHref(id: string) {
+  if (id === "templates") return "/templates";
+  if (id === "agents") return "/agents";
+  if (id === "history") return "/history";
+  if (id === "balance") return "/balance";
+  const task = TASKS.find((item) => item.id === id);
+  return task?.model ? `/generate?model=${task.model}` : "/create";
+}
+
+function usePrototypeState(initialTab: Tab, initialSub?: Sub, realRoutes = true) {
   const [lang, setLang] = useState("ru");
-  const [balance, setBalance] = useState(550);
+  const [balance, setBalance] = useState(realRoutes ? 0 : 550);
+  const [authError, setAuthError] = useState("");
   const [tab, setTab] = useState<Tab>(initialTab);
   const [sub, setSub] = useState<Sub>(initialSub || null);
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("hbx_lang");
+      const stored = localStorage.getItem("hubicx-locale") || localStorage.getItem("hbx_lang");
       if (stored) setLang(stored);
     } catch {}
   }, []);
-  useEffect(() => { try { localStorage.setItem("hbx_lang", lang); } catch {} }, [lang]);
-  return { lang, setLang, balance, setBalance, tab, setTab, sub, setSub };
+  useEffect(() => { try { localStorage.setItem("hbx_lang", lang); localStorage.setItem("hubicx-locale", lang); } catch {} }, [lang]);
+  useEffect(() => {
+    if (!realRoutes) return;
+    let cancelled = false;
+    async function loadUser() {
+      try {
+        await initTelegram();
+        const user = await api.me() as User;
+        if (cancelled) return;
+        setBalance(user.balance_credits || 0);
+        if (!localStorage.getItem("hubicx-locale")) setLang(user.language_code || "ru");
+        setAuthError("");
+      } catch (event) {
+        if (!cancelled) setAuthError(event instanceof Error ? event.message : "Откройте WebApp через Telegram-бота");
+      }
+    }
+    void loadUser();
+    return () => { cancelled = true; };
+  }, [realRoutes]);
+  return { lang, setLang, balance, setBalance, authError, tab, setTab, sub, setSub, realRoutes };
 }
 
 function Shell({ state, children, showNav = true }: { state: ReturnType<typeof usePrototypeState>; children: React.ReactNode; showNav?: boolean }) {
-  return <div className="phone"><div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, animation: "fade .42s cubic-bezier(.2,.7,.2,1)" }}>{children}</div>{showNav && !state.sub && <BottomNav tab={state.tab} lang={state.lang} go={(next) => { state.setTab(next as Tab); state.setSub(null); }} />}</div>;
+  return <div className="phone"><div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, animation: "fade .42s cubic-bezier(.2,.7,.2,1)" }}>{children}</div>{showNav && !state.sub && <BottomNav tab={state.tab} lang={state.lang} routeLinks={state.realRoutes} go={(next) => { state.setTab(next as Tab); state.setSub(null); }} />}</div>;
 }
 
 function MotionBanner({ lang, openTask }: { lang: string; openTask: (id: string) => void }) {
@@ -41,15 +72,26 @@ function ActorsSection({ lang, openTask }: { lang: string; openTask: (id: string
 function HomeScreen({ state }: { state: ReturnType<typeof usePrototypeState> }) {
   const { lang, balance } = state;
   const pct = Math.min(100, Math.max(6, Math.round(balance / 2000 * 100)));
-  const go = (tab: Tab) => { state.setTab(tab); state.setSub(null); };
+  const go = (tab: Tab) => {
+    if (state.realRoutes) {
+      location.assign(tab === "home" ? "/" : tab === "templates" ? "/templates" : `/${tab}`);
+      return;
+    }
+    state.setTab(tab);
+    state.setSub(null);
+  };
   const openTask = (id: string) => {
+    if (state.realRoutes) {
+      location.assign(taskHref(id));
+      return;
+    }
     const task = TASKS.find((item) => item.id === id);
     if (!task) return;
     if (task.cat === "image") state.setSub({ screen: "image-form", task });
     else if (task.cat === "video") state.setSub({ screen: "video-form", task });
     else state.setSub({ screen: "chat", agent: AGENTS[0] });
   };
-  const openTemplate = (id: string) => { const tpl = TEMPLATES.find((item) => item.id === id); if (tpl) state.setSub({ screen: "template-run", tpl }); };
+  const openTemplate = (id: string) => { const tpl = TEMPLATES.find((item) => item.id === id); if (!tpl) return; if (state.realRoutes) location.assign("/templates"); else state.setSub({ screen: "template-run", tpl }); };
   return <><TopBar balance={balance} lang={lang} onLang={state.setLang} onBalance={() => go("balance")} /><div className="scroll"><div className="page"><div className="greet"><GlossTile icon="image_flash" size={44} style={{ borderRadius: 14, flex: "0 0 auto" }} /><div style={{ flex: 1, minWidth: 0 }}><div className="hi">{tt(lang, "Welcome back", "С возвращением")}</div><div className="q">{tt(lang, "What will you create?", "Что создадим сегодня?")}</div></div></div><div className="kicker"><span className="dot" />{tt(lang, "Just dropped", "Свежие модели")}</div><Hero lang={lang} openTask={openTask} /><div className="section-h"><h3>{tt(lang, "Quick start", "Быстрый старт")}</h3></div><div className="rail">{QUICK.map((q, i) => <button key={q.id} className="card fu" style={{ flex: "0 0 auto", width: 94, padding: "13px 8px 11px", display: "flex", flexDirection: "column", alignItems: "center", gap: 8, animationDelay: i * 40 + "ms", scrollSnapAlign: "start" }} onClick={() => q.id === "templates" ? go("templates") : q.id === "agents" ? go("agents") : openTask(q.id)}><GlossTile icon={q.icon} size={46} style={{ borderRadius: 14 }} /><span style={{ fontSize: 11.5, fontWeight: 700, textAlign: "center", lineHeight: 1.15, color: "var(--text)" }}>{toText(q.label, lang)}</span></button>)}</div><div className="section-h"><h3>{tt(lang, "New models", "Новые модели")}</h3><button className="more" onClick={() => go("create")}>{tt(lang, "All", "Все")}</button></div><div className="rail">{MODELS.map((m, i) => <button key={m.id} className="model-card fu" style={{ animationDelay: i * 45 + "ms" }} onClick={() => openTask(m.task)}><img className="cov" src={COV(m.cov)} alt="" /><div className="scrim" /><div className="mtop"><span className="mcat">{m.cat === "video" ? tt(lang, "Video", "Видео") : tt(lang, "Image", "Фото")}</span><Badge kind={m.badge} lang={lang} /></div><div className="mbot"><div className="mn">{m.name}</div><div className="mt">{toText(m.tagline, lang)}</div><span className="mc"><Token size={13} />{m.cost}</span></div></button>)}</div><div style={{ marginTop: 22 }}><MotionBanner lang={lang} openTask={openTask} /></div><div className="section-h"><h3>{tt(lang, "Trending this week", "В тренде на неделе")}</h3><button className="more" onClick={() => go("templates")}>{tt(lang, "All", "Все")}</button></div><div className="rail">{TRENDING.map((tr, i) => <button key={tr.id} className="trend-card fu" style={{ animationDelay: i * 45 + "ms" }} onClick={() => openTemplate(tr.id)}><img className="cov" src={COV(tr.cov)} alt="" /><div className="scrim" /><div className="tbot"><div className="tn">{toText(tr.title, lang)}</div><div className="tmeta"><span>{tr.uses} {tt(lang, "runs", "исп.")}</span><span className="c"><Token size={13} />{tr.cost}</span></div></div></button>)}</div><ActorsSection lang={lang} openTask={openTask} /><button className="credit-strip" onClick={() => go("balance")}><GlossTile icon="coins" size={38} style={{ borderRadius: 12, flex: "0 0 auto" }} /><div style={{ flex: "0 0 auto" }}><div style={{ fontSize: 15.5, fontWeight: 800, lineHeight: 1 }}>{balance.toLocaleString()} <span className="muted" style={{ fontSize: 11.5, fontWeight: 700 }}>{tt(lang, "credits", "кр.")}</span></div></div><div className="cs-bars"><i style={{ width: pct + "%" }} /></div><span style={{ fontSize: 13, fontWeight: 800, color: "var(--blue)", display: "inline-flex", alignItems: "center", gap: 4, flex: "0 0 auto", whiteSpace: "nowrap" }}>{tt(lang, "Top up", "Пополнить")}<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span></button><div className="section-h"><h3>{tt(lang, "Recent generations", "Недавние работы")}</h3><button className="more" onClick={() => go("history")}>{tt(lang, "See all", "Все")}</button></div><div className="rail">{RECENT.map((r, i) => <button key={r.id} className="fu" style={{ flex: "0 0 138px", animationDelay: i * 40 + "ms", scrollSnapAlign: "start", textAlign: "left" }} onClick={() => go("history")}><div style={{ borderRadius: 18, overflow: "hidden", aspectRatio: "1/1", boxShadow: "var(--sh)", position: "relative" }}><img src={COV(r.cov)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /><div style={{ position: "absolute", left: 8, bottom: 8, width: 30, height: 30, borderRadius: 10, background: "rgba(0,0,0,.45)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,.14)" }}><img src={IC(r.icon)} style={{ width: 22, height: 22 }} alt="" /></div></div><div style={{ fontSize: 12.5, fontWeight: 700, marginTop: 7, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{toText(r.name, lang)}</div></button>)}</div><div className="section-h"><h3>{tt(lang, "Popular templates", "Популярные шаблоны")}</h3><button className="more" onClick={() => go("templates")}>{tt(lang, "See all", "Все")}</button></div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>{TEMPLATES.slice(0, 4).map((tp, i) => <button key={tp.id} className="card fu" style={{ padding: 12, display: "flex", alignItems: "center", gap: 11, textAlign: "left", animationDelay: i * 40 + "ms" }} onClick={() => openTemplate(tp.id)}><GlossTile icon={tp.icon} size={44} style={{ borderRadius: 13, flex: "0 0 auto" }} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 13, fontWeight: 800, lineHeight: 1.15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{toText(tp.title, lang)}</div><div className="muted" style={{ fontSize: 11.5, fontWeight: 700, marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}><Token size={13} />{tp.cost}</div></div></button>)}</div></div></div></>;
 }
 
@@ -58,8 +100,8 @@ function CreateScreen({ state, fixedCat }: { state: ReturnType<typeof usePrototy
   const [tab, setTab] = useState(fixedCat || "image");
   const tabs = [{ id: "image", l: tt(lang, "Image", "Фото") }, { id: "video", l: tt(lang, "Video", "Видео") }, { id: "text", l: tt(lang, "Text", "Текст") }, { id: "prompt", l: tt(lang, "Prompts", "Промпты") }];
   const list = TASKS.filter((x) => x.cat === (fixedCat || tab));
-  const openTask = (id: string) => { const task = TASKS.find((x) => x.id === id); if (!task) return; if (task.cat === "image") state.setSub({ screen: "image-form", task }); else if (task.cat === "video") state.setSub({ screen: "video-form", task }); else state.setSub({ screen: "chat", agent: AGENTS[0] }); };
-  return <><TopBar balance={state.balance} lang={lang} onLang={state.setLang} onBalance={() => state.setTab("balance")} /><div className="scroll"><div className="page"><ScreenHead lang={lang} title={tt(lang, "Create", "Создать")} sub={tt(lang, "Pick a task — we handle the technical side.", "Выберите задачу — техника на нас.")} />{!fixedCat && <div className="segmented" style={{ marginBottom: 18 }}>{tabs.map((x) => <button key={x.id} className={tab === x.id ? "on" : ""} onClick={() => setTab(x.id)}>{x.l}</button>)}</div>}<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{list.map((task, i) => <ActionCard key={task.id} task={task} lang={lang} index={i} onOpen={openTask} />)}</div><div className="card" style={{ marginTop: 16, padding: 16, background: "var(--surface-blue)", border: "1px solid #DCEBFF", display: "flex", gap: 12, alignItems: "center" }}><img src={IC("swirl")} style={{ width: 42, height: 42 }} alt="" /><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 14 }}>{tt(lang, "Not sure what to pick?", "Не знаете, что выбрать?")}</div><div className="t2" style={{ fontSize: 12.5, fontWeight: 500 }}>{tt(lang, "Let Prompt Helper guide you.", "Помощник промптов подскажет.")}</div></div><button className="btn btn-ghost btn-sm" onClick={() => openTask("prompt-helper")}>{tt(lang, "Open", "Открыть")}</button></div></div></div></>;
+  const openTask = (id: string) => { if (state.realRoutes) { location.assign(taskHref(id)); return; } const task = TASKS.find((x) => x.id === id); if (!task) return; if (task.cat === "image") state.setSub({ screen: "image-form", task }); else if (task.cat === "video") state.setSub({ screen: "video-form", task }); else state.setSub({ screen: "chat", agent: AGENTS[0] }); };
+  return <><TopBar balance={state.balance} lang={lang} onLang={state.setLang} onBalance={() => state.realRoutes ? location.assign("/balance") : state.setTab("balance")} /><div className="scroll"><div className="page"><ScreenHead lang={lang} title={tt(lang, "Create", "Создать")} sub={tt(lang, "Pick a task — we handle the technical side.", "Выберите задачу — техника на нас.")} />{!fixedCat && <div className="segmented" style={{ marginBottom: 18 }}>{tabs.map((x) => <button key={x.id} className={tab === x.id ? "on" : ""} onClick={() => setTab(x.id)}>{x.l}</button>)}</div>}<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>{list.map((task, i) => <ActionCard key={task.id} task={task} lang={lang} index={i} onOpen={openTask} />)}</div><div className="card" style={{ marginTop: 16, padding: 16, background: "var(--surface-blue)", border: "1px solid #DCEBFF", display: "flex", gap: 12, alignItems: "center" }}><img src={IC("swirl")} style={{ width: 42, height: 42 }} alt="" /><div style={{ flex: 1 }}><div style={{ fontWeight: 800, fontSize: 14 }}>{tt(lang, "Not sure what to pick?", "Не знаете, что выбрать?")}</div><div className="t2" style={{ fontSize: 12.5, fontWeight: 500 }}>{tt(lang, "Let Prompt Helper guide you.", "Помощник промптов подскажет.")}</div></div><button className="btn btn-ghost btn-sm" onClick={() => openTask("prompt-helper")}>{tt(lang, "Open", "Открыть")}</button></div></div></div></>;
 }
 
 function phForRatio(ratio: string) { if (ratio === "16:9" || ratio === "3:2") return ["land1", "land2", "land3"]; if (ratio === "9:16" || ratio === "4:5") return ["port1", "port2", "port3"]; return ["sq1", "sq2", "sq3", "sq4"]; }
@@ -155,8 +197,8 @@ function BalanceScreen({ state }: { state: ReturnType<typeof usePrototypeState> 
   return <><TopBar balance={state.balance} lang={lang} onLang={state.setLang} onBalance={() => undefined} /><div className="scroll"><div className="page"><ScreenHead lang={lang} title={tt(lang, "Balance", "Баланс")} /><div className="card" style={{ background: "var(--grad)", border: "none", padding: "22px 22px 20px", color: "#fff", position: "relative", overflow: "hidden", boxShadow: "var(--sh-blue)" }}><img src={IC("coins")} style={{ position: "absolute", right: -10, top: -6, width: 108, height: 108, opacity: .9, filter: "drop-shadow(0 10px 18px rgba(0,40,90,.3))" }} alt="" /><div style={{ fontSize: 13, fontWeight: 700, opacity: .9 }}>{tt(lang, "Current balance", "Текущий баланс")}</div><div style={{ fontSize: 42, fontWeight: 800, letterSpacing: "-.03em", lineHeight: 1.05, margin: "4px 0 2px" }}>{state.balance.toLocaleString()}</div><div style={{ fontSize: 13.5, fontWeight: 700, opacity: .92 }}>{tt(lang, "credits available", "доступно кредитов")}</div></div><div className="section-h"><h3>{tt(lang, "Top up credits", "Пополнить баланс")}</h3></div><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>{PACKAGES.map((p, i) => <button key={p.id} className="card fu" style={{ padding: "16px 14px", textAlign: "left", position: "relative", animationDelay: i * 45 + "ms", border: p.popular || p.best ? "1.5px solid var(--blue)" : "1px solid var(--border)" }}><img src={IC("coins")} style={{ width: 40, height: 40, marginBottom: 8 }} alt="" /><div style={{ fontSize: 22, fontWeight: 800, letterSpacing: "-.02em" }}>{p.credits.toLocaleString()}</div><div className="muted" style={{ fontSize: 12, fontWeight: 700, marginTop: 2 }}>{p.bonus ? `+${p.bonus} ${tt(lang, "bonus", "бонус")}` : tt(lang, "credits", "кредитов")}</div><div style={{ marginTop: 10, fontSize: 15, fontWeight: 800, color: "var(--blue)" }}>{p.price}</div></button>)}</div><div className="section-h"><h3>{tt(lang, "Transactions", "Транзакции")}</h3></div><div className="card" style={{ padding: "4px 0" }}>{TX.map((x, i) => <div key={x.id} className="row" style={{ padding: "13px 16px", gap: 12, borderTop: i ? "1px solid var(--border)" : "none" }}><img src={IC(x.icon)} style={{ width: 34, height: 34, flex: "0 0 auto" }} alt="" /><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{toText(x.label, lang)}</div><div className="muted" style={{ fontSize: 11.5, fontWeight: 700 }}>{toText(x.date, lang)}</div></div><div style={{ fontSize: 15, fontWeight: 800, color: x.amount.startsWith("+") ? "var(--success)" : "var(--text)" }}>{x.amount}</div></div>)}</div><div className="section-h"><h3>{tt(lang, "Documents", "Документы")}</h3></div><div className="card" style={{ padding: "4px 0" }}>{DOCS.map((d, i) => <button key={d.id} className="row" style={{ padding: "14px 16px", gap: 12, width: "100%", textAlign: "left", borderTop: i ? "1px solid var(--border)" : "none" }}><img src={IC(d.icon)} style={{ width: 30, height: 30, flex: "0 0 auto" }} alt="" /><span style={{ flex: 1, fontSize: 14.5, fontWeight: 700 }}>{toText(d.title, lang)}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6" /></svg></button>)}</div></div></div></>;
 }
 
-export default function PrototypeApp({ initialTab = "home", initialSub, fixedCreateCat }: { initialTab?: Tab; initialSub?: Sub; fixedCreateCat?: string }) {
-  const state = usePrototypeState(initialTab, initialSub);
+export default function PrototypeApp({ initialTab = "home", initialSub, fixedCreateCat, realRoutes = true }: { initialTab?: Tab; initialSub?: Sub; fixedCreateCat?: string; realRoutes?: boolean }) {
+  const state = usePrototypeState(initialTab, initialSub, realRoutes);
   const content = useMemo(() => {
     if (state.sub?.screen === "image-form" && state.sub.task) return <ImageForm state={state} task={state.sub.task} />;
     if (state.sub?.screen === "video-form" && state.sub.task) return <VideoForm state={state} task={state.sub.task} />;
@@ -172,10 +214,10 @@ export default function PrototypeApp({ initialTab = "home", initialSub, fixedCre
   return <Shell state={state}>{content}</Shell>;
 }
 
-export function PrototypeRoute({ route, code }: { route?: string; code?: string }) {
+export function PrototypeRoute({ route, code, realRoutes = true }: { route?: string; code?: string; realRoutes?: boolean }) {
   const initialSub = route === "generate" ? { screen: code?.includes("video") || code?.includes("seedance") || code?.includes("kling") ? "video-form" : "image-form", task: TASKS.find((task) => task.model === code) || TASKS[0] } as Sub : route === "template" ? { screen: "template-run", tpl: TEMPLATES.find((tpl) => tpl.code === code) || TEMPLATES[0] } as Sub : route === "agent" ? { screen: "chat", agent: AGENTS.find((agent) => agent.id === code) || AGENTS[0] } as Sub : undefined;
   const createRoute = route === "create-image" || route === "create-video" || route === "create-text" || route === "create-prompts";
   const fixedCreateCat = route === "create-image" ? "image" : route === "create-video" ? "video" : route === "create-text" ? "text" : route === "create-prompts" ? "prompt" : undefined;
   const initialTab = route === "create" || createRoute ? "create" : route === "agents" ? "agents" : route === "history" ? "history" : route === "balance" ? "balance" : route === "templates" ? "templates" : "home";
-  return <PrototypeApp initialTab={initialTab as Tab} initialSub={initialSub} fixedCreateCat={fixedCreateCat} />;
+  return <PrototypeApp initialTab={initialTab as Tab} initialSub={realRoutes ? undefined : initialSub} fixedCreateCat={fixedCreateCat} realRoutes={realRoutes} />;
 }

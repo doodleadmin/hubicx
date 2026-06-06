@@ -1,5 +1,5 @@
-import { PrototypeRoute } from "@/components/new-ui/PrototypeApp";
+import TemplatesSoon from "@/components/new-ui/TemplatesSoon";
 
 export default function TemplatesPage() {
-  return <PrototypeRoute route="templates" />;
+  return <TemplatesSoon />;
 }
