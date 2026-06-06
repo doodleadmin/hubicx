@@ -1,7 +1,5 @@
-import Layout from "@/components/Layout";
-import ModelForm from "@/components/ModelForm";
+import GenerationForm from "@/components/new-ui/GenerationForm";
 
-export default async function GeneratePage({ searchParams }: { searchParams: Promise<{ model?: string }> }) {
-  const params = await searchParams;
-  return <Layout>{params.model ? <ModelForm modelCode={params.model} /> : <p>Модель не выбрана</p>}</Layout>;
+export default function GeneratePage({ searchParams }: { searchParams?: { model?: string } }) {
+  return <GenerationForm modelCode={searchParams?.model || "nano_banana_2"} />;
 }

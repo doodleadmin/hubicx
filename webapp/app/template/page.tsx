@@ -1,7 +1,5 @@
-import Layout from "@/components/Layout";
-import TemplateForm from "@/components/TemplateForm";
+import { PrototypeRoute } from "@/components/new-ui/PrototypeApp";
 
-export default async function TemplatePage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
-  const params = await searchParams;
-  return <Layout>{params.code ? <TemplateForm code={params.code} /> : <p>Шаблон не выбран</p>}</Layout>;
+export default function TemplatePage({ searchParams }: { searchParams?: { code?: string } }) {
+  return <PrototypeRoute route="template" code={searchParams?.code} />;
 }

@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./hubicx-prototype.css";
 import type { Metadata } from "next";
 import Script from "next/script";
 
