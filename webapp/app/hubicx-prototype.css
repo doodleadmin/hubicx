@@ -39,7 +39,7 @@
 }
 
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
+html,body{margin:0;padding:0;min-height:100%;background:var(--bg)}
 body{
   font-family:'Manrope',system-ui,-apple-system,sans-serif;
   color:var(--text);
@@ -57,18 +57,18 @@ img{display:block}
 /* ---- App shell : phone-width column ---- */
 #root{min-height:100dvh;display:flex;justify-content:center;align-items:stretch}
 .phone{
-  width:100%;max-width:var(--col-w);min-height:100dvh;
+  width:100%;max-width:var(--col-w);min-height:100dvh;height:100dvh;
   background:var(--bg);position:relative;display:flex;flex-direction:column;
   box-shadow:0 0 0 1px rgba(170,200,235,.5), 0 30px 80px rgba(20,70,140,.18);
   overflow:hidden;padding-top:var(--top-inset);
 }
-@media(min-width:480px){ .phone{ min-height:920px;height:920px;margin:24px 0;border-radius:38px } }
+@media(min-width:480px){ .phone{ height:min(920px, calc(100dvh - 48px));min-height:min(920px, calc(100dvh - 48px));margin:24px 0;border-radius:38px } }
 
 /* scroll area */
 /* hide scrollbars everywhere — touch/swipe only */
 .scroll,.rail,.hero-rail,.chiprow,.segmented,textarea{scrollbar-width:none;-ms-overflow-style:none}
 .scroll::-webkit-scrollbar,.rail::-webkit-scrollbar,.hero-rail::-webkit-scrollbar,.chiprow::-webkit-scrollbar,.segmented::-webkit-scrollbar,textarea::-webkit-scrollbar{display:none;width:0;height:0;background:transparent}
-.scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative}
+.scroll{flex:1;height:100%;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
 .page{padding:0 18px calc(108px + env(safe-area-inset-bottom)) 18px;animation:fade .42s cubic-bezier(.2,.7,.2,1)}
 @keyframes fade{from{transform:translateY(10px)}to{transform:none}}
 
@@ -127,7 +127,7 @@ img{display:block}
 .segmented button.on{background:var(--surface);color:var(--blue);box-shadow:var(--sh-sm)}
 
 /* ---- Bottom nav (raised center) ---- */
-.tabbar-wrap{position:absolute;left:0;right:0;bottom:0;padding:0 14px calc(14px + env(safe-area-inset-bottom));pointer-events:none}
+.tabbar-wrap{position:fixed;left:50%;right:auto;bottom:max(12px, env(safe-area-inset-bottom));transform:translateX(-50%);width:min(430px, calc(100vw - 24px));padding:0;pointer-events:none;z-index:100}
 .tabbar{pointer-events:auto;position:relative;height:68px;background:var(--tabbar-bg);backdrop-filter:blur(18px);
   border:1px solid var(--border);border-radius:26px;box-shadow:0 -2px 14px rgba(20,70,140,.06),0 16px 30px rgba(20,70,140,.16);
   display:flex;align-items:center;justify-content:space-around;padding:0 8px}

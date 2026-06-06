@@ -44,10 +44,17 @@ type TelegramWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
 
 let telegramUiInitialized = false;
 
+function currentTelegramColors() {
+  const theme = typeof document === "undefined" ? "signal" : document.documentElement.dataset.theme;
+  return theme === "onyx"
+    ? { header: "#0B1220", background: "#0B1220", bottom: "#0B1220" }
+    : { header: "#FFFFFF", background: "#F7FAFE", bottom: "#FFFFFF" };
+}
+
 function initializeTelegramUi(webApp: TelegramWebApp) {
   try {
-    webApp.ready();
-    webApp.expand();
+    webApp.ready?.();
+    webApp.expand?.();
   } catch {
     // Outside real Telegram WebApp these calls can fail; auth handling below will show a clear error.
   }
@@ -56,15 +63,20 @@ function initializeTelegramUi(webApp: TelegramWebApp) {
   telegramUiInitialized = true;
 
   try {
-    webApp.setHeaderColor?.("#FFFFFF");
-    webApp.setBackgroundColor?.("#F7FAFE");
-    webApp.setBottomBarColor?.("#FFFFFF");
+    const colors = currentTelegramColors();
+    webApp.setHeaderColor?.(colors.header);
+    webApp.setBackgroundColor?.(colors.background);
+    webApp.setBottomBarColor?.(colors.bottom);
   } catch {
     // Older Telegram clients can ignore theme API calls.
   }
 
   try {
-    webApp.onEvent?.("fullscreenChanged", () => undefined);
+    webApp.onEvent?.("fullscreenChanged", () => {
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") {
+        console.info("Telegram fullscreen changed", webApp.isFullscreen);
+      }
+    });
     webApp.onEvent?.("fullscreenFailed", (event) => {
       if (event?.error !== "UNSUPPORTED") {
         console.warn("Telegram fullscreen failed", event?.error);
@@ -81,6 +93,14 @@ function initializeTelegramUi(webApp: TelegramWebApp) {
   } catch (error) {
     console.warn("fullscreen request failed", error);
   }
+}
+
+export async function initTelegramWebApp(timeoutMs = 3000): Promise<TelegramWebApp | null> {
+  if (typeof window === "undefined") return null;
+  const webApp = await waitForTelegramWebApp(timeoutMs);
+  if (!webApp) return null;
+  initializeTelegramUi(webApp);
+  return webApp;
 }
 
 export async function waitForTelegramWebApp(timeoutMs = 3000): Promise<TelegramWebApp | null> {
