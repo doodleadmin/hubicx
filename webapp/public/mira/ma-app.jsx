@@ -24,13 +24,16 @@ function App(){
 
   React.useEffect(()=>{ localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
-  React.useEffect(()=>{
+  const refreshBalance = React.useCallback(()=>{
     let alive = true;
-    if(!window.HubicxApi) return;
+    if(!window.HubicxApi) return ()=>{};
     window.HubicxApi.me()
-      .then(me=>{ if(!alive) return; setTokens(Number(me.balance_credits || 0)); setAuthHint(''); })
+      .then(me=>{ if(!alive) return; const next=Number(me.balance_credits || 0); setTokens(next); localStorage.setItem(TOK_KEY, String(next)); setAuthHint(''); })
       .catch(err=>{ if(!alive) return; setTokens(0); setAuthHint(err && err.code==='unauthorized' ? window.HubicxApi.authHint() : 'Баланс временно недоступен'); });
     return ()=>{ alive=false; };
+  }, []);
+  React.useEffect(()=>{
+    return refreshBalance();
   }, []);
 
   const applyMode = (m) => {
@@ -55,8 +58,15 @@ function App(){
       return;
     }
     window.HubicxApi.chat({prompt: promptPrefix ? `${promptPrefix}\n\nЗапрос пользователя: ${text}` : text})
-      .then(res=>setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c)))
-      .catch(err=>setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:(err && err.message) || 'Не удалось получить ответ'}]}:c)));
+      .then(res=>{
+        setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, lastTaskId:res.task && res.task.id, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c));
+        refreshBalance();
+      })
+      .catch(err=>{
+        const msg = (err && err.message) || 'Не удалось получить ответ';
+        setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:msg}]}:c));
+        refreshBalance();
+      });
   };
   const startChat = (text, promptPrefix='') => {
     const id = 'c'+Date.now();
@@ -66,9 +76,16 @@ function App(){
     botReply(id, text, promptPrefix);
   };
   const sendInChat = (text) => {
-    setChats(cs=>cs.map(c=>c.id===activeChat?{...c, msgs:[...c.msgs,{role:'user',text}]}:c));
+    setChats(cs=>cs.map(c=>c.id===activeChat?{...c, draft:'', msgs:[...c.msgs,{role:'user',text}]}:c));
     const chat = chats.find(c=>c.id===activeChat);
     botReply(activeChat, text, chat && chat.promptPrefix);
+  };
+  const openDraftChat = (text='', promptPrefix='') => {
+    const draft = (text || '').trim();
+    const id = 'c'+Date.now();
+    const title = draft ? (draft.length>34? draft.slice(0,34)+'…' : draft) : 'Новый чат';
+    setChats(cs=>[{id, title, promptPrefix, draft, msgs:[], typing:false}, ...cs]);
+    setActiveChat(id);
   };
   const deleteChat = (id) => setChats(cs=>cs.filter(c=>c.id!==id));
   const curChat = chats.find(c=>c.id===activeChat);
@@ -81,7 +98,7 @@ function App(){
   } else if(tab==='agent'){
     body = <AgentScreen tokens={tokens} authHint={authHint} onBuyPro={()=>setTopup(true)}
       onCreatePhoto={()=>openCreate('photo')} onCreateVideo={()=>openCreate('video')} onTopup={()=>setTopup(true)}
-      onStartChat={startChat} chats={chats} onOpenChat={(id)=>setActiveChat(id)} onDeleteChat={deleteChat}/>;
+      onStartChat={startChat} onAddToChat={openDraftChat} chats={chats} onOpenChat={(id)=>setActiveChat(id)} onDeleteChat={deleteChat}/>;
   } else if(tab==='gen'){
     body = <GenerationScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)}
       onCreatePhoto={()=>openCreate('photo')} onCreateVideo={()=>openCreate('video')}

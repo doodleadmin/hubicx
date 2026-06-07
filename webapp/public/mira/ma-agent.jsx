@@ -1,13 +1,13 @@
 /* ============ Agent (home) screen ============ */
 const HUBICX_AGENTS = [
-  {name:'Prompt Master', description:'Улучшает промпты', prompt:'Ты Prompt Master Hubicx. Улучши запрос пользователя для генеративной AI-модели.', quick:['Улучши промпт','Сделай 3 варианта']},
-  {name:'SMM Assistant', description:'Идеи и посты', prompt:'Ты SMM Assistant Hubicx. Помогай с контент-планом, постами и рекламными текстами.', quick:['Пост для Telegram','Идеи Reels']},
-  {name:'Design Brief Builder', description:'Бриф для дизайна', prompt:'Ты Design Brief Builder Hubicx. Превращай идею в понятный дизайн-бриф.', quick:['Собери бриф','Moodboard prompt']},
-  {name:'Video Script Writer', description:'Сценарии видео', prompt:'Ты Video Script Writer Hubicx. Пиши короткие сценарии и shot list для видео.', quick:['Сценарий 15 сек','Shot list']},
-  {name:'Telegram Bot Copywriter', description:'Тексты для ботов', prompt:'Ты Telegram Bot Copywriter Hubicx. Пиши тексты кнопок, онбординг и сообщения для Telegram-ботов.', quick:['Онбординг','Текст кнопок']},
+  {name:'Prompt Master', description:'Улучшает промпты для фото, видео и текста', prompt:'Ты Prompt Master Hubicx. Улучши запрос пользователя для генеративной AI-модели. Отвечай кратко, структурно и сразу давай готовый промпт.', quick:['Улучши промпт','Сделай 3 варианта','Добавь cinematic стиль']},
+  {name:'SMM Assistant', description:'Идеи, посты и контент-планы', prompt:'Ты SMM Assistant Hubicx. Помогай с контент-планом, постами, рекламными текстами и идеями для соцсетей. Пиши практично и в тоне бренда.', quick:['Пост для Telegram','Идеи Reels','Контент-план на неделю']},
+  {name:'Design Brief Builder', description:'Собирает понятный дизайн-бриф', prompt:'Ты Design Brief Builder Hubicx. Превращай идею в понятный дизайн-бриф: цель, аудитория, стиль, референсы, deliverables и критерии результата.', quick:['Собери бриф','Moodboard prompt','Опиши стиль бренда']},
+  {name:'Video Script Writer', description:'Сценарии и shot list для видео', prompt:'Ты Video Script Writer Hubicx. Пиши короткие сценарии, hooks, структуру ролика и shot list для генерации видео.', quick:['Сценарий 15 сек','Shot list','Hook для рекламы']},
+  {name:'Telegram Bot Copywriter', description:'Тексты для Telegram-ботов', prompt:'Ты Telegram Bot Copywriter Hubicx. Пиши тексты кнопок, онбординг, сообщения, команды и microcopy для Telegram-ботов.', quick:['Онбординг','Текст кнопок','Сообщение после оплаты']},
 ];
 
-function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo, onTopup, onStartChat, chats, onOpenChat, onDeleteChat }){
+function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo, onTopup, onStartChat, onAddToChat, chats, onOpenChat, onDeleteChat }){
   const { Ic, TokenBadge, HERO } = window.MiraCore;
   const [val, setVal] = useState("");
   const [agent, setAgent] = useState(HUBICX_AGENTS[0]);
@@ -37,7 +37,7 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
       <div className="pill" style={{flex:1}} onClick={onCreateVideo}><Ic n="video" s={19}/> Создать видео</div>
     </div>
     <div style={{display:'flex',justifyContent:'center',marginTop:10}}>
-      <div className="pill"><Ic n="chat" s={18}/> Добавить в чат</div>
+      <div className="pill" onClick={()=>onAddToChat(val.trim(), agent.prompt)}><Ic n="chat" s={18}/> Добавить в чат</div>
     </div>
 
     <div className="rail" style={{marginTop:14}}>
@@ -47,6 +47,10 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
       </div>)}
     </div>
     <div className="muted" style={{fontSize:12,marginTop:8,textAlign:'center'}}>{agent.description}</div>
+    <div className="rail" style={{marginTop:10}}>
+      {agent.quick.map(q=><div key={q} className="pill" onClick={()=>setVal(q)}
+        style={{scrollSnapAlign:'start',whiteSpace:'nowrap',fontSize:13}}>{q}</div>)}
+    </div>
 
     {chats && chats.length>0 && <>
       <div className="sec-h"><h2>Мои чаты</h2></div>

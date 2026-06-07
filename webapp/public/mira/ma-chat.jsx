@@ -8,8 +8,9 @@ const BOT_LINES = [
 
 function ChatScreen({ chat, onBack, onSend }){
   const { Ic } = window.MiraCore;
-  const [val, setVal] = useState("");
+  const [val, setVal] = useState(chat.draft || "");
   const endRef = useRef(null);
+  useEffect(()=>{ setVal(chat.draft || ""); }, [chat.id]);
   useEffect(()=>{ if(endRef.current) endRef.current.scrollTop = endRef.current.scrollHeight; }, [chat.msgs.length]);
 
   const send = () => {
@@ -26,7 +27,7 @@ function ChatScreen({ chat, onBack, onSend }){
         <div className="chat-av"><img src="assets/logo.jpg" alt=""/></div>
         <div>
           <div style={{fontWeight:700,fontSize:16}}>Агент Hubicx</div>
-          <div className="muted" style={{fontSize:12}}>онлайн</div>
+          <div className="muted" style={{fontSize:12}}>{chat.typing ? 'печатает…' : 'онлайн'}</div>
         </div>
       </div>
     </div>
