@@ -12,7 +12,7 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
   const [val, setVal] = useState("");
   const [agent, setAgent] = useState(HUBICX_AGENTS[0]);
   const send = ()=>{ const t=val.trim(); if(!t) return; setVal(""); onStartChat(t, agent.prompt); };
-  return <div className="screen scr-enter">
+  return <div className="screen agent-screen scr-enter">
     <div className="topbar">
       <div className="tb-av" style={{padding:0,overflow:'hidden'}}>
         <img src="assets/logo.jpg" alt="Hubicx" style={{width:'100%',height:'100%',objectFit:'cover'}}/>

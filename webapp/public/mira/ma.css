@@ -27,6 +27,7 @@
   --hbx-content-safe-left:0px;
   --hbx-content-safe-right:0px;
   --mira-top-offset:100px;
+  --mira-agent-lift:50px;
   --app-height:100dvh;
   --glass:rgba(22,30,44,.55);
   --glass-line:rgba(255,255,255,.10);
@@ -87,6 +88,8 @@ body{
   padding-top:var(--mira-top-offset)!important;
 }
 .scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-top:var(--mira-top-offset);padding-bottom:calc(110px + var(--hbx-safe-bottom));-webkit-overflow-scrolling:touch}
+.agent-screen{padding-top:calc(var(--mira-top-offset) - var(--mira-agent-lift))!important}
+.agent-screen .scroll,.agent-screen .main-scroll,.agent-screen .page-scroll{padding-top:calc(var(--mira-top-offset) - var(--mira-agent-lift))}
 
 /* hide scrollbars on horizontal rails */
 .rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
