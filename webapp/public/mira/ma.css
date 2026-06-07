@@ -13,23 +13,36 @@
   --link:#3e92f0;
   --purple:#7b5cff;
   --nav-h:96px;
-  --maxw:392px;
+  --maxw:430px;
+  --safe-top:env(safe-area-inset-top, 0px);
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+  --safe-left:env(safe-area-inset-left, 0px);
+  --safe-right:env(safe-area-inset-right, 0px);
+  --app-height:100dvh;
   --glass:rgba(22,30,44,.55);
   --glass-line:rgba(255,255,255,.10);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-html,body{height:100%}
+html.telegram-ready{--app-height:var(--tg-viewport-height, 100dvh)}
+html,body{
+  width:100%;min-width:100%;height:100%;min-height:100%;
+  margin:0;padding:0;background:#05070D;overflow:hidden;
+}
 body{
-  background:#000;
+  background:#05070D;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   color:var(--tx);
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
-#root{min-height:100%;display:flex;justify-content:center}
+#root{
+  width:100vw;min-width:100vw;height:var(--app-height);min-height:var(--app-height);
+  margin:0;padding:0;overflow:hidden;background:#05070D;
+}
 .phone{
-  position:relative;width:100%;max-width:var(--maxw);min-height:100vh;
-  background:#05070b;overflow:hidden;
+  position:relative;width:100vw;max-width:none;min-width:100vw;
+  height:var(--app-height);min-height:var(--app-height);
+  margin:0;border-radius:0;background:#05070b;overflow:hidden;
 }
 
 /* ---- animated blue blob background ---- */
@@ -56,8 +69,13 @@ body{
 }
 @media (prefers-reduced-motion: reduce){.blob{animation:none!important}}
 
-.screen{position:relative;z-index:1;padding:0 16px calc(var(--nav-h) + 16px);min-height:100vh}
-.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen{
+  position:relative;z-index:1;width:100vw;max-width:none;min-width:100vw;
+  height:var(--app-height);min-height:var(--app-height);
+  margin:0;border-radius:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:var(--safe-top) max(16px, var(--safe-left)) calc(var(--nav-h) + 16px + var(--safe-bottom)) max(16px, var(--safe-right));
+}
+.scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-bottom:calc(110px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
 
 /* hide scrollbars on horizontal rails */
 .rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
@@ -105,7 +123,7 @@ body{
 .thumb .shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.62));z-index:1}
 
 /* ---------- bottom nav (glass dock) ---------- */
-.nav{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;width:calc(100% - 28px);max-width:calc(var(--maxw) - 28px);
+.nav,.dock,.bottom-dock,.nav-dock{position:fixed;left:max(16px, var(--safe-left));right:max(16px, var(--safe-right));transform:none;bottom:calc(16px + var(--safe-bottom));width:auto;max-width:none;
   z-index:30;display:flex;align-items:center;justify-content:space-between;gap:6px;
   padding:9px;border-radius:26px;
   background:rgba(20,28,42,.55);border:1px solid var(--glass-line);
@@ -166,7 +184,7 @@ body{
   .sheet-ov{animation:ovIn .2s ease}
 }
 @keyframes ovIn{from{opacity:0}to{opacity:1}}
-.sheet{width:100%;max-width:var(--maxw);padding:0 14px calc(var(--nav-h) + 10px);transform:none}
+.sheet,.bottom-sheet{width:100%;max-width:none;padding:0 max(14px, var(--safe-left)) calc(96px + var(--safe-bottom)) max(14px, var(--safe-right));transform:none;bottom:calc(96px + var(--safe-bottom))}
 .sheet-card{background:rgba(22,30,44,.86);border:1px solid var(--glass-line);border-radius:22px;
   backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);padding:18px 18px 8px;
   box-shadow:0 20px 50px rgba(0,0,0,.6)}
@@ -194,8 +212,8 @@ body{
 
 /* ---------- agent chat ---------- */
 @keyframes chatIn{from{opacity:0}to{opacity:1}}
-.chat-wrap{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);
-  width:100%;max-width:var(--maxw);height:100dvh;z-index:45;display:flex;flex-direction:column;
+.chat-wrap,.chat-overlay{position:fixed;inset:0;left:0;right:0;top:0;bottom:0;transform:none;
+  width:100vw;max-width:none;height:var(--app-height);min-height:var(--app-height);z-index:2000;display:flex;flex-direction:column;
   background:rgba(8,12,20,.82);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);
   opacity:1}
 @media (prefers-reduced-motion: no-preference){
@@ -223,7 +241,7 @@ body{
 .bubble.typing span:nth-child(2){animation-delay:.2s}
 .bubble.typing span:nth-child(3){animation-delay:.4s}
 @keyframes tdot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
-.chat-input{padding:10px 14px calc(env(safe-area-inset-bottom) + 14px);flex:0 0 auto}
+.chat-input{padding:10px max(14px, var(--safe-left)) calc(var(--safe-bottom) + 14px) max(14px, var(--safe-right));flex:0 0 auto}
 
 /* saved chat plates */
 .chat-plate{display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;
