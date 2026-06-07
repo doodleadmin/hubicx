@@ -3,7 +3,7 @@ const { useState: uS } = React;
 const TOK_KEY='mira_tokens_v1', TAB_KEY='mira_tab_v1', CHATS_KEY='hbx_chats_v1';
 
 function App(){
-  const { BottomNav, Star } = window.MiraCore;
+  const { BottomNav, Star, defaultModelForMode, isModelAllowedForMode, modelsByType, modelTypeForMode } = window.MiraCore;
   const [tab, setTab] = uS(()=>localStorage.getItem(TAB_KEY)||'agent');
   const [tokens, setTokens] = uS(()=>{ const v=localStorage.getItem(TOK_KEY); return v==null?0:+v; });
   const [authHint, setAuthHint] = uS('');
@@ -18,7 +18,7 @@ function App(){
   const [createOpen, setCreateOpen] = uS(false);
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
-  const [model, setModel] = uS(()=>window.MiraCore.MODELS[0]);
+  const [model, setModel] = uS(()=>defaultModelForMode('photo'));
   const [aspect, setAspect] = uS(()=>window.MiraCore.ASPECTS[1]);
   const [picker, setPicker] = uS(null); // 'model' | 'aspect' | null
 
@@ -33,7 +33,14 @@ function App(){
     return ()=>{ alive=false; };
   }, []);
 
-  const openCreate = (m, p=null) => { setMode(m); setPreset(p); setCreateOpen(true); };
+  const applyMode = (m) => {
+    setMode(m);
+    setModel(cur=>isModelAllowedForMode(cur, m) ? cur : defaultModelForMode(m));
+  };
+  React.useEffect(()=>{
+    if(!isModelAllowedForMode(model, mode)) setModel(defaultModelForMode(mode));
+  }, [mode, model && model.code]);
+  const openCreate = (m, p=null) => { applyMode(m); setPreset(p); setCreateOpen(true); };
   const goTab = (t)=>{ setCreateOpen(false); setActiveChat(null); setTab(t); };
 
   // ---- chat logic ----
@@ -68,7 +75,7 @@ function App(){
 
   let body;
   if(createOpen){
-    body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset}
+    body = <CreateScreen tokens={tokens} mode={mode} setMode={applyMode} preset={preset}
       model={model} aspect={aspect}
       onPickModel={()=>setPicker('model')} onPickAspect={()=>setPicker('aspect')}/>;
   } else if(tab==='agent'){
@@ -89,7 +96,7 @@ function App(){
     {curChat && <ChatScreen chat={curChat} onBack={()=>setActiveChat(null)} onSend={sendInChat}/>}
     {!curChat && <BottomNav tab={createOpen?'gen':tab} onTab={goTab}/>}
     {topup && <Topup tokens={tokens} onClose={()=>setTopup(false)}/>}
-    {picker==='model' && <window.PickerSheet title="Модель" options={window.MiraCore.MODELS}
+    {picker==='model' && <window.PickerSheet title="Модель" options={modelsByType(modelTypeForMode(mode))}
       current={model} onSelect={setModel} onClose={()=>setPicker(null)}/>}
     {picker==='aspect' && <window.PickerSheet title="Соотношение сторон" options={window.MiraCore.ASPECTS}
       current={aspect} onSelect={setAspect} onClose={()=>setPicker(null)}/>}

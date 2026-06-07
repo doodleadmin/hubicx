@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen (sub-screen) ============ */
 function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickModel, onPickAspect }){
-  const { Ic, Star, CREATE_TPL } = window.MiraCore;
+  const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.MiraCore;
   const [tab, setTab] = useState('tpl');          // tpl | prompt
   const [sel, setSel] = useState(preset ? preset.t : null);
   const [prompt, setPrompt] = useState("");
@@ -18,9 +18,12 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   const [audio, setAudio] = useState(true);
 
   const ready = (tab==='tpl' && sel) || (tab==='prompt' && prompt.trim());
+  const modelAllowed = isModelAllowedForMode(model, mode);
   const btnLabel = tab==='prompt' && !prompt.trim() ? 'Укажите промпт'
+    : !model ? 'Выберите модель'
+    : !modelAllowed ? 'Выберите модель'
     : !ready ? 'Выберите шаблон' : submitting ? 'Создаю…' : 'Создать';
-  const code = model.code || model.id;
+  const code = model && (model.code || model.id);
   const fields = (modelInfo && modelInfo.form_schema && modelInfo.form_schema.fields) || [];
   const hasField = (name)=>fields.some(f=>f.name===name);
   const field = (name)=>fields.find(f=>f.name===name) || {};
@@ -31,11 +34,12 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     return current || f.default || (opts.length ? opts[0] : current);
   };
   const needsImage = fields.some(f=>(f.name==='image_url' || f.name==='image_urls') && f.required);
+  const showUpload = needsImage || (model && (model.subtype==='image_edit' || model.subtype==='image_to_video'));
 
   useEffect(()=>{
     let alive=true;
     setModelInfo(null); setPrice(null); setStatus(''); setResult(null);
-    if(!window.HubicxApi) return;
+    if(!code || !window.HubicxApi) return;
     window.HubicxApi.model(code).then(m=>{ if(alive) setModelInfo(m); }).catch(()=>{});
     return ()=>{ alive=false; };
   }, [code]);
@@ -66,7 +70,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   }
 
   useEffect(()=>{
-    if(!ready || !modelInfo || !window.HubicxApi) return;
+    if(!ready || !modelAllowed || !modelInfo || !window.HubicxApi) return;
     if(needsImage && !uploaded) { setPrice(null); return; }
     const timer = setTimeout(()=>{
       window.HubicxApi.pricePreview({model_code:code, inputs:buildInputs()})
@@ -74,7 +78,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
         .catch(err=>setPrice({error:(err && err.message) || 'Цена недоступна'}));
     }, 400);
     return ()=>clearTimeout(timer);
-  }, [ready, modelInfo, code, aspect.id, duration, resolution, numImages, audio, uploaded && uploaded.file_id, prompt, sel, tab]);
+  }, [ready, modelAllowed, modelInfo, code, aspect.id, duration, resolution, numImages, audio, uploaded && uploaded.file_id, prompt, sel, tab]);
 
   async function onFile(e){
     const f = e.target.files && e.target.files[0];
@@ -88,6 +92,8 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   }
   async function submit(){
     if(!ready || submitting || uploading) return;
+    if(!model){ setStatus('Выберите модель'); return; }
+    if(!modelAllowed){ setStatus(mode==='video' ? 'Выберите видео-модель' : 'Выберите фото-модель'); return; }
     if(needsImage && !uploaded){ setStatus('Для этой модели нужно загрузить изображение'); return; }
     setSubmitting(true); setResult(null); setStatus('Задача создана, ожидаю результат…');
     try{
@@ -124,12 +130,12 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
       </div>
     </div>
 
-    <label className="card" style={{display:'flex',alignItems:'center',gap:14,padding:'18px 18px',marginTop:6,cursor:'pointer'}}>
+    {showUpload && <label className="card" style={{display:'flex',alignItems:'center',gap:14,padding:'18px 18px',marginTop:6,cursor:'pointer'}}>
       <Ic n="addimg" s={26} c="#4d9bf5"/>
       <span style={{color:'#4d9bf5',fontWeight:700,fontSize:16}}>
         {file ? file.name : (mode==='photo'?'Загрузить селфи или фото':'Загрузить фото для видео')}</span>
       <input type="file" accept="image/*" onChange={onFile} style={{display:'none'}}/>
-    </label>
+    </label>}
 
     <div className="seg lite" style={{marginTop:16}}>
       <button className={tab==='tpl'?'on':''} onClick={()=>setTab('tpl')}>Выбрать шаблон</button>
@@ -189,7 +195,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     </div>}
 
     <div style={{height:18}}/>
-    <button className="btn-primary" disabled={!ready || submitting || uploading} onClick={submit}>{btnLabel}</button>
+    <button className="btn-primary" disabled={!ready || !modelAllowed || submitting || uploading} onClick={submit}>{btnLabel}</button>
   </div>;
 }
 window.CreateScreen = CreateScreen;
@@ -197,7 +203,8 @@ window.CreateScreen = CreateScreen;
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }){
   const { Ic } = window.MiraCore;
-  const [val, setVal] = useState(current.id);
+  const safeCurrent = options.find(o=>current && o.id===current.id) || options[0];
+  const [val, setVal] = useState(safeCurrent && safeCurrent.id);
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={e=>e.stopPropagation()}>
       <div className="sheet-card">
@@ -212,7 +219,7 @@ function PickerSheet({ title, options, current, onSelect, onClose }){
           </div>
         ))}
       </div>
-      <button className="sheet-cta" onClick={()=>{ onSelect(options.find(o=>o.id===val)); onClose(); }}>Сохранить</button>
+      <button className="sheet-cta" onClick={()=>{ const picked = options.find(o=>o.id===val) || options[0]; if(picked) onSelect(picked); onClose(); }}>Сохранить</button>
     </div>
   </div>;
 }
