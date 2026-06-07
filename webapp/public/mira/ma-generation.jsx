@@ -54,14 +54,32 @@ function taskKind(t){
   return 'image';
 }
 function taskUrl(t){ return t.output_file_url || (t.params && (t.params.output_file_url || t.params.url)); }
+function taskText(t){ return t.output_text || (t.params && (t.params.output_text || t.params.text)) || ''; }
 function taskDate(t){ try{ return new Date(t.created_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function taskTitle(t){ return t.title || t.model_code || 'Задача'; }
+function statusLabel(st){
+  if(st==='completed') return 'готово';
+  if(st==='failed' || st==='error') return 'ошибка';
+  if(st==='refunded') return 'возврат';
+  if(st==='processing' || st==='running') return 'выполняется';
+  if(st==='queued' || st==='pending') return 'в очереди';
+  return st || 'статус';
+}
 function HistoryBlock({ items=[], hint='', onRefresh, onBalanceRefresh }){
   const [msg, setMsg] = useState('');
+  const [detail, setDetail] = useState(null);
+  const [copyMsg, setCopyMsg] = useState('');
   async function send(t){
     if(!window.HubicxApi || t.status!=='completed') return;
     setMsg('Отправляю…');
     try{ await window.HubicxApi.sendToTelegram(t.id); setMsg('Отправлено в Telegram'); if(onBalanceRefresh) onBalanceRefresh(); }
     catch(err){ setMsg((err && err.message) || 'Не удалось отправить в Telegram'); }
+  }
+  async function copyText(t){
+    const text = taskText(t);
+    if(!text) return;
+    try{ await navigator.clipboard.writeText(text); setCopyMsg('Скопировано'); }
+    catch(e){ setCopyMsg('Не удалось скопировать'); }
   }
   return <div style={{marginTop:22}}>
     <div className="sec-h" style={{marginBottom:10}}><h2>Последние результаты</h2><span className="all" onClick={onRefresh}>Обновить</span></div>
@@ -69,12 +87,13 @@ function HistoryBlock({ items=[], hint='', onRefresh, onBalanceRefresh }){
     <div className="history-list">
       {items.length===0 && <div className="card" style={{padding:14}}><div className="muted" style={{fontSize:14}}>История появится после генераций.</div></div>}
       {items.slice(0,10).map(t=>{
-        const url = taskUrl(t), kind = taskKind(t);
-        return <div className="history-item" key={t.id} onClick={()=>{ if(url) window.open(url, '_blank'); }}>
+        const url = taskUrl(t), text = taskText(t), kind = taskKind(t);
+        return <div className="history-item" key={t.id} onClick={()=>{ setDetail(t); setCopyMsg(''); }}>
           {url && kind==='image' ? <img className="history-thumb" src={url} alt=""/> : <div className={'history-kind '+kind}>{kind}</div>}
           <div style={{flex:1,minWidth:0}}>
-            <div className="history-title">{t.title || t.model_code || 'Задача'} · #{t.id}</div>
-            <div className="muted" style={{fontSize:12}}>{kind} · {t.status} · {t.cost_credits||0} кр · {taskDate(t)}</div>
+            <div className="history-title">{taskTitle(t)} · #{t.id}</div>
+            <div className="muted" style={{fontSize:12}}>{kind} · {statusLabel(t.status)} · {t.cost_credits||0} кр · {taskDate(t)}</div>
+            {text && <div className="history-preview">{text}</div>}
             {t.status==='failed' && <div className="muted" style={{fontSize:12,color:'#ffb4b4'}}>{t.error_message || 'Ошибка генерации'}</div>}
           </div>
           {t.status==='completed' && <button className="history-send" onClick={e=>{ e.stopPropagation(); send(t); }}>TG</button>}
@@ -82,6 +101,35 @@ function HistoryBlock({ items=[], hint='', onRefresh, onBalanceRefresh }){
       })}
     </div>
     {msg && <div className="muted" style={{fontSize:13,marginTop:8}}>{msg}</div>}
+    {detail && <ResultDetailSheet task={detail} onClose={()=>setDetail(null)} onSend={send} onCopy={copyText} copyMsg={copyMsg} sendMsg={msg}/>} 
   </div>;
 }
 window.HistoryBlock = HistoryBlock;
+
+function ResultDetailSheet({ task, onClose, onSend, onCopy, copyMsg, sendMsg }){
+  const url = taskUrl(task), text = taskText(task), kind = taskKind(task);
+  const completed = task.status==='completed';
+  return <div className="sheet-ov" onClick={onClose}>
+    <div className="sheet" onClick={e=>e.stopPropagation()}>
+      <div className="sheet-card result-detail">
+        <div className="sheet-grab"></div>
+        <div className="sheet-title">Последние результаты</div>
+        <div className="muted" style={{fontSize:13,marginTop:4,marginBottom:10}}>
+          #{task.id} · {kind} · {statusLabel(task.status)} · {task.cost_credits||0} кр · {taskDate(task)}
+        </div>
+        <div style={{fontWeight:800,marginBottom:10}}>{taskTitle(task)}</div>
+        {url && kind==='image' && <img className="result-img" src={url} alt="Результат"/>}
+        {text && <div className="result-text">{text}</div>}
+        {(task.status==='failed' || task.status==='error' || task.status==='refunded') && <div className="muted" style={{fontSize:14,color:'#ffb4b4'}}>{task.error_message || 'Задача завершилась ошибкой'}</div>}
+        <div className="result-actions">
+          {url && <a className="pill" href={url} target="_blank" rel="noreferrer">Открыть</a>}
+          {text && <button className="pill" onClick={()=>onCopy(task)}>Скопировать</button>}
+          {completed && <button className="pill" onClick={()=>onSend(task)}>Отправить в Telegram</button>}
+          <button className="pill" onClick={onClose}>Закрыть</button>
+        </div>
+        {sendMsg && <div className="muted" style={{fontSize:13,marginTop:8}}>{sendMsg}</div>}
+        {copyMsg && <div className="muted" style={{fontSize:13,marginTop:8}}>{copyMsg}</div>}
+      </div>
+    </div>
+  </div>;
+}

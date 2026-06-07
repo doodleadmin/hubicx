@@ -1,5 +1,5 @@
 /* ============ Create photo/video screen (sub-screen) ============ */
-function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickModel, onPickAspect, onTaskDone }){
+function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickModel, onPickAspect, onTaskDone, onNewGeneration, onContinueChat }){
   const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.MiraCore;
   const [tab, setTab] = useState('tpl');          // tpl | prompt
   const [sel, setSel] = useState(preset ? preset.t : null);
@@ -12,6 +12,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   const [status, setStatus] = useState('');
   const [result, setResult] = useState(null);
   const [sendState, setSendState] = useState('');
+  const [copyState, setCopyState] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [duration, setDuration] = useState('5');
   const [resolution, setResolution] = useState('720p');
@@ -39,7 +40,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
 
   useEffect(()=>{
     let alive=true;
-    setModelInfo(null); setPrice(null); setStatus(''); setResult(null); setSendState('');
+    setModelInfo(null); setPrice(null); setStatus(''); setResult(null); setSendState(''); setCopyState('');
     if(!code || !window.HubicxApi) return;
     window.HubicxApi.model(code).then(m=>{ if(alive) setModelInfo(m); }).catch(()=>{});
     return ()=>{ alive=false; };
@@ -129,8 +130,24 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     }catch(err){ setSendState((err && err.message) || 'Не удалось отправить в Telegram'); }
   }
 
+  async function copyResult(){
+    const text = resultText(result);
+    if(!text) return;
+    try{
+      await navigator.clipboard.writeText(text);
+      setCopyState('Скопировано');
+    }catch(e){ setCopyState('Не удалось скопировать'); }
+  }
+
   function resultUrl(task){ return task && (task.output_file_url || (task.params && (task.params.output_file_url || task.params.url))); }
   function resultText(task){ return task && (task.output_text || task.error_message || 'Результат пока недоступен'); }
+  function resultTitle(task){
+    const st = task && task.status;
+    if(st==='completed') return 'Результат готов';
+    if(st==='failed' || st==='error') return 'Ошибка генерации';
+    if(st==='refunded') return 'Средства возвращены';
+    return 'Генерация выполняется';
+  }
 
   return <div className="screen scr-enter" style={{paddingTop:6}}>
     <div className="topbar" style={{padding:'10px 0 8px'}}>
@@ -207,21 +224,26 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     {price && <div className="muted" style={{fontSize:13,marginTop:12}}>{price.error ? price.error : <>Стоимость: <b>{price.final_price_credits}</b> токенов</>}</div>}
     {status && <div className="muted" style={{fontSize:13,marginTop:8}}>{status}</div>}
     {result && <div className="card result-card" style={{marginTop:12,padding:12}}>
-      <div style={{fontWeight:800,marginBottom:8}}>{result.status==='failed'?'Ошибка генерации':'Результат готов'}</div>
-      {result.status==='failed'
+      <div style={{fontWeight:800,marginBottom:8}}>{resultTitle(result)}</div>
+      {result.status==='failed' || result.status==='error' || result.status==='refunded'
         ? <div className="muted" style={{fontSize:14}}>{resultText(result)}</div>
         : resultUrl(result)
           ? <>
               <img className="result-img" src={resultUrl(result)} alt="Результат"/>
               <div className="result-actions">
                 <a className="pill" href={resultUrl(result)} target="_blank" rel="noreferrer">Открыть</a>
-                <a className="pill" href={resultUrl(result)} download>Скачать</a>
-                <button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button>
+                {result.status==='completed' && <button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button>}
+                <button className="pill" onClick={onNewGeneration}>Новая генерация</button>
               </div>
             </>
           : <div className="result-text">{resultText(result)}</div>}
-      {result.status==='completed' && !resultUrl(result) && <div className="result-actions"><button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button></div>}
+      {result.status==='completed' && !resultUrl(result) && <div className="result-actions">
+        <button className="pill" onClick={copyResult}>Скопировать</button>
+        <button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button>
+        <button className="pill" onClick={()=>onContinueChat && onContinueChat(resultText(result))}>Продолжить в чате</button>
+      </div>}
       {sendState && <div className="muted" style={{fontSize:13,marginTop:8}}>{sendState}</div>}
+      {copyState && <div className="muted" style={{fontSize:13,marginTop:8}}>{copyState}</div>}
     </div>}
 
     <div style={{height:18}}/>

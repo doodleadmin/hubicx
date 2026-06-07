@@ -42,6 +42,7 @@ function App(){
 
   // create sub-screen state
   const [createOpen, setCreateOpen] = uS(false);
+  const [createKey, setCreateKey] = uS(0);
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
   const [model, setModel] = uS(()=>defaultModelForMode('photo'));
@@ -89,7 +90,8 @@ function App(){
   React.useEffect(()=>{
     if(!isModelAllowedForMode(model, mode)) setModel(defaultModelForMode(mode));
   }, [mode, model && model.code]);
-  const openCreate = (m, p=null) => { applyMode(m); setPreset(p); setCreateOpen(true); };
+  const openCreate = (m, p=null) => { applyMode(m); setPreset(p); setCreateKey(k=>k+1); setCreateOpen(true); };
+  const newGeneration = () => { setPreset(null); setCreateKey(k=>k+1); };
   const goTab = (t)=>{ setCreateOpen(false); setActiveChat(null); setTab(t); };
 
   // ---- chat logic ----
@@ -140,10 +142,10 @@ function App(){
 
   let body;
   if(createOpen){
-    body = <CreateScreen tokens={tokens} mode={mode} setMode={applyMode} preset={preset}
+    body = <CreateScreen key={createKey} tokens={tokens} mode={mode} setMode={applyMode} preset={preset}
       model={model} aspect={aspect}
       onPickModel={()=>setPicker('model')} onPickAspect={()=>setPicker('aspect')}
-      onTaskDone={refreshAfterTask}/>;
+      onTaskDone={refreshAfterTask} onNewGeneration={newGeneration} onContinueChat={openDraftChat}/>;
   } else if(tab==='agent'){
     body = <AgentScreen tokens={tokens} authHint={authHint} onBuyPro={()=>setTopup(true)}
       onCreatePhoto={()=>openCreate('photo')} onCreateVideo={()=>openCreate('video')} onTopup={()=>setTopup(true)}
