@@ -82,10 +82,8 @@
     }
     return {text:'Ответ ещё готовится. Проверьте историю чуть позже.', task_id:taskId};
   }
-  async function updateProfile(payload){
-    localStorage.setItem('hubicx-profile', JSON.stringify(payload));
-    return {ok:true, persisted:'localStorage'};
-  }
+  async function profile(){ return request('/profile'); }
+  async function updateProfile(payload){ return request('/profile', {method:'PATCH', body:JSON.stringify(payload)}); }
 
   window.HubicxApiError = HubicxApiError;
   window.HubicxApi = {
@@ -101,6 +99,7 @@
     history:()=>request('/generations/history'),
     sendToTelegram:(taskId)=>request(`/generations/${encodeURIComponent(taskId)}/send-to-chat`, {method:'POST', body:JSON.stringify({})}),
     chat,
+    profile,
     updateProfile,
     authHint,
   };

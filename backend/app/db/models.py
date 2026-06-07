@@ -34,6 +34,21 @@ class User(Base, TimestampMixin):
     referrer: Mapped["User | None"] = relationship(remote_side="User.id")
 
 
+class UserProfileSettings(Base, TimestampMixin):
+    __tablename__ = "user_profile_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, index=True)
+    preferred_llm_model: Mapped[str] = mapped_column(String(64), default="ai_chat")
+    daily_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    hubicx_personality: Mapped[str | None] = mapped_column(Text)
+    about_user: Mapped[str | None] = mapped_column(Text)
+    communication_style: Mapped[str | None] = mapped_column(Text)
+    persona_emoji: Mapped[str | None] = mapped_column(String(32))
+
+    user: Mapped[User] = relationship()
+
+
 class AIModel(Base, TimestampMixin):
     __tablename__ = "ai_models"
 

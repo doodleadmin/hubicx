@@ -5,6 +5,8 @@ function IconChip({ bg, children }){
 }
 
 const PROF_KEY='hbx_profile_v1';
+const LLM_CODE = {'AI Chat':'ai_chat','Prompt Helper':'prompt_helper'};
+const CODE_LLM = {ai_chat:'AI Chat', prompt_helper:'Prompt Helper'};
 const PROF_DEFAULTS = {
   llm:'AI Chat', lang:'ru', daily:false,
   style:'', hubicxLang:'', emoji:'✨', traits:'',
@@ -22,10 +24,48 @@ const OPTS = {
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
 
-function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', onRefreshHistory, onBalanceRefresh }){
+function toBackendProfile(p){
+  return {
+    language_code:p.lang || 'ru',
+    preferred_llm_model:LLM_CODE[p.llm] || 'ai_chat',
+    daily_enabled:!!p.daily,
+    hubicx_personality:JSON.stringify({hubicxLang:p.hubicxLang||'', traits:p.traits||''}),
+    about_user:JSON.stringify({name:p.name||'', gender:p.gender||'', age:p.age||'', location:p.location||'', activity:p.activity||'', interests:p.interests||'', timezone:p.timezone||''}),
+    communication_style:p.style || '',
+    persona_emoji:p.emoji || '',
+  };
+}
+function fromBackendProfile(profile, current){
+  const next = {...PROF_DEFAULTS, ...(current || {})};
+  if(!profile) return next;
+  next.lang = profile.language_code || next.lang;
+  next.llm = CODE_LLM[profile.preferred_llm_model] || next.llm;
+  next.daily = !!profile.daily_enabled;
+  next.style = profile.communication_style || next.style;
+  next.emoji = profile.persona_emoji || next.emoji;
+  try{ Object.assign(next, JSON.parse(profile.hubicx_personality || '{}')); }catch(e){ if(profile.hubicx_personality) next.traits = profile.hubicx_personality; }
+  try{ Object.assign(next, JSON.parse(profile.about_user || '{}')); }catch(e){ if(profile.about_user) next.activity = profile.about_user; }
+  return next;
+}
+
+function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', onRefreshHistory, onBalanceRefresh, onProfileChange }){
   const { Ic, Star } = window.MiraCore;
   const [p, setP] = useState(()=>{ try{ return {...PROF_DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF_KEY))||{})}; }catch(e){ return {...PROF_DEFAULTS}; } });
   const [editor, setEditor] = useState(null);
+  const [saveHint, setSaveHint] = useState('');
+  const didMount = useRef(false);
+  const suppressSave = useRef(false);
+  useEffect(()=>{
+    let alive = true;
+    if(!window.HubicxApi || !window.HubicxApi.getInitData()) return ()=>{};
+    window.HubicxApi.profile().then(profile=>{
+      if(!alive) return;
+      suppressSave.current = true;
+      setP(cur=>fromBackendProfile(profile, cur));
+      setSaveHint('Настройки загружены');
+    }).catch(err=>{ if(alive) setSaveHint((err && err.code)==='unauthorized' ? 'Откройте через Telegram для сохранения настроек' : 'Профиль временно доступен локально'); });
+    return ()=>{ alive=false; };
+  }, []);
   useEffect(()=>{
     localStorage.setItem(PROF_KEY, JSON.stringify(p));
     localStorage.setItem('hubicx-profile', JSON.stringify(p));
@@ -34,7 +74,14 @@ function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', 
     localStorage.setItem('hubicx-personality', JSON.stringify({style:p.style, hubicxLang:p.hubicxLang, emoji:p.emoji, traits:p.traits}));
     localStorage.setItem('hubicx-about-user', JSON.stringify({name:p.name, gender:p.gender, age:p.age, location:p.location, activity:p.activity, interests:p.interests, timezone:p.timezone}));
     localStorage.setItem('hubicx-daily-enabled', p.daily ? '1' : '0');
-    if(window.HubicxApi) window.HubicxApi.updateProfile(p).catch(()=>{});
+    const backendPayload = toBackendProfile(p);
+    if(onProfileChange) onProfileChange({...backendPayload, ...p});
+    if(!didMount.current){ didMount.current = true; return; }
+    if(suppressSave.current){ suppressSave.current = false; return; }
+    if(window.HubicxApi && window.HubicxApi.getInitData()) window.HubicxApi.updateProfile(backendPayload)
+      .then(saved=>{ setSaveHint('Настройки сохранены'); if(onProfileChange) onProfileChange({...saved, ...p}); })
+      .catch(()=>setSaveHint('Откройте через Telegram для сохранения настроек'));
+    else setSaveHint('Откройте через Telegram для сохранения настроек');
   }, [p]);
   const set = (k,v)=> setP(s=>({...s,[k]:v}));
 
@@ -75,6 +122,7 @@ function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', 
   return <div className="screen scr-enter" style={{paddingTop:14}}>
     <div className="label-sec" style={{marginTop:4}}>Профиль</div>
     {authHint && <div className="muted" style={{fontSize:12,marginBottom:8}}>{authHint}</div>}
+    {saveHint && <div className="muted" style={{fontSize:12,marginBottom:8}}>{saveHint}</div>}
     <div className="card" style={{overflow:'hidden'}}>
       <Row chip={<IconChip bg="#5b34ff"><Star s={16} c="#fff"/></IconChip>} title="Мои токены" value={tokens} onClick={onTopup}/>
       <Row chip={<IconChip bg="#d94fd0"><Ic n="wand" s={18} c="#fff"/></IconChip>} title="LLM-модель" value={p.llm} onClick={()=>openOpts('llm','LLM-модель')}/>

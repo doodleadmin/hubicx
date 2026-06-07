@@ -1,6 +1,29 @@
 /* ============ App shell ============ */
 const { useState: uS } = React;
-const TOK_KEY='mira_tokens_v1', TAB_KEY='mira_tab_v1', CHATS_KEY='hbx_chats_v1';
+const TOK_KEY='mira_tokens_v1', TAB_KEY='mira_tab_v1', CHATS_KEY='hbx_chats_v1', PROF_KEY='hbx_profile_v1';
+
+function loadMiraProfile(){
+  try{ return JSON.parse(localStorage.getItem(PROF_KEY)) || JSON.parse(localStorage.getItem('hubicx-profile')) || {}; }
+  catch(e){ return {}; }
+}
+
+function profileLine(label, value){ return value ? `- ${label}: ${value}` : ''; }
+
+function composeProfilePrefix(profile){
+  const p = profile || loadMiraProfile();
+  let about = p.about_user || '';
+  let personality = p.hubicx_personality || '';
+  try{ const a = JSON.parse(about); about = [a.name, a.activity, a.interests, a.location].filter(Boolean).join('; '); }catch(e){}
+  try{ const h = JSON.parse(personality); personality = [h.hubicxLang, h.traits].filter(Boolean).join('; '); }catch(e){}
+  const lines = [
+    profileLine('О пользователе', about),
+    profileLine('Предпочитаемый стиль общения', p.communication_style || p.style),
+    profileLine('Личность Hubicx', personality || p.traits),
+    profileLine('Язык ответа', p.language_code || p.lang),
+    profileLine('Эмодзи/персона', p.persona_emoji || p.emoji),
+  ].filter(Boolean);
+  return lines.length ? `Профиль пользователя:\n${lines.join('\n')}` : '';
+}
 
 function App(){
   const { BottomNav, Star, defaultModelForMode, isModelAllowedForMode, modelsByType, modelTypeForMode } = window.MiraCore;
@@ -10,6 +33,7 @@ function App(){
   const [topup, setTopup] = uS(false);
   const [history, setHistory] = uS([]);
   const [historyHint, setHistoryHint] = uS('');
+  const [profile, setProfile] = uS(()=>loadMiraProfile());
 
   // chats
   const [chats, setChats] = uS(()=>{ try{ return JSON.parse(localStorage.getItem(CHATS_KEY))||[]; }catch(e){ return []; } });
@@ -47,6 +71,16 @@ function App(){
   }, []);
   React.useEffect(()=>{ return refreshHistory(); }, []);
   const refreshAfterTask = React.useCallback(()=>{ refreshBalance(); refreshHistory(); }, [refreshBalance, refreshHistory]);
+  const refreshProfile = React.useCallback(()=>{
+    if(!window.HubicxApi || !window.HubicxApi.getInitData()) return;
+    window.HubicxApi.profile().then(p=>{
+      setProfile(p || {});
+      localStorage.setItem(PROF_KEY, JSON.stringify(p || {}));
+      localStorage.setItem('hubicx-profile', JSON.stringify(p || {}));
+      if(p && p.language_code) localStorage.setItem('hubicx-language', p.language_code);
+    }).catch(()=>{});
+  }, []);
+  React.useEffect(()=>{ refreshProfile(); }, []);
 
   const applyMode = (m) => {
     setMode(m);
@@ -69,7 +103,9 @@ function App(){
       setTimeout(fallback, 900);
       return;
     }
-    window.HubicxApi.chat({prompt: promptPrefix ? `${promptPrefix}\n\nЗапрос пользователя: ${text}` : text})
+    const profilePrefix = composeProfilePrefix(profile);
+    const fullPrefix = [profilePrefix, promptPrefix].filter(Boolean).join('\n\nРежим агента:\n');
+    window.HubicxApi.chat({prompt: fullPrefix ? `${fullPrefix}\n\nЗапрос пользователя: ${text}` : text})
       .then(res=>{
         setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, lastTaskId:res.task && res.task.id, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c));
         refreshAfterTask();
@@ -119,7 +155,7 @@ function App(){
       onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance}/>;
   } else {
     body = <ProfileScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)} history={history} historyHint={historyHint}
-      onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance}/>;
+      onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance} onProfileChange={setProfile}/>;
   }
 
   return <div className="phone">
