@@ -22,7 +22,7 @@ const OPTS = {
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
 
-function ProfileScreen({ tokens, authHint, onTopup }){
+function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', onRefreshHistory, onBalanceRefresh }){
   const { Ic, Star } = window.MiraCore;
   const [p, setP] = useState(()=>{ try{ return {...PROF_DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF_KEY))||{})}; }catch(e){ return {...PROF_DEFAULTS}; } });
   const [editor, setEditor] = useState(null);
@@ -89,6 +89,8 @@ function ProfileScreen({ tokens, authHint, onTopup }){
         <span className={"switch"+(p.daily?" on":"")}><i></i></span>
       </div>
     </div>
+
+    {window.HistoryBlock && <window.HistoryBlock items={history} hint={historyHint} onRefresh={onRefreshHistory} onBalanceRefresh={onBalanceRefresh}/>} 
 
     <div className="sec-h" style={{marginBottom:4}}>
       <span className="label-sec" style={{padding:0}}>Личность Hubicx</span>

@@ -8,6 +8,8 @@ function App(){
   const [tokens, setTokens] = uS(()=>{ const v=localStorage.getItem(TOK_KEY); return v==null?0:+v; });
   const [authHint, setAuthHint] = uS('');
   const [topup, setTopup] = uS(false);
+  const [history, setHistory] = uS([]);
+  const [historyHint, setHistoryHint] = uS('');
 
   // chats
   const [chats, setChats] = uS(()=>{ try{ return JSON.parse(localStorage.getItem(CHATS_KEY))||[]; }catch(e){ return []; } });
@@ -35,6 +37,16 @@ function App(){
   React.useEffect(()=>{
     return refreshBalance();
   }, []);
+  const refreshHistory = React.useCallback(()=>{
+    let alive = true;
+    if(!window.HubicxApi || !window.HubicxApi.getInitData()) { setHistory([]); return ()=>{}; }
+    window.HubicxApi.history()
+      .then(items=>{ if(!alive) return; setHistory(Array.isArray(items) ? items.slice(0,10) : []); setHistoryHint(''); })
+      .catch(err=>{ if(!alive) return; setHistoryHint((err && err.code)==='unauthorized' ? window.HubicxApi.authHint() : 'История временно недоступна'); });
+    return ()=>{ alive=false; };
+  }, []);
+  React.useEffect(()=>{ return refreshHistory(); }, []);
+  const refreshAfterTask = React.useCallback(()=>{ refreshBalance(); refreshHistory(); }, [refreshBalance, refreshHistory]);
 
   const applyMode = (m) => {
     setMode(m);
@@ -60,12 +72,12 @@ function App(){
     window.HubicxApi.chat({prompt: promptPrefix ? `${promptPrefix}\n\nЗапрос пользователя: ${text}` : text})
       .then(res=>{
         setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, lastTaskId:res.task && res.task.id, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c));
-        refreshBalance();
+        refreshAfterTask();
       })
       .catch(err=>{
         const msg = (err && err.message) || 'Не удалось получить ответ';
         setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:msg}]}:c));
-        refreshBalance();
+        refreshAfterTask();
       });
   };
   const startChat = (text, promptPrefix='') => {
@@ -94,7 +106,8 @@ function App(){
   if(createOpen){
     body = <CreateScreen tokens={tokens} mode={mode} setMode={applyMode} preset={preset}
       model={model} aspect={aspect}
-      onPickModel={()=>setPicker('model')} onPickAspect={()=>setPicker('aspect')}/>;
+      onPickModel={()=>setPicker('model')} onPickAspect={()=>setPicker('aspect')}
+      onTaskDone={refreshAfterTask}/>;
   } else if(tab==='agent'){
     body = <AgentScreen tokens={tokens} authHint={authHint} onBuyPro={()=>setTopup(true)}
       onCreatePhoto={()=>openCreate('photo')} onCreateVideo={()=>openCreate('video')} onTopup={()=>setTopup(true)}
@@ -102,9 +115,11 @@ function App(){
   } else if(tab==='gen'){
     body = <GenerationScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)}
       onCreatePhoto={()=>openCreate('photo')} onCreateVideo={()=>openCreate('video')}
-      onTemplate={(t)=>openCreate('photo', t)}/>;
+      onTemplate={(t)=>openCreate('photo', t)} history={history} historyHint={historyHint}
+      onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)}/>;
+    body = <ProfileScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)} history={history} historyHint={historyHint}
+      onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance}/>;
   }
 
   return <div className="phone">
