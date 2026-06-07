@@ -18,12 +18,20 @@
   --safe-bottom:env(safe-area-inset-bottom, 0px);
   --safe-left:env(safe-area-inset-left, 0px);
   --safe-right:env(safe-area-inset-right, 0px);
+  --hbx-safe-top:env(safe-area-inset-top, 0px);
+  --hbx-safe-bottom:env(safe-area-inset-bottom, 0px);
+  --hbx-safe-left:env(safe-area-inset-left, 0px);
+  --hbx-safe-right:env(safe-area-inset-right, 0px);
+  --hbx-content-safe-top:0px;
+  --hbx-content-safe-bottom:0px;
+  --hbx-content-safe-left:0px;
+  --hbx-content-safe-right:0px;
   --app-height:100dvh;
   --glass:rgba(22,30,44,.55);
   --glass-line:rgba(255,255,255,.10);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
-html.telegram-ready{--app-height:var(--tg-viewport-height, 100dvh)}
+html.telegram-ready,html.hbx-telegram-mode{--app-height:var(--tg-viewport-height, 100dvh)}
 html,body{
   width:100%;min-width:100%;height:100%;min-height:100%;
   margin:0;padding:0;background:#05070D;overflow:hidden;
@@ -39,7 +47,8 @@ body{
   width:100vw;min-width:100vw;height:var(--app-height);min-height:var(--app-height);
   margin:0;padding:0;overflow:hidden;background:#05070D;
 }
-.phone{
+.hbx-telegram-mode #root{height:var(--app-height);min-height:var(--app-height)}
+.phone,.app{
   position:relative;width:100vw;max-width:none;min-width:100vw;
   height:var(--app-height);min-height:var(--app-height);
   margin:0;border-radius:0;background:#05070b;overflow:hidden;
@@ -73,9 +82,9 @@ body{
   position:relative;z-index:1;width:100vw;max-width:none;min-width:100vw;
   height:var(--app-height);min-height:var(--app-height);
   margin:0;border-radius:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:var(--safe-top) max(16px, var(--safe-left)) calc(var(--nav-h) + 16px + var(--safe-bottom)) max(16px, var(--safe-right));
+  padding:0 max(16px, var(--hbx-safe-left)) calc(var(--nav-h) + 16px + var(--hbx-safe-bottom)) max(16px, var(--hbx-safe-right));
 }
-.scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-bottom:calc(110px + var(--safe-bottom));-webkit-overflow-scrolling:touch}
+.scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-bottom:calc(110px + var(--hbx-safe-bottom));-webkit-overflow-scrolling:touch}
 
 /* hide scrollbars on horizontal rails */
 .rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
@@ -83,7 +92,8 @@ body{
 .rail{scrollbar-width:none}
 
 /* ---------- top bar ---------- */
-.topbar{display:flex;align-items:center;gap:10px;padding:14px 0 8px}
+.topbar,.header,.app-header{padding-top:max(12px, var(--hbx-content-safe-top), var(--hbx-safe-top))}
+.topbar{display:flex;align-items:center;gap:10px;padding-right:0;padding-bottom:8px;padding-left:0}
 .tb-av{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.12);
   display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .tb-pro{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
@@ -123,7 +133,7 @@ body{
 .thumb .shade{position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.62));z-index:1}
 
 /* ---------- bottom nav (glass dock) ---------- */
-.nav,.dock,.bottom-dock,.nav-dock{position:fixed;left:max(16px, var(--safe-left));right:max(16px, var(--safe-right));transform:none;bottom:calc(16px + var(--safe-bottom));width:auto;max-width:none;
+.nav,.dock,.bottom-dock,.nav-dock{position:fixed;left:max(16px, var(--hbx-safe-left));right:max(16px, var(--hbx-safe-right));transform:none;bottom:calc(16px + var(--hbx-safe-bottom));width:auto;max-width:none;
   z-index:30;display:flex;align-items:center;justify-content:space-between;gap:6px;
   padding:9px;border-radius:26px;
   background:rgba(20,28,42,.55);border:1px solid var(--glass-line);
@@ -184,7 +194,7 @@ body{
   .sheet-ov{animation:ovIn .2s ease}
 }
 @keyframes ovIn{from{opacity:0}to{opacity:1}}
-.sheet,.bottom-sheet{width:100%;max-width:none;padding:0 max(14px, var(--safe-left)) calc(96px + var(--safe-bottom)) max(14px, var(--safe-right));transform:none;bottom:calc(96px + var(--safe-bottom))}
+.sheet,.bottom-sheet{width:100%;max-width:none;padding:0 max(14px, var(--hbx-safe-left)) calc(96px + var(--hbx-safe-bottom)) max(14px, var(--hbx-safe-right));transform:none;bottom:calc(96px + var(--hbx-safe-bottom))}
 .sheet-card{background:rgba(22,30,44,.86);border:1px solid var(--glass-line);border-radius:22px;
   backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);padding:18px 18px 8px;
   box-shadow:0 20px 50px rgba(0,0,0,.6)}
@@ -241,7 +251,7 @@ body{
 .bubble.typing span:nth-child(2){animation-delay:.2s}
 .bubble.typing span:nth-child(3){animation-delay:.4s}
 @keyframes tdot{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
-.chat-input{padding:10px max(14px, var(--safe-left)) calc(var(--safe-bottom) + 14px) max(14px, var(--safe-right));flex:0 0 auto}
+.chat-input{padding:10px max(14px, var(--hbx-safe-left)) calc(var(--hbx-safe-bottom) + 14px) max(14px, var(--hbx-safe-right));flex:0 0 auto}
 
 /* saved chat plates */
 .chat-plate{display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer;
