@@ -1,6 +1,7 @@
 /* ============ Create photo/video screen (sub-screen) ============ */
 function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickModel, onPickAspect, onTaskDone, onNewGeneration, onContinueChat }){
   const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.MiraCore;
+  const t = window.t || ((k)=>k);
   const [tab, setTab] = useState('tpl');          // tpl | prompt
   const [sel, setSel] = useState(preset ? preset.t : null);
   const [prompt, setPrompt] = useState("");
@@ -21,10 +22,10 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
 
   const ready = (tab==='tpl' && sel) || (tab==='prompt' && prompt.trim());
   const modelAllowed = isModelAllowedForMode(model, mode);
-  const btnLabel = tab==='prompt' && !prompt.trim() ? 'Укажите промпт'
-    : !model ? 'Выберите модель'
-    : !modelAllowed ? 'Выберите модель'
-    : !ready ? 'Выберите шаблон' : submitting ? 'Создаю…' : 'Создать';
+  const btnLabel = tab==='prompt' && !prompt.trim() ? t('gen.enter_prompt')
+    : !model ? t('gen.select_model')
+    : !modelAllowed ? t('gen.select_model')
+    : !ready ? t('gen.select_tpl') : submitting ? t('gen.creating') : t('gen.create');
   const code = model && (model.code || model.id);
   const fields = (modelInfo && modelInfo.form_schema && modelInfo.form_schema.fields) || [];
   const hasField = (name)=>fields.some(f=>f.name===name);
@@ -85,19 +86,19 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   async function onFile(e){
     const f = e.target.files && e.target.files[0];
     if(!f) return;
-    setFile(f); setUploaded(null); setUploading(true); setStatus('Загружаю файл…');
+    setFile(f); setUploaded(null); setUploading(true); setStatus(t('gen.file_uploading'));
     try{
       const up = await window.HubicxApi.upload(f);
-      setUploaded(up); setStatus('Файл загружен');
-    }catch(err){ setStatus((err && err.message) || 'Не удалось загрузить файл'); }
+      setUploaded(up); setStatus(t('gen.file_uploaded'));
+    }catch(err){ setStatus((err && err.message) || t('gen.file_failed')); }
     finally{ setUploading(false); }
   }
   async function submit(){
     if(!ready || submitting || uploading) return;
-    if(!model){ setStatus('Выберите модель'); return; }
-    if(!modelAllowed){ setStatus(mode==='video' ? 'Выберите видео-модель' : 'Выберите фото-модель'); return; }
-    if(needsImage && !uploaded){ setStatus('Для этой модели нужно загрузить изображение'); return; }
-    setSubmitting(true); setResult(null); setStatus('Задача создана, ожидаю результат…');
+    if(!model){ setStatus(t('gen.select_model')); return; }
+    if(!modelAllowed){ setStatus(mode==='video' ? t('gen.need_video_model') : t('gen.need_photo_model')); return; }
+    if(needsImage && !uploaded){ setStatus(t('gen.need_image')); return; }
+    setSubmitting(true); setResult(null); setStatus(t('gen.task_created'));
     try{
       const body = {model_code:code, prompt:currentPrompt(), inputs:buildInputs()};
       const queued = await window.HubicxApi.createGeneration(body);
@@ -105,29 +106,29 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
       for(let i=0;i<45;i++){
         task = await window.HubicxApi.getTask(queued.task_id);
         if(task.status==='completed' || task.status==='failed') break;
-        setStatus(`Статус: ${task.status}`);
+        setStatus(t('gen.task_status',{status:task.status}));
         await new Promise(r=>setTimeout(r, 1500));
       }
       if(task && task.status==='completed'){
         setResult(task);
-        setStatus('Готово');
+        setStatus(t('common.ready'));
         if(onTaskDone) onTaskDone(task);
       }else if(task && task.status==='failed'){
         setResult(task);
-        setStatus(task.error_message || 'Генерация завершилась ошибкой');
-      }else setStatus('Задача ещё выполняется. Результат появится в истории.');
-    }catch(err){ setStatus((err && err.message) || 'Не удалось создать генерацию'); }
+        setStatus(task.error_message || t('gen.generation_failed'));
+      }else setStatus(t('gen.long_task'));
+    }catch(err){ setStatus((err && err.message) || t('gen.create_failed')); }
     finally{ setSubmitting(false); }
   }
 
   async function sendToTelegram(){
     if(!result || result.status!=='completed' || !window.HubicxApi) return;
-    setSendState('Отправляю в Telegram…');
+    setSendState(t('result.sending'));
     try{
       await window.HubicxApi.sendToTelegram(result.id);
-      setSendState('Отправлено в Telegram');
+      setSendState(t('result.sent'));
       if(onTaskDone) onTaskDone(result);
-    }catch(err){ setSendState((err && err.message) || 'Не удалось отправить в Telegram'); }
+    }catch(err){ setSendState((err && err.message) || t('result.send_failed')); }
   }
 
   async function copyResult(){
@@ -135,28 +136,28 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     if(!text) return;
     try{
       await navigator.clipboard.writeText(text);
-      setCopyState('Скопировано');
-    }catch(e){ setCopyState('Не удалось скопировать'); }
+      setCopyState(t('common.copied'));
+    }catch(e){ setCopyState(t('common.copy_failed')); }
   }
 
   function resultUrl(task){ return task && (task.output_file_url || (task.params && (task.params.output_file_url || task.params.url))); }
-  function resultText(task){ return task && (task.output_text || task.error_message || 'Результат пока недоступен'); }
+  function resultText(task){ return task && (task.output_text || task.error_message || t('result.unavailable')); }
   function resultTitle(task){
     const st = task && task.status;
-    if(st==='completed') return 'Результат готов';
-    if(st==='failed' || st==='error') return 'Ошибка генерации';
-    if(st==='refunded') return 'Средства возвращены';
-    return 'Генерация выполняется';
+    if(st==='completed') return t('result.ready');
+    if(st==='failed' || st==='error') return t('result.failed');
+    if(st==='refunded') return t('result.refunded');
+    return t('result.processing');
   }
 
   return <div className="screen scr-enter" style={{paddingTop:6}}>
     <div className="topbar" style={{padding:'10px 0 8px'}}>
       <div className="seg" style={{flex:1,maxWidth:230}}>
-        <button className={mode==='photo'?'on':''} onClick={()=>setMode('photo')}><Ic n="image" s={18}/> Фото</button>
-        <button className={mode==='video'?'on':''} onClick={()=>setMode('video')}><Ic n="video" s={18}/> Видео</button>
+        <button className={mode==='photo'?'on':''} onClick={()=>setMode('photo')}><Ic n="image" s={18}/> {t('gen.photo')}</button>
+        <button className={mode==='video'?'on':''} onClick={()=>setMode('video')}><Ic n="video" s={18}/> {t('gen.video')}</button>
       </div>
       <div style={{marginLeft:'auto',textAlign:'right'}}>
-        <div className="muted" style={{fontSize:12,fontWeight:600}}>баланс</div>
+        <div className="muted" style={{fontSize:12,fontWeight:600}}>{t('gen.balance')}</div>
         <div style={{display:'flex',alignItems:'center',gap:5,justifyContent:'flex-end',fontWeight:700}}>
           <Star s={14} c="#cfe0ff"/> {tokens}
         </div>
@@ -166,13 +167,13 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     {showUpload && <label className="card" style={{display:'flex',alignItems:'center',gap:14,padding:'18px 18px',marginTop:6,cursor:'pointer'}}>
       <Ic n="addimg" s={26} c="#4d9bf5"/>
       <span style={{color:'#4d9bf5',fontWeight:700,fontSize:16}}>
-        {file ? file.name : (mode==='photo'?'Загрузить селфи или фото':'Загрузить фото для видео')}</span>
+        {file ? file.name : (mode==='photo'?t('gen.upload_photo'):t('gen.upload_video'))}</span>
       <input type="file" accept="image/*" onChange={onFile} style={{display:'none'}}/>
     </label>}
 
     <div className="seg lite" style={{marginTop:16}}>
-      <button className={tab==='tpl'?'on':''} onClick={()=>setTab('tpl')}>Выбрать шаблон</button>
-      <button className={tab==='prompt'?'on':''} onClick={()=>setTab('prompt')}>Свой промпт</button>
+      <button className={tab==='tpl'?'on':''} onClick={()=>setTab('tpl')}>{t('gen.choose_tpl')}</button>
+      <button className={tab==='prompt'?'on':''} onClick={()=>setTab('prompt')}>{t('gen.custom_prompt')}</button>
     </div>
 
     {tab==='tpl'
@@ -188,17 +189,17 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
           ))}
         </div>
       : <textarea value={prompt} onChange={e=>setPrompt(e.target.value)}
-          placeholder="Опишите, что хотите сгенерировать..."
+          placeholder={t('gen.prompt_ph')}
           style={{width:'100%',marginTop:14,height:120,resize:'none',background:'var(--card)',
             border:'1px solid var(--line)',borderRadius:16,padding:16,color:'#fff',
             fontSize:15,fontFamily:'inherit',outline:'none'}}/>}
 
-    <div className="label-sec" style={{marginTop:20}}>Детали</div>
+    <div className="label-sec" style={{marginTop:20}}>{t('gen.details')}</div>
     <div className="card" style={{overflow:'hidden'}}>
       <div className="row-link" onClick={onPickModel}>
         <Ic n="model" s={22} c="#cfe0ff"/>
         <div>
-          <div className="muted" style={{fontSize:13}}>Модель</div>
+          <div className="muted" style={{fontSize:13}}>{t('gen.model')}</div>
           <div style={{fontWeight:600,fontSize:15}}>{model.t}</div>
         </div>
         <span className="chev" style={{marginLeft:'auto'}}><Ic n="chev" s={20}/></span>
@@ -207,7 +208,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
       <div className="row-link" onClick={onPickAspect}>
         <Ic n="aspect" s={22} c="#cfe0ff"/>
         <div>
-          <div className="muted" style={{fontSize:13}}>Соотношение сторон</div>
+          <div className="muted" style={{fontSize:13}}>{t('gen.aspect')}</div>
           <div style={{fontWeight:600,fontSize:15}}>{aspect.t}</div>
         </div>
         <span className="chev" style={{marginLeft:'auto'}}><Ic n="chev" s={20}/></span>
@@ -215,13 +216,13 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     </div>
 
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:12}}>
-      {hasField('num_images') && <select className="text-in" value={numImages} onChange={e=>setNumImages(e.target.value)}><option value="1">1 изображение</option><option value="2">2 изображения</option><option value="4">4 изображения</option></select>}
-      {hasField('duration') && <select className="text-in" value={fieldValue('duration', duration)} onChange={e=>setDuration(e.target.value)}>{(field('duration').options || ['5']).map(o=><option key={o} value={o}>{o} сек</option>)}</select>}
+      {hasField('num_images') && <select className="text-in" value={numImages} onChange={e=>setNumImages(e.target.value)}><option value="1">{t('gen.one_image')}</option><option value="2">2</option><option value="4">4</option></select>}
+      {hasField('duration') && <select className="text-in" value={fieldValue('duration', duration)} onChange={e=>setDuration(e.target.value)}>{(field('duration').options || ['5']).map(o=><option key={o} value={o}>{o} {t('gen.seconds')}</option>)}</select>}
       {hasField('resolution') && <select className="text-in" value={fieldValue('resolution', resolution)} onChange={e=>setResolution(e.target.value)}>{(field('resolution').options || ['720p']).map(o=><option key={o} value={o}>{o}</option>)}</select>}
-      {hasField('generate_audio') && <button className="pill" onClick={()=>setAudio(!audio)} style={{justifyContent:'center'}}>{audio?'Со звуком':'Без звука'}</button>}
+      {hasField('generate_audio') && <button className="pill" onClick={()=>setAudio(!audio)} style={{justifyContent:'center'}}>{audio?t('gen.with_audio'):t('gen.no_audio')}</button>}
     </div>
 
-    {price && <div className="muted" style={{fontSize:13,marginTop:12}}>{price.error ? price.error : <>Стоимость: <b>{price.final_price_credits}</b> токенов</>}</div>}
+    {price && <div className="muted" style={{fontSize:13,marginTop:12}}>{price.error ? price.error : <>{t('common.cost')}: <b>{price.final_price_credits}</b> {t('common.tokens')}</>}</div>}
     {status && <div className="muted" style={{fontSize:13,marginTop:8}}>{status}</div>}
     {result && <div className="card result-card" style={{marginTop:12,padding:12}}>
       <div style={{fontWeight:800,marginBottom:8}}>{resultTitle(result)}</div>
@@ -229,18 +230,18 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
         ? <div className="muted" style={{fontSize:14}}>{resultText(result)}</div>
         : resultUrl(result)
           ? <>
-              <img className="result-img" src={resultUrl(result)} alt="Результат"/>
+              <img className="result-img" src={resultUrl(result)} alt={t('result.ready')}/>
               <div className="result-actions">
-                <a className="pill" href={resultUrl(result)} target="_blank" rel="noreferrer">Открыть</a>
-                {result.status==='completed' && <button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button>}
-                <button className="pill" onClick={onNewGeneration}>Новая генерация</button>
+                <a className="pill" href={resultUrl(result)} target="_blank" rel="noreferrer">{t('result.open')}</a>
+                {result.status==='completed' && <button className="pill" onClick={sendToTelegram}>{t('result.send_tg')}</button>}
+                <button className="pill" onClick={onNewGeneration}>{t('result.new')}</button>
               </div>
             </>
           : <div className="result-text">{resultText(result)}</div>}
       {result.status==='completed' && !resultUrl(result) && <div className="result-actions">
-        <button className="pill" onClick={copyResult}>Скопировать</button>
-        <button className="pill" onClick={sendToTelegram}>Отправить в Telegram</button>
-        <button className="pill" onClick={()=>onContinueChat && onContinueChat(resultText(result))}>Продолжить в чате</button>
+        <button className="pill" onClick={copyResult}>{t('result.copy')}</button>
+        <button className="pill" onClick={sendToTelegram}>{t('result.send_tg')}</button>
+        <button className="pill" onClick={()=>onContinueChat && onContinueChat(resultText(result))}>{t('result.continue_chat')}</button>
       </div>}
       {sendState && <div className="muted" style={{fontSize:13,marginTop:8}}>{sendState}</div>}
       {copyState && <div className="muted" style={{fontSize:13,marginTop:8}}>{copyState}</div>}
@@ -255,6 +256,7 @@ window.CreateScreen = CreateScreen;
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }){
   const { Ic } = window.MiraCore;
+  const t = window.t || ((k)=>k);
   const safeCurrent = options.find(o=>current && o.id===current.id) || options[0];
   const [val, setVal] = useState(safeCurrent && safeCurrent.id);
   return <div className="sheet-ov" onClick={onClose}>
@@ -265,13 +267,13 @@ function PickerSheet({ title, options, current, onSelect, onClose }){
           <div className="opt" key={o.id} onClick={()=>setVal(o.id)}>
             <div>
               <div className="o-t">{o.t}</div>
-              <div className="o-s">{o.s}</div>
+              <div className="o-s">{o.sKey ? t(o.sKey) : o.s}</div>
             </div>
             {val===o.id && <span className="o-check"><Ic n="check" s={22} sw={2.4}/></span>}
           </div>
         ))}
       </div>
-      <button className="sheet-cta" onClick={()=>{ const picked = options.find(o=>o.id===val) || options[0]; if(picked) onSelect(picked); onClose(); }}>Сохранить</button>
+      <button className="sheet-cta" onClick={()=>{ const picked = options.find(o=>o.id===val) || options[0]; if(picked) onSelect(picked); onClose(); }}>{t('common.save')}</button>
     </div>
   </div>;
 }

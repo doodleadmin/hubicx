@@ -13,6 +13,7 @@ async def delete_active_menu(bot, user: User) -> None:
     if not user.active_menu_chat_id or not user.active_menu_message_id:
         return
     try:
+        logger.info("delete_old_menu message_id=%s user_id=%s", user.active_menu_message_id, user.id)
         await bot.delete_message(chat_id=user.active_menu_chat_id, message_id=user.active_menu_message_id)
     except TelegramBadRequest as exc:
         message = str(exc).lower()

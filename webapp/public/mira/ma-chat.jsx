@@ -8,6 +8,7 @@ const BOT_LINES = [
 
 function ChatScreen({ chat, onBack, onSend }){
   const { Ic } = window.MiraCore;
+  const t = window.t || ((k)=>k);
   const [val, setVal] = useState(chat.draft || "");
   const endRef = useRef(null);
   useEffect(()=>{ setVal(chat.draft || ""); }, [chat.id]);
@@ -26,8 +27,8 @@ function ChatScreen({ chat, onBack, onSend }){
       <div className="chat-id">
         <div className="chat-av"><img src="assets/logo.jpg" alt=""/></div>
         <div>
-          <div style={{fontWeight:700,fontSize:16}}>Агент Hubicx</div>
-          <div className="muted" style={{fontSize:12}}>{chat.typing ? 'печатает…' : 'онлайн'}</div>
+          <div style={{fontWeight:700,fontSize:16}}>{t('agent.hubicx_agent')}</div>
+          <div className="muted" style={{fontSize:12}}>{chat.typing ? t('agent.typing') : t('agent.online')}</div>
         </div>
       </div>
     </div>
@@ -41,7 +42,7 @@ function ChatScreen({ chat, onBack, onSend }){
 
     <div className="chat-input">
       <div className="askbar" style={{marginTop:0}}>
-        <input placeholder="Сообщение..." value={val}
+        <input placeholder={t('agent.message')} value={val}
           onChange={e=>setVal(e.target.value)}
           onKeyDown={e=>{ if(e.key==='Enter') send(); }}/>
         <div className={"send"+(val.trim()?" on":"")} onClick={send}><Ic n="arrowUp" s={20}/></div>

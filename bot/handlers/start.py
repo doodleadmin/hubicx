@@ -20,7 +20,7 @@ async def start(message: Message) -> None:
     payload = message.text.split(maxsplit=1)[1] if message.text and len(message.text.split(maxsplit=1)) > 1 else None
     async with async_session() as session:
         user = await get_or_create_user(session, message.from_user.model_dump(), payload)
-        logger.info("START user_id=%s language_selected=%s language_code=%s", message.from_user.id, user.language_selected, user.language_code)
+        logger.info("start_received user_id=%s language_selected=%s language_code=%s", message.from_user.id, user.language_selected, user.language_code)
         if not user.language_selected:
             await send_or_replace_menu(message, session, user, t(user.language_code, "language.choose"), language_keyboard())
             return

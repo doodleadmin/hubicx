@@ -42,10 +42,11 @@ function TokenBadge({n}){
 
 /* ---- nav ---- */
 function BottomNav({tab, onTab}){
+  const t = window.t || ((k)=>k);
   const items=[
-    {id:'agent', label:'Агент', ic:'sparkle'},
-    {id:'gen', label:'Генерация', ic:'wand'},
-    {id:'profile', label:'Профиль', ic:'user'},
+    {id:'agent', label:t('nav.agent'), ic:'sparkle'},
+    {id:'gen', label:t('nav.generation'), ic:'wand'},
+    {id:'profile', label:t('nav.profile'), ic:'user'},
   ];
   return <nav className="nav">
     {items.map(it=>{
@@ -89,18 +90,18 @@ const CREATE_TPL = [
   {t:'Мой день за 15 сек', img:'assets/cov/m3.png'},
 ];
 const MODELS = [
-  {id:'nano2', code:'nano_banana_2', t:'Nano Banana 2', title:'Nano Banana 2', type:'image', s:'Фото · быстро', subtitle:'Фото · быстро'},
-  {id:'nanopro', code:'nano_banana_pro', t:'Nano Banana Pro', title:'Nano Banana Pro', type:'image', s:'Фото · Pro', subtitle:'Фото · Pro'},
-  {id:'nanoedit', code:'nano_banana_edit', t:'Nano Banana Edit', title:'Nano Banana Edit', type:'image', subtype:'image_edit', s:'Фото · редактирование', subtitle:'Фото · редактирование'},
-  {id:'fast', code:'flux_schnell', t:'Fast Image', title:'Fast Image', type:'image', s:'Фото · быстро', subtitle:'Фото · быстро'},
-  {id:'seedream', code:'seedream', t:'Seedream', title:'Seedream', type:'image', s:'Фото · реализм', subtitle:'Фото · реализм'},
-  {id:'zimage', code:'z_image', t:'Z-Image', title:'Z-Image', type:'image', s:'Фото · turbo', subtitle:'Фото · turbo'},
-  {id:'seedance-t2v', code:'seedance_2_t2v', t:'Seedance T2V', title:'Seedance T2V', type:'video', subtype:'text_to_video', s:'Видео · текст в видео', subtitle:'Видео · текст в видео'},
-  {id:'seedance-i2v-fast', code:'seedance_2_i2v_fast', t:'Seedance I2V Fast', title:'Seedance I2V Fast', type:'video', subtype:'image_to_video', s:'Видео · быстрое оживление', subtitle:'Видео · быстрое оживление'},
-  {id:'seedance-i2v', code:'seedance_2_i2v', t:'Seedance I2V', title:'Seedance I2V', type:'video', subtype:'image_to_video', s:'Видео · качественное оживление', subtitle:'Видео · качественное оживление'},
-  {id:'kling-i2v', code:'kling_21_i2v', t:'Kling I2V', title:'Kling I2V', type:'video', subtype:'image_to_video', s:'Видео · image-to-video', subtitle:'Видео · image-to-video'},
-  {id:'chat', code:'ai_chat', t:'AI Chat', title:'AI Chat', type:'text', s:'Текст · чат', subtitle:'Текст · чат'},
-  {id:'prompt-helper', code:'prompt_helper', t:'Prompt Helper', title:'Prompt Helper', type:'text', s:'Текст · промпты', subtitle:'Текст · промпты'},
+  {id:'nano2', code:'nano_banana_2', t:'Nano Banana 2', title:'Nano Banana 2', type:'image', s:'Фото · быстро', subtitle:'Фото · быстро', sKey:'model.image_fast'},
+  {id:'nanopro', code:'nano_banana_pro', t:'Nano Banana Pro', title:'Nano Banana Pro', type:'image', s:'Фото · Pro', subtitle:'Фото · Pro', sKey:'model.image_pro'},
+  {id:'nanoedit', code:'nano_banana_edit', t:'Nano Banana Edit', title:'Nano Banana Edit', type:'image', subtype:'image_edit', s:'Фото · редактирование', subtitle:'Фото · редактирование', sKey:'model.image_edit'},
+  {id:'fast', code:'flux_schnell', t:'Fast Image', title:'Fast Image', type:'image', s:'Фото · быстро', subtitle:'Фото · быстро', sKey:'model.image_fast'},
+  {id:'seedream', code:'seedream', t:'Seedream', title:'Seedream', type:'image', s:'Фото · реализм', subtitle:'Фото · реализм', sKey:'model.image_real'},
+  {id:'zimage', code:'z_image', t:'Z-Image', title:'Z-Image', type:'image', s:'Фото · turbo', subtitle:'Фото · turbo', sKey:'model.image_turbo'},
+  {id:'seedance-t2v', code:'seedance_2_t2v', t:'Seedance T2V', title:'Seedance T2V', type:'video', subtype:'text_to_video', s:'Видео · текст в видео', subtitle:'Видео · текст в видео', sKey:'model.video_t2v'},
+  {id:'seedance-i2v-fast', code:'seedance_2_i2v_fast', t:'Seedance I2V Fast', title:'Seedance I2V Fast', type:'video', subtype:'image_to_video', s:'Видео · быстрое оживление', subtitle:'Видео · быстрое оживление', sKey:'model.video_i2v_fast'},
+  {id:'seedance-i2v', code:'seedance_2_i2v', t:'Seedance I2V', title:'Seedance I2V', type:'video', subtype:'image_to_video', s:'Видео · качественное оживление', subtitle:'Видео · качественное оживление', sKey:'model.video_i2v'},
+  {id:'kling-i2v', code:'kling_21_i2v', t:'Kling I2V', title:'Kling I2V', type:'video', subtype:'image_to_video', s:'Видео · image-to-video', subtitle:'Видео · image-to-video', sKey:'model.video_kling'},
+  {id:'chat', code:'ai_chat', t:'AI Chat', title:'AI Chat', type:'text', s:'Текст · чат', subtitle:'Текст · чат', sKey:'model.text_chat'},
+  {id:'prompt-helper', code:'prompt_helper', t:'Prompt Helper', title:'Prompt Helper', type:'text', s:'Текст · промпты', subtitle:'Текст · промпты', sKey:'model.text_prompt'},
 ];
 const MIRA_MODELS = MODELS;
 const modelByCode = (code)=>MODELS.find(m=>m.code===code || m.id===code);
@@ -109,11 +110,11 @@ const defaultModelForMode = (mode)=>modelByCode(mode==='video' ? 'seedance_2_t2v
 const modelTypeForMode = (mode)=>mode==='video' ? 'video' : mode==='text' ? 'text' : 'image';
 const isModelAllowedForMode = (model, mode)=>!!model && model.type===modelTypeForMode(mode);
 const ASPECTS = [
-  {id:'1:1', t:'1:1', s:'Квадрат'},
-  {id:'2:3', t:'2:3', s:'Портрет'},
-  {id:'3:2', t:'3:2', s:'Альбом'},
-  {id:'9:16', t:'9:16', s:'Сторис'},
-  {id:'16:9', t:'16:9', s:'Широкий'},
+  {id:'1:1', t:'1:1', s:'Квадрат', sKey:'aspect.square'},
+  {id:'2:3', t:'2:3', s:'Портрет', sKey:'aspect.portrait'},
+  {id:'3:2', t:'3:2', s:'Альбом', sKey:'aspect.album'},
+  {id:'9:16', t:'9:16', s:'Сторис', sKey:'aspect.stories'},
+  {id:'16:9', t:'16:9', s:'Широкий', sKey:'aspect.wide'},
 ];
 
 window.MiraCore = { Ic, Star, TokenBadge, BottomNav, HERO, TEMPLATES, CREATE_TPL, MODELS, MIRA_MODELS, ASPECTS, modelByCode, modelsByType, defaultModelForMode, modelTypeForMode, isModelAllowedForMode };

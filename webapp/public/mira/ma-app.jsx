@@ -27,6 +27,8 @@ function composeProfilePrefix(profile){
 
 function App(){
   const { BottomNav, Star, defaultModelForMode, isModelAllowedForMode, modelsByType, modelTypeForMode } = window.MiraCore;
+  const [lang, setLang] = uS(()=>window.HubicxI18n ? window.HubicxI18n.getLang() : 'ru');
+  const t = window.t || ((k)=>k);
   const [tab, setTab] = uS(()=>localStorage.getItem(TAB_KEY)||'agent');
   const [tokens, setTokens] = uS(()=>{ const v=localStorage.getItem(TOK_KEY); return v==null?0:+v; });
   const [authHint, setAuthHint] = uS('');
@@ -50,13 +52,18 @@ function App(){
   const [picker, setPicker] = uS(null); // 'model' | 'aspect' | null
 
   React.useEffect(()=>{ localStorage.setItem(TAB_KEY, tab); }, [tab]);
+  React.useEffect(()=>{
+    const h = (e)=>setLang((e && e.detail && e.detail.lang) || (window.HubicxI18n && window.HubicxI18n.getLang()) || 'ru');
+    window.addEventListener('hubicx:lang', h);
+    return ()=>window.removeEventListener('hubicx:lang', h);
+  }, []);
 
   const refreshBalance = React.useCallback(()=>{
     let alive = true;
     if(!window.HubicxApi) return ()=>{};
     window.HubicxApi.me()
       .then(me=>{ if(!alive) return; const next=Number(me.balance_credits || 0); setTokens(next); localStorage.setItem(TOK_KEY, String(next)); setAuthHint(''); })
-      .catch(err=>{ if(!alive) return; setTokens(0); setAuthHint(err && err.code==='unauthorized' ? window.HubicxApi.authHint() : 'Баланс временно недоступен'); });
+      .catch(err=>{ if(!alive) return; setTokens(0); setAuthHint(err && err.code==='unauthorized' ? t('common.open_telegram') : t('common.balance_unavailable')); });
     return ()=>{ alive=false; };
   }, []);
   React.useEffect(()=>{
@@ -67,7 +74,7 @@ function App(){
     if(!window.HubicxApi || !window.HubicxApi.getInitData()) { setHistory([]); return ()=>{}; }
     window.HubicxApi.history()
       .then(items=>{ if(!alive) return; setHistory(Array.isArray(items) ? items.slice(0,10) : []); setHistoryHint(''); })
-      .catch(err=>{ if(!alive) return; setHistoryHint((err && err.code)==='unauthorized' ? window.HubicxApi.authHint() : 'История временно недоступна'); });
+      .catch(err=>{ if(!alive) return; setHistoryHint((err && err.code)==='unauthorized' ? t('common.open_telegram') : t('history.unavailable')); });
     return ()=>{ alive=false; };
   }, []);
   React.useEffect(()=>{ return refreshHistory(); }, []);
@@ -79,6 +86,7 @@ function App(){
       localStorage.setItem(PROF_KEY, JSON.stringify(p || {}));
       localStorage.setItem('hubicx-profile', JSON.stringify(p || {}));
       if(p && p.language_code) localStorage.setItem('hubicx-language', p.language_code);
+      if(p && p.language_code && window.HubicxI18n) window.HubicxI18n.setLang(p.language_code);
     }).catch(()=>{});
   }, []);
   React.useEffect(()=>{ refreshProfile(); }, []);
@@ -113,7 +121,7 @@ function App(){
         refreshAfterTask();
       })
       .catch(err=>{
-        const msg = (err && err.message) || 'Не удалось получить ответ';
+        const msg = (err && err.message) || t('agent.no_answer');
         setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:msg}]}:c));
         refreshAfterTask();
       });
@@ -133,7 +141,7 @@ function App(){
   const openDraftChat = (text='', promptPrefix='') => {
     const draft = (text || '').trim();
     const id = 'c'+Date.now();
-    const title = draft ? (draft.length>34? draft.slice(0,34)+'…' : draft) : 'Новый чат';
+    const title = draft ? (draft.length>34? draft.slice(0,34)+'…' : draft) : t('agent.new_chat');
     setChats(cs=>[{id, title, promptPrefix, draft, msgs:[], typing:false}, ...cs]);
     setActiveChat(id);
   };
@@ -166,30 +174,31 @@ function App(){
     {curChat && <ChatScreen chat={curChat} onBack={()=>setActiveChat(null)} onSend={sendInChat}/>}
     {!curChat && <BottomNav tab={createOpen?'gen':tab} onTab={goTab}/>}
     {topup && <Topup tokens={tokens} onClose={()=>setTopup(false)}/>}
-    {picker==='model' && <window.PickerSheet title="Модель" options={modelsByType(modelTypeForMode(mode))}
+    {picker==='model' && <window.PickerSheet title={t('gen.model')} options={modelsByType(modelTypeForMode(mode))}
       current={model} onSelect={setModel} onClose={()=>setPicker(null)}/>}
-    {picker==='aspect' && <window.PickerSheet title="Соотношение сторон" options={window.MiraCore.ASPECTS}
+    {picker==='aspect' && <window.PickerSheet title={t('gen.aspect')} options={window.MiraCore.ASPECTS}
       current={aspect} onSelect={setAspect} onClose={()=>setPicker(null)}/>}
   </div>;
 }
 
 function Topup({ tokens, onClose }){
   const { Star } = window.MiraCore;
-  const packs=[{n:50,p:'149 ₽'},{n:150,p:'399 ₽',tag:'Выгодно'},{n:500,p:'1 190 ₽'}];
+  const t = window.t || ((k)=>k);
+  const packs=[{n:50,p:'149 ₽'},{n:150,p:'399 ₽',tag:t('profile.good_deal')},{n:500,p:'1 190 ₽'}];
   const [sel, setSel] = uS(1);
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={e=>e.stopPropagation()}>
       <div className="sheet-card">
         <div className="sheet-grab"></div>
-        <div className="sheet-title">Пополнить токены</div>
-        <div className="muted" style={{fontSize:14,marginBottom:14}}>Текущий баланс: {tokens}</div>
+        <div className="sheet-title">{t('profile.topup')}</div>
+        <div className="muted" style={{fontSize:14,marginBottom:14}}>{t('profile.current_balance',{tokens})}</div>
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           {packs.map((p,i)=>(
             <div key={i} className="opt" onClick={()=>setSel(i)}
               style={{border:'1px solid '+(sel===i?'rgba(77,155,245,.7)':'var(--glass-line)'),
                 borderRadius:14,padding:'13px 14px',background:sel===i?'rgba(47,128,237,.14)':'rgba(255,255,255,.03)'}}>
               <Star s={20} c="#3e92f0"/>
-              <span style={{fontWeight:700,fontSize:17}}>{p.n} токенов</span>
+              <span style={{fontWeight:700,fontSize:17}}>{p.n} {t('common.tokens')}</span>
               {p.tag && <span style={{fontSize:12,fontWeight:700,color:'#fff',background:'#2f80ed',
                 padding:'3px 9px',borderRadius:8}}>{p.tag}</span>}
               <span style={{marginLeft:'auto',fontWeight:700,fontSize:16}}>{p.p}</span>
@@ -197,7 +206,7 @@ function Topup({ tokens, onClose }){
           ))}
         </div>
       </div>
-      <button className="sheet-cta" onClick={onClose}>Оплатить {packs[sel].p}</button>
+      <button className="sheet-cta" onClick={onClose}>{t('profile.pay',{price:packs[sel].p})}</button>
     </div>
   </div>;
 }

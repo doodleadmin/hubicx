@@ -1,9 +1,7 @@
 import logging
 from pathlib import Path
 
-from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import FSInputFile, Message
-from aiogram.types import ReplyKeyboardRemove
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import User
@@ -27,17 +25,8 @@ def get_start_image_path(language_code: str | None) -> Path:
     return START_IMAGE_PATHS.get((language_code or "ru")[:2].lower(), START_IMAGE_PATHS["ru"])
 
 
-async def remove_reply_keyboard(message: Message) -> None:
-    try:
-        cleanup = await message.answer("Обновляю меню...", reply_markup=ReplyKeyboardRemove())
-        await message.bot.delete_message(chat_id=cleanup.chat.id, message_id=cleanup.message_id)
-    except TelegramBadRequest:
-        return
-
-
 async def send_start_menu(message: Message, session: AsyncSession, user: User) -> Message:
     await delete_active_menu(message.bot, user)
-    await remove_reply_keyboard(message)
     caption = t(user.language_code, "start.caption")
     reply_markup = main_menu_keyboard(user.language_code)
     try:
@@ -46,7 +35,9 @@ async def send_start_menu(message: Message, session: AsyncSession, user: User) -
             caption=caption,
             reply_markup=reply_markup,
         )
+        logger.info("send_start_photo message_id=%s user_id=%s", sent.message_id, user.id)
     except Exception:
         logger.exception("Failed to send start image user_id=%s", user.id)
         sent = await message.answer(caption, reply_markup=reply_markup)
+        logger.info("send_start_text message_id=%s user_id=%s", sent.message_id, user.id)
     return sent
