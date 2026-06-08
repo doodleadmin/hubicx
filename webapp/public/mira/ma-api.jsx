@@ -104,5 +104,13 @@
     profile,
     updateProfile,
     authHint,
+    // Agent chat sessions
+    agentChats:()=>request('/agent/chats'),
+    agentCreateChat:(agent_mode, first_message)=>request('/agent/chats', {method:'POST', body:JSON.stringify({agent_mode, first_message})}),
+    agentGetChat:(chatId)=>request(`/agent/chats/${encodeURIComponent(chatId)}`),
+    agentUpdateChat:(chatId, patch)=>request(`/agent/chats/${encodeURIComponent(chatId)}`, {method:'PATCH', body:JSON.stringify(patch)}),
+    agentSendMessage:(chatId, content)=>request(`/agent/chats/${encodeURIComponent(chatId)}/messages`, {method:'POST', body:JSON.stringify({content})}),
+    agentReplyToMessage:(chatId, userMessageId, content, taskId)=>request(`/agent/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(userMessageId)}/reply`, {method:'POST', body:JSON.stringify({content, task_id:taskId})}),
+    agentArchiveChat:(chatId)=>request(`/agent/chats/${encodeURIComponent(chatId)}`, {method:'DELETE'}),
   };
 })();

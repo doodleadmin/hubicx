@@ -104,8 +104,79 @@ function App(){
   const goTab = (t)=>{ setCreateOpen(false); setActiveChat(null); setTab(t); };
 
   // ---- chat logic ----
+  // Load backend chats on mount if auth exists
+  const loadBackendChats = React.useCallback(() => {
+    if(!window.HubicxApi || !window.HubicxApi.getInitData()) return;
+    window.HubicxApi.agentChats().then(data => {
+      if(!data || !Array.isArray(data.chats)) return;
+      const bc = data.chats.map(c => ({
+        id: 'b'+c.id,
+        backendId: c.id,
+        title: c.title,
+        agentMode: c.agent_mode,
+        draft: '',
+        msgs: [],
+        typing: false,
+        messageCount: c.message_count || 0,
+      }));
+      setChats(cs => {
+        const merged = [...bc, ...cs.filter(c => !c.backendId)];
+        return merged;
+      });
+    }).catch(() => {});
+  }, []);
+  React.useEffect(() => { loadBackendChats(); }, []);
   const botReply = (chatId, text, agentMode='general') => {
+    const theChat = chats.find(c=>c.id===chatId);
+    if(!theChat) return;
     setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:true}:c));
+
+    // --- Backend chat flow ---
+    if(theChat.backendId && window.HubicxApi && window.HubicxApi.getInitData()){
+      window.HubicxApi.agentSendMessage(theChat.backendId, text)
+        .then(res=>{
+          if(!res || !res.task_id) return;
+          // Show user message immediately
+          setChats(cs=>cs.map(c=>c.id===chatId?{...c, msgs:[...c.msgs,{role:'user',text:text,id:res.user_message&&res.user_message.id}]}:c));
+          // Poll task
+          let polled = false;
+          const poll = () => {
+            if(polled) return;
+            window.HubicxApi.getTask(res.task_id).then(task=>{
+              if(task.status === 'completed'){
+                polled = true;
+                const output = task.output_text || task.output_file_url || '';
+                if(output && res.user_message && res.user_message.id){
+                  window.HubicxApi.agentReplyToMessage(theChat.backendId, res.user_message.id, output, res.task_id)
+                    .then(() => {
+                      // Reload chat messages
+                      window.HubicxApi.agentGetChat(theChat.backendId).then(chatData => {
+                        if(chatData && chatData.chat && Array.isArray(chatData.chat.messages)){
+                          const msgs = chatData.chat.messages.map(m => ({role:m.role==='assistant'?'bot':'user', text:m.content, id:m.id}));
+                          setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs, title:chatData.chat.title}:c));
+                        }
+                        refreshAfterTask();
+                      }).catch(() => { refreshAfterTask(); });
+                    }).catch(() => { refreshAfterTask(); });
+                } else { refreshAfterTask(); }
+              } else if(task.status === 'failed' || task.status === 'error'){
+                polled = true;
+                setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:task.error_message || 'Ошибка генерации'}]}:c));
+                refreshAfterTask();
+              } else {
+                setTimeout(poll, 1200);
+              }
+            }).catch(() => { setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false}:c)); });
+          };
+          setTimeout(poll, 1200);
+        })
+        .catch(err=>{
+          setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:err.message||'Не удалось отправить сообщение'}]}:c));
+        });
+      return;
+    }
+
+    // --- Local fallback ---
     const fallback = ()=>{
       const line = window.BOT_LINES[Math.floor(Math.random()*window.BOT_LINES.length)];
       setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:line}]}:c));
@@ -132,9 +203,38 @@ function App(){
   const startChat = (text) => {
     const id = 'c'+Date.now();
     const title = text.length>34? text.slice(0,34)+'…' : text;
-    setChats(cs=>[{id, title, agentMode:'general', msgs:[{role:'user',text}], typing:false}, ...cs]);
-    setActiveChat(id);
-    botReply(id, text, 'general');
+    // Create backend chat if auth exists
+    if(window.HubicxApi && window.HubicxApi.getInitData()){
+      window.HubicxApi.agentCreateChat('general', text).then(data => {
+        if(data && data.chat){
+          const bc = data.chat;
+          const chatObj = {
+            id: 'b'+bc.id,
+            backendId: bc.id,
+            title: bc.title || title,
+            agentMode: 'general',
+            draft: '',
+            msgs: (bc.messages||[]).map(m=>({role:m.role==='assistant'?'bot':'user', text:m.content, id:m.id})),
+            typing: false,
+          };
+          setChats(cs=>[chatObj, ...cs.filter(c=>c.id!==id)]);
+          setActiveChat(chatObj.id);
+          // If first_message was sent but AI didn't respond yet, poll
+          if(bc.messages && bc.messages.length === 1 && bc.messages[0].role === 'user'){
+            botReply(chatObj.id, text, 'general');
+          }
+        }
+      }).catch(() => {
+        // Fallback to local
+        setChats(cs=>[{id, title, agentMode:'general', msgs:[{role:'user',text}], typing:false}, ...cs]);
+        setActiveChat(id);
+        botReply(id, text, 'general');
+      });
+    } else {
+      setChats(cs=>[{id, title, agentMode:'general', msgs:[{role:'user',text}], typing:false}, ...cs]);
+      setActiveChat(id);
+      botReply(id, text, 'general');
+    }
   };
   const sendInChat = (text) => {
     setChats(cs=>cs.map(c=>c.id===activeChat?{...c, draft:'', msgs:[...c.msgs,{role:'user',text}]}:c));
@@ -150,6 +250,10 @@ function App(){
   };
   const changeChatMode = (modeCode) => {
     setChats(cs=>cs.map(c=>c.id===activeChat?{...c, agentMode:modeCode}:c));
+    const cur = chats.find(c=>c.id===activeChat);
+    if(cur && cur.backendId && window.HubicxApi && window.HubicxApi.getInitData()){
+      window.HubicxApi.agentUpdateChat(cur.backendId, {agent_mode: modeCode}).catch(()=>{});
+    }
   };
   const deleteChat = (id) => setChats(cs=>cs.filter(c=>c.id!==id));
   const curChat = chats.find(c=>c.id===activeChat);

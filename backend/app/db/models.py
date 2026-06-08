@@ -220,3 +220,36 @@ class ReferralReward(Base):
     reward_credits: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32), default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AgentChat(Base, TimestampMixin):
+    __tablename__ = "agent_chats"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200), default="Новый чат")
+    agent_mode: Mapped[str] = mapped_column(String(32), default="general")
+    language_code: Mapped[str] = mapped_column(String(8), default="ru")
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    user: Mapped[User] = relationship()
+    messages: Mapped[list["AgentChatMessage"]] = relationship(back_populates="chat", order_by="AgentChatMessage.id")
+
+
+class AgentChatMessage(Base):
+    __tablename__ = "agent_chat_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[int] = mapped_column(ForeignKey("agent_chats.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+    visible_content: Mapped[str | None] = mapped_column(Text, nullable=True)
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("generation_tasks.id"), nullable=True)
+    token_cost: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    chat: Mapped[AgentChat] = relationship(back_populates="messages")
+    task: Mapped[GenerationTask | None] = relationship()
