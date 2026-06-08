@@ -19,6 +19,7 @@ function Ic({n, s=22, c="currentColor", sw=1.9}){
     addimg:<g><rect x="3" y="4" width="18" height="14" rx="3"/><path d="M3 15l5-4 4 3 3-2 6 4"/><circle cx="9" cy="9" r="1.6"/></g>,
     aspect:<rect x="7" y="3.5" width="10" height="17" rx="2.5"/>,
     check:<path d="M5 12.5l4.5 4.5L19 6.5"/>,
+    doc:<g><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-6z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 11h2"/></g>,
     back:<path d="M15 5l-7 7 7 7"/>,
     close:<path d="M6 6l12 12M18 6L6 18"/>,
     edit:<path d="M14 4l6 6M3 21l1-5L17 3l4 4L8 20z"/>,

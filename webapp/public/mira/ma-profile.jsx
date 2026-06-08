@@ -49,7 +49,7 @@ function fromBackendProfile(profile, current){
   return next;
 }
 
-function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', onRefreshHistory, onBalanceRefresh, onProfileChange }){
+function ProfileScreen({ tokens, authHint, onTopup, onDocs, onSupport, history=[], historyHint='', onRefreshHistory, onBalanceRefresh, onProfileChange }){
   const { Ic, Star } = window.MiraCore;
   const t = window.t || ((k)=>k);
   const [p, setP] = useState(()=>{ try{ return {...PROF_DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF_KEY))||{})}; }catch(e){ return {...PROF_DEFAULTS}; } });
@@ -142,6 +142,12 @@ function ProfileScreen({ tokens, authHint, onTopup, history=[], historyHint='', 
         <span className="muted" style={{marginLeft:'auto',marginRight:10,fontSize:15}}>{p.daily?t('profile.on'):t('profile.off')}</span>
         <span className={"switch"+(p.daily?" on":"")}><i></i></span>
       </div>
+    </div>
+
+    {/* Документы и поддержка */}
+    <div className="card" style={{overflow:'hidden',marginTop:14}}>
+      <Row chip={<IconChip bg="#1a7a5c"><Ic n="doc" s={18} c="#fff"/></IconChip>} title={t('doc.title')} value="" onClick={onDocs}/>
+      <Row chip={<IconChip bg="#7b5cff"><Ic n="chat" s={18} c="#fff"/></IconChip>} title={t('doc.support')} value="" onClick={onSupport} last/>
     </div>
 
     {window.HistoryBlock && <window.HistoryBlock items={history} hint={historyHint} onRefresh={onRefreshHistory} onBalanceRefresh={onBalanceRefresh}/>} 

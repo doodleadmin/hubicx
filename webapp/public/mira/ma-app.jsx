@@ -36,6 +36,7 @@ function App(){
   const [history, setHistory] = uS([]);
   const [historyHint, setHistoryHint] = uS('');
   const [profile, setProfile] = uS(()=>loadMiraProfile());
+  const [showDocs, setShowDocs] = uS(false);
 
   // chats
   const [chats, setChats] = uS(()=>{ try{ return JSON.parse(localStorage.getItem(CHATS_KEY))||[]; }catch(e){ return []; } });
@@ -169,7 +170,7 @@ function App(){
       onTemplate={(t)=>openCreate('photo', t)} history={history} historyHint={historyHint}
       onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)} history={history} historyHint={historyHint}
+    body = <ProfileScreen tokens={tokens} authHint={authHint} onTopup={()=>setTopup(true)} onDocs={()=>setShowDocs(true)} onSupport={()=>{ const tg=window.Telegram&&window.Telegram.WebApp; if(tg&&tg.openTelegramLink) tg.openTelegramLink('https://t.me/hubicx_support'); else window.open('https://t.me/hubicx_support','_blank'); }} history={history} historyHint={historyHint}
       onRefreshHistory={refreshHistory} onBalanceRefresh={refreshBalance} onProfileChange={setProfile}/>;
   }
 
@@ -183,6 +184,7 @@ function App(){
       current={model} onSelect={setModel} onClose={()=>setPicker(null)}/>}
     {picker==='aspect' && <window.PickerSheet title={t('gen.aspect')} options={window.MiraCore.ASPECTS}
       current={aspect} onSelect={setAspect} onClose={()=>setPicker(null)}/>}
+    {showDocs && window.DocsList && <window.DocsList onClose={()=>setShowDocs(false)}/>}
   </div>;
 }
 
@@ -270,7 +272,9 @@ function Topup({ tokens, onClose }){
           <div className="muted" style={{fontSize:12,marginTop:4}}>Бонус: 0 · 1 ₽ = 1 токен</div>
         </div>}
 
-        <div className="muted" style={{fontSize:13,marginTop:14,marginBottom:6}}>Оплата скоро будет доступна</div>
+        <div className="muted" style={{fontSize:13,marginTop:14,marginBottom:6}}>
+          {t('topup.yookassa_note')}
+        </div>
       </div>
 
       {/* CTA внутри sheet, снизу card */}
