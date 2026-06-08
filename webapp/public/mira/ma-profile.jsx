@@ -201,7 +201,7 @@ function OptsSheet({ title, options, current, onSave, onClose }){
           </div>
         ))}
       </div>
-      <button className="sheet-cta" onClick={()=>{ onSave(val); onClose(); }}>{t('common.save')}</button>
+      <div className="sheet-footer"><button className="sheet-cta primary" onClick={()=>{ onSave(val); onClose(); }}>{t('common.save')}</button></div>
     </div>
   </div>;
 }
@@ -217,7 +217,7 @@ function TextSheet({ title, ph, current, onSave, onClose }){
         <input ref={ref} className="text-in" placeholder={ph||t('profile.value_ph')} value={val}
           onChange={e=>setVal(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){ onSave(val.trim()); onClose(); } }}/>
       </div>
-      <button className="sheet-cta" onClick={()=>{ onSave(val.trim()); onClose(); }}>{t('common.save')}</button>
+      <div className="sheet-footer"><button className="sheet-cta primary" onClick={()=>{ onSave(val.trim()); onClose(); }}>{t('common.save')}</button></div>
     </div>
   </div>;
 }
@@ -234,7 +234,7 @@ function EmojiSheet({ current, onSave, onClose }){
           ))}
         </div>
       </div>
-      <button className="sheet-cta" onClick={()=>{ onSave(val); onClose(); }}>{t('common.save')}</button>
+      <div className="sheet-footer"><button className="sheet-cta primary" onClick={()=>{ onSave(val); onClose(); }}>{t('common.save')}</button></div>
     </div>
   </div>;
 }

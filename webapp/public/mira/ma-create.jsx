@@ -273,7 +273,7 @@ function PickerSheet({ title, options, current, onSelect, onClose }){
           </div>
         ))}
       </div>
-      <button className="sheet-cta" onClick={()=>{ const picked = options.find(o=>o.id===val) || options[0]; if(picked) onSelect(picked); onClose(); }}>{t('common.save')}</button>
+      <div className="sheet-footer"><button className="sheet-cta primary" onClick={()=>{ const picked = options.find(o=>o.id===val) || options[0]; if(picked) onSelect(picked); onClose(); }}>{t('common.save')}</button></div>
     </div>
   </div>;
 }

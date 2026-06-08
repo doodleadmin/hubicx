@@ -30,7 +30,6 @@
   --mira-agent-lift:50px;
   --mira-dock-height:92px;
   --mira-sheet-action-gap:16px;
-  --mira-sheet-action-bottom:calc(var(--mira-dock-height) + var(--mira-sheet-action-gap) + var(--hbx-safe-bottom, 0px));
   --app-height:100dvh;
   --glass:rgba(22,30,44,.55);
   --glass-line:rgba(255,255,255,.10);
@@ -202,10 +201,16 @@ body{
   .sheet-ov{animation:ovIn .2s ease}
 }
 @keyframes ovIn{from{opacity:0}to{opacity:1}}
-.sheet,.bottom-sheet,.opts-sheet,.text-sheet,.emoji-sheet,.modal{width:100%;max-width:none;padding:0 max(14px, var(--hbx-safe-left)) calc(var(--mira-dock-height) + 32px + var(--hbx-safe-bottom)) max(14px, var(--hbx-safe-right));transform:none;bottom:calc(var(--mira-dock-height) + var(--hbx-safe-bottom))}
+.sheet,.bottom-sheet,.opts-sheet,.text-sheet,.emoji-sheet,.modal{
+  position:fixed;left:max(14px, var(--hbx-safe-left));right:max(14px, var(--hbx-safe-right));
+  bottom:calc(118px + var(--hbx-safe-bottom, 0px));width:auto;max-width:none;
+  max-height:calc(var(--app-height) - 180px);display:flex;flex-direction:column;overflow:hidden;
+  padding:0;transform:none;
+}
 .sheet-card{background:rgba(22,30,44,.86);border:1px solid var(--glass-line);border-radius:22px;
   backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);padding:18px 18px 8px;
-  box-shadow:0 20px 50px rgba(0,0,0,.6)}
+  box-shadow:0 20px 50px rgba(0,0,0,.6);flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet-body,.sheet-content,.sheet-options,.opts-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:16px}
 .sheet-grab{width:38px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);margin:-4px auto 14px}
 .sheet-h{color:var(--link);font-weight:700;font-size:15px;margin-bottom:6px}
 .sheet-title{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-bottom:2px}
@@ -214,11 +219,14 @@ body{
 .opt .o-t{font-weight:700;font-size:16px}
 .opt .o-s{color:var(--tx2);font-size:13px;margin-top:2px}
 .opt .o-check{margin-left:auto;color:var(--blue-l)}
-.sheet-cta{width:100%;height:54px;border:none;border-radius:16px;margin:14px 0 0;
+.sheet-cta{width:100%;height:54px;border:none;border-radius:16px;margin:0;
   background:linear-gradient(180deg,#5aa0ec,#3f86e0);color:#fff;font-size:17px;font-weight:700;cursor:pointer;
   box-shadow:0 8px 22px rgba(47,128,237,.4)}
-.sheet-actions,.sheet-footer,.sheet-save,.sheet-save-wrap,.save-btn,.sheet-cta{position:sticky;bottom:var(--mira-sheet-action-bottom);z-index:20}
-.sheet-card,.result-detail{padding-bottom:18px}
+.sheet-actions,.sheet-footer,.sheet-save-wrap{position:sticky;bottom:0;z-index:5;flex:0 0 auto;padding:12px 0 0;
+  background:linear-gradient(180deg,rgba(15,24,38,0) 0%,rgba(15,24,38,.96) 28%,rgba(15,24,38,1) 100%)}
+.sheet-actions .primary,.sheet-footer .primary,.sheet-save-wrap .primary,.sheet-save{width:100%}
+.sheet > .sheet-cta{flex:0 0 auto;margin-top:12px}
+.sheet-card,.result-detail{padding-bottom:16px}
 
 /* big primary */
 .btn-primary{width:100%;height:56px;border-radius:16px;border:none;font-size:17px;font-weight:700;
