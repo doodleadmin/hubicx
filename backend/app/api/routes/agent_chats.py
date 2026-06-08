@@ -168,11 +168,12 @@ async def create_chat(
         session.add(msg)
         chat.last_message_at = now
     await session.commit()
-    await session.refresh(chat)
-    if chat.messages:
-        _ = chat.messages
-    else:
-        chat.messages = []
+    # Reload with messages eager-loaded
+    chat = await session.scalar(
+        select(AgentChat)
+        .where(AgentChat.id == chat.id)
+        .options(selectinload(AgentChat.messages))
+    )
     return {"chat": _serialize_chat_detail(chat)}
 
 
@@ -201,7 +202,12 @@ async def update_chat(
     if payload.is_archived is not None:
         chat.is_archived = payload.is_archived
     await session.commit()
-    await session.refresh(chat)
+    # Reload with eager-loaded messages
+    chat = await session.scalar(
+        select(AgentChat)
+        .where(AgentChat.id == chat_id)
+        .options(selectinload(AgentChat.messages))
+    )
     return {"chat": _serialize_chat(chat)}
 
 
@@ -211,7 +217,12 @@ async def archive_chat(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    chat = await _require_chat_owner(session, chat_id, user.id)
+    chat = await session.scalar(
+        select(AgentChat)
+        .where(AgentChat.id == chat_id, AgentChat.user_id == user.id)
+    )
+    if not chat:
+        raise AppError("chat_not_found", "Чат не найден", 404)
     chat.is_archived = True
     await session.commit()
     return {"ok": True}
