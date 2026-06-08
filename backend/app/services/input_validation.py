@@ -38,12 +38,30 @@ def _mime_matches_accept(mime_type: str | None, accept: str | None) -> bool:
     return False
 
 
+def _check_file_size(file_obj: File, field: dict[str, Any]) -> None:
+    max_size_mb = field.get("max_size_mb")
+    if max_size_mb is None or file_obj.size_bytes is None:
+        return
+    try:
+        limit = int(max_size_mb) * 1024 * 1024
+    except (TypeError, ValueError):
+        return
+    if file_obj.size_bytes > limit:
+        raise AppError("validation_error", f"Файл {file_obj.id} слишком большой для поля '{field.get('label', field['name'])}'")
+
+
 def validate_inputs_against_schema(
     form_schema: dict[str, Any] | None,
     inputs: dict[str, Any] | None,
     default_params: dict[str, Any] | None,
+    *,
+    for_preview: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    """Validate inputs against form_schema and return (validated_inputs, provider_input)."""
+    """Validate inputs against form_schema and return (validated_inputs, provider_input).
+    
+    When for_preview=True, required checks are skipped for file/image fields
+    so price-preview works without actual uploads.
+    """
     if not form_schema or not form_schema.get("fields"):
         return inputs or {}, inputs or {}
 
@@ -55,7 +73,10 @@ def validate_inputs_against_schema(
     raw_inputs = inputs or {}
     extra_keys = set(raw_inputs) - set(field_map)
     if extra_keys:
-        raise AppError("validation_error", f"Недопустимые поля: {', '.join(sorted(extra_keys))}")
+        if not for_preview:
+            raise AppError("validation_error", f"Недопустимые поля: {', '.join(sorted(extra_keys))}")
+        # For preview: silently ignore unknown keys
+        raw_inputs = {k: v for k, v in raw_inputs.items() if k in field_map}
 
     validated: dict[str, Any] = {}
     provider_input: dict[str, Any] = {}
@@ -70,6 +91,13 @@ def validate_inputs_against_schema(
         value = raw_inputs.get(name)
 
         if value is None:
+            # For preview: skip required check for file/image fields and any missing field
+            if for_preview:
+                if default is not None:
+                    validated[name] = default
+                    if field_type not in ("file", "files"):
+                        provider_input[provider_key] = default
+                continue
             if required and default is None:
                 raise AppError("validation_error", f"Поле '{field.get('label', name)}' обязательно")
             if default is not None:
@@ -78,6 +106,15 @@ def validate_inputs_against_schema(
                 continue
 
         if value is not None:
+            if field_type == "files":
+                if not isinstance(value, list):
+                    raise AppError("validation_error", f"Поле '{field.get('label', name)}' должно быть списком файлов")
+                min_files = int(field.get("min_files", 1 if required else 0))
+                max_files = int(field.get("max_files", 4))
+                if len(value) < min_files:
+                    raise AppError("validation_error", f"Минимум {min_files} файлов для '{field.get('label', name)}'")
+                if len(value) > max_files:
+                    raise AppError("validation_error", f"Максимум {max_files} файлов для '{field.get('label', name)}'")
             if field_type == "select":
                 options = field.get("options", [])
                 if options and str(value) not in [str(o) for o in options]:
@@ -135,6 +172,7 @@ async def resolve_input_files(
                     raise AppError("validation_error", f"Файл {fid} нельзя использовать как входной")
                 if not _mime_matches_accept(file_obj.mime_type, field.get("accept")):
                     raise AppError("validation_error", f"Файл {fid} не подходит для поля '{field.get('label', name)}'")
+                _check_file_size(file_obj, field)
                 urls.append(file_obj.storage_url)
             result[name] = urls
             result[f"{name}_resolved"] = urls
@@ -149,6 +187,7 @@ async def resolve_input_files(
                     raise AppError("validation_error", f"Файл {fid} нельзя использовать как входной")
                 if not _mime_matches_accept(file_obj.mime_type, field.get("accept")):
                     raise AppError("validation_error", f"Файл {fid} не подходит для поля '{field.get('label', name)}'")
+                _check_file_size(file_obj, field)
                 result[name] = file_obj.storage_url
                 result[f"{name}_resolved"] = file_obj.storage_url
             else:

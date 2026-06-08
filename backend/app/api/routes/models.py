@@ -50,7 +50,7 @@ async def preview_model_price(
     inputs = payload.get("inputs") or {}
     if not isinstance(inputs, dict):
         raise AppError("validation_error", "inputs must be an object")
-    validated_inputs, _ = validate_inputs_against_schema(model.form_schema or {}, inputs, model.default_params)
+    validated_inputs, _ = validate_inputs_against_schema(model.form_schema or {}, inputs, model.default_params, for_preview=True)
     final_price, breakdown = await calculate_generation_cost_breakdown_from_db(session, model, validated_inputs)
 
     # Определяем pricing_source из breakdown
