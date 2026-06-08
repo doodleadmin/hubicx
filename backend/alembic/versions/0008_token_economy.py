@@ -117,7 +117,7 @@ def upgrade() -> None:
             sa.text("SELECT id FROM token_packages WHERE code = :code"), {"code": pkg["code"]}
         ).fetchone()
         if existing:
-            op.execute(
+            op.get_bind().execute(
                 sa.text(
                     "UPDATE token_packages SET title=:title, tokens=:total_tokens, price_rub=:price_rub, "
                     "base_tokens=:base_tokens, total_tokens=:total_tokens, bonus_tokens=:bonus_tokens, "
@@ -166,7 +166,7 @@ def upgrade() -> None:
             rules_json = IMAGE_MULTIPLY_BY_NUM
 
         if existing_p:
-            op.execute(
+            op.get_bind().execute(
                 sa.text(
                     "UPDATE model_pricing SET display_name=:name, category=:cat, price_tokens=:price, "
                     "is_enabled=:enabled, is_featured=:feat, price_rules=:rules::jsonb WHERE model_code=:code"
