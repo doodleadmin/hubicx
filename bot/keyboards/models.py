@@ -8,7 +8,7 @@ from bot.custom_emoji import emoji_icon
 from bot.i18n import t
 
 logger = logging.getLogger(__name__)
-WEBAPP_VERSION = "20260608_token_economy"
+WEBAPP_VERSION = "20260608_agent_chat_modes"
 
 
 def versioned_webapp_url(url: str) -> str:

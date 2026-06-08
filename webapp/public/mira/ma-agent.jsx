@@ -1,18 +1,20 @@
 /* ============ Agent (home) screen ============ */
 const HUBICX_AGENTS = [
-  {name:'Prompt Master', descKey:'agent.prompt_master.desc', prompt:'Ты Prompt Master Hubicx. Улучши запрос пользователя для генеративной AI-модели. Отвечай кратко, структурно и сразу давай готовый промпт.', quickKeys:['quick.improve','quick.variants','quick.cinematic']},
-  {name:'SMM Assistant', descKey:'agent.smm.desc', prompt:'Ты SMM Assistant Hubicx. Помогай с контент-планом, постами, рекламными текстами и идеями для соцсетей. Пиши практично и в тоне бренда.', quickKeys:['quick.tg_post','quick.reels','quick.week_plan']},
-  {name:'Design Brief Builder', descKey:'agent.brief.desc', prompt:'Ты Design Brief Builder Hubicx. Превращай идею в понятный дизайн-бриф: цель, аудитория, стиль, референсы, deliverables и критерии результата.', quickKeys:['quick.brief','quick.moodboard','quick.brand']},
-  {name:'Video Script Writer', descKey:'agent.video.desc', prompt:'Ты Video Script Writer Hubicx. Пиши короткие сценарии, hooks, структуру ролика и shot list для генерации видео.', quickKeys:['quick.script15','quick.shotlist','quick.hook']},
-  {name:'Telegram Bot Copywriter', descKey:'agent.botcopy.desc', prompt:'Ты Telegram Bot Copywriter Hubicx. Пиши тексты кнопок, онбординг, сообщения, команды и microcopy для Telegram-ботов.', quickKeys:['quick.onboarding','quick.buttons','quick.payment']},
+  {code:'general', nameKey:'agent.mode.general', descKey:'agent.mode.general.desc', prompt:''},
+  {code:'prompt_master', nameKey:'agent.mode.prompt_master', descKey:'agent.mode.prompt_master.desc', prompt:'Ты Prompt Master Hubicx. Улучши запрос пользователя для генеративной AI-модели. Отвечай кратко, структурно и сразу давай готовый промпт.', quickKeys:['quick.improve','quick.variants','quick.cinematic']},
+  {code:'smm_assistant', nameKey:'agent.mode.smm_assistant', descKey:'agent.mode.smm_assistant.desc', prompt:'Ты SMM Assistant Hubicx. Помогай с контент-планом, постами, рекламными текстами и идеями для соцсетей. Пиши практично и в тоне бренда.', quickKeys:['quick.tg_post','quick.reels','quick.week_plan']},
+  {code:'design_brief', nameKey:'agent.mode.design_brief', descKey:'agent.mode.design_brief.desc', prompt:'Ты Design Brief Builder Hubicx. Превращай идею в понятный дизайн-бриф: цель, аудитория, стиль, референсы, deliverables и критерии результата.', quickKeys:['quick.brief','quick.moodboard','quick.brand']},
+  {code:'video_script', nameKey:'agent.mode.video_script', descKey:'agent.mode.video_script.desc', prompt:'Ты Video Script Writer Hubicx. Пиши короткие сценарии, hooks, структуру ролика и shot list для генерации видео.', quickKeys:['quick.script15','quick.shotlist','quick.hook']},
+  {code:'bot_copywriter', nameKey:'agent.mode.bot_copywriter', descKey:'agent.mode.bot_copywriter.desc', prompt:'Ты Telegram Bot Copywriter Hubicx. Пиши тексты кнопок, онбординг, сообщения, команды и microcopy для Telegram-ботов.', quickKeys:['quick.onboarding','quick.buttons','quick.payment']},
 ];
+
+function getAgentByCode(code){ return HUBICX_AGENTS.find(a=>a.code===code) || HUBICX_AGENTS[0]; }
 
 function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo, onTopup, onStartChat, onAddToChat, chats, onOpenChat, onDeleteChat }){
   const { Ic, TokenBadge, HERO } = window.MiraCore;
   const t = window.t || ((k)=>k);
   const [val, setVal] = useState("");
-  const [agent, setAgent] = useState(HUBICX_AGENTS[0]);
-  const send = ()=>{ const t=val.trim(); if(!t) return; setVal(""); onStartChat(t, agent.prompt); };
+  const send = ()=>{ const txt=val.trim(); if(!txt) return; setVal(""); onStartChat(txt); };
   return <div className="screen agent-screen scr-enter">
     <div className="topbar">
       <div className="tb-av" style={{padding:0,overflow:'hidden'}}>
@@ -38,19 +40,7 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
       <div className="pill" style={{flex:1}} onClick={onCreateVideo}><Ic n="video" s={19}/> {t('agent.create_video')}</div>
     </div>
     <div style={{display:'flex',justifyContent:'center',marginTop:10}}>
-      <div className="pill" onClick={()=>onAddToChat(val.trim(), agent.prompt)}><Ic n="chat" s={18}/> {t('agent.add_chat')}</div>
-    </div>
-
-    <div className="rail" style={{marginTop:14}}>
-      {HUBICX_AGENTS.map(a=><div key={a.name} className="pill" onClick={()=>setAgent(a)}
-        style={{scrollSnapAlign:'start',whiteSpace:'nowrap',borderColor:agent.name===a.name?'rgba(77,155,245,.7)':'var(--glass-line)'}}>
-        {a.name}
-      </div>)}
-    </div>
-    <div className="muted" style={{fontSize:12,marginTop:8,textAlign:'center'}}>{t(agent.descKey)}</div>
-    <div className="rail" style={{marginTop:10}}>
-      {agent.quickKeys.map(k=><div key={k} className="pill" onClick={()=>setVal(t(k))}
-        style={{scrollSnapAlign:'start',whiteSpace:'nowrap',fontSize:13}}>{t(k)}</div>)}
+      <div className="pill" onClick={()=>onAddToChat(val.trim())}><Ic n="chat" s={18}/> {t('agent.add_chat')}</div>
     </div>
 
     {chats && chats.length>0 && <>
@@ -63,6 +53,7 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
               <div style={{fontWeight:700,fontSize:15,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.title}</div>
               <div className="muted" style={{fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.msgs.length? c.msgs[c.msgs.length-1].text : ''}</div>
             </div>
+            {c.agentMode && c.agentMode!=='general' && <div className="muted" style={{fontSize:11,whiteSpace:'nowrap',padding:'2px 6px',borderRadius:6,background:'rgba(77,155,245,.12)',color:'#4d9bf5',marginRight:6}}>{t(getAgentByCode(c.agentMode).nameKey)}</div>}
             <div className="cp-x" onClick={e=>{ e.stopPropagation(); onDeleteChat(c.id); }}><Ic n="close" s={17}/></div>
           </div>
         ))}
@@ -83,3 +74,5 @@ function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo,
   </div>;
 }
 window.AgentScreen = AgentScreen;
+window.HUBICX_AGENTS = HUBICX_AGENTS;
+window.getAgentByCode = getAgentByCode;

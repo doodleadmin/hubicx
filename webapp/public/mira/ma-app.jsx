@@ -103,7 +103,7 @@ function App(){
   const goTab = (t)=>{ setCreateOpen(false); setActiveChat(null); setTab(t); };
 
   // ---- chat logic ----
-  const botReply = (chatId, text, promptPrefix='') => {
+  const botReply = (chatId, text, agentMode='general') => {
     setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:true}:c));
     const fallback = ()=>{
       const line = window.BOT_LINES[Math.floor(Math.random()*window.BOT_LINES.length)];
@@ -113,8 +113,10 @@ function App(){
       setTimeout(fallback, 900);
       return;
     }
+    const agent = window.getAgentByCode ? window.getAgentByCode(agentMode) : null;
+    const rolePrefix = (agent && agent.prompt) || '';
     const profilePrefix = composeProfilePrefix(profile);
-    const fullPrefix = [profilePrefix, promptPrefix].filter(Boolean).join('\n\nРежим агента:\n');
+    const fullPrefix = [profilePrefix, rolePrefix].filter(Boolean).join('\n\n');
     window.HubicxApi.chat({prompt: fullPrefix ? `${fullPrefix}\n\nЗапрос пользователя: ${text}` : text})
       .then(res=>{
         setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, lastTaskId:res.task && res.task.id, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c));
@@ -126,24 +128,27 @@ function App(){
         refreshAfterTask();
       });
   };
-  const startChat = (text, promptPrefix='') => {
+  const startChat = (text) => {
     const id = 'c'+Date.now();
     const title = text.length>34? text.slice(0,34)+'…' : text;
-    setChats(cs=>[{id, title, promptPrefix, msgs:[{role:'user',text}], typing:false}, ...cs]);
+    setChats(cs=>[{id, title, agentMode:'general', msgs:[{role:'user',text}], typing:false}, ...cs]);
     setActiveChat(id);
-    botReply(id, text, promptPrefix);
+    botReply(id, text, 'general');
   };
   const sendInChat = (text) => {
     setChats(cs=>cs.map(c=>c.id===activeChat?{...c, draft:'', msgs:[...c.msgs,{role:'user',text}]}:c));
     const chat = chats.find(c=>c.id===activeChat);
-    botReply(activeChat, text, chat && chat.promptPrefix);
+    botReply(activeChat, text, chat && chat.agentMode);
   };
-  const openDraftChat = (text='', promptPrefix='') => {
+  const openDraftChat = (text='') => {
     const draft = (text || '').trim();
     const id = 'c'+Date.now();
     const title = draft ? (draft.length>34? draft.slice(0,34)+'…' : draft) : t('agent.new_chat');
-    setChats(cs=>[{id, title, promptPrefix, draft, msgs:[], typing:false}, ...cs]);
+    setChats(cs=>[{id, title, agentMode:'general', draft, msgs:[], typing:false}, ...cs]);
     setActiveChat(id);
+  };
+  const changeChatMode = (modeCode) => {
+    setChats(cs=>cs.map(c=>c.id===activeChat?{...c, agentMode:modeCode}:c));
   };
   const deleteChat = (id) => setChats(cs=>cs.filter(c=>c.id!==id));
   const curChat = chats.find(c=>c.id===activeChat);
@@ -171,7 +176,7 @@ function App(){
   return <div className="phone">
     <div className="bgfx"><div className="blob b1"></div><div className="blob b2"></div></div>
     {body}
-    {curChat && <ChatScreen chat={curChat} onBack={()=>setActiveChat(null)} onSend={sendInChat}/>}
+    {curChat && <ChatScreen chat={curChat} onBack={()=>setActiveChat(null)} onSend={sendInChat} onModeChange={changeChatMode}/>}
     {!curChat && <BottomNav tab={createOpen?'gen':tab} onTab={goTab}/>}
     {topup && <Topup tokens={tokens} onClose={()=>setTopup(false)}/>}
     {picker==='model' && <window.PickerSheet title={t('gen.model')} options={modelsByType(modelTypeForMode(mode))}
