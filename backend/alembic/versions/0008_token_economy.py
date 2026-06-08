@@ -166,10 +166,11 @@ def upgrade() -> None:
             rules_json = IMAGE_MULTIPLY_BY_NUM
 
         if existing_p:
-            op.get_bind().execute(
+            conn = op.get_bind()
+            conn.execute(
                 sa.text(
                     "UPDATE model_pricing SET display_name=:name, category=:cat, price_tokens=:price, "
-                    "is_enabled=:enabled, is_featured=:feat, price_rules=:rules::jsonb WHERE model_code=:code"
+                    "is_enabled=:enabled, is_featured=:feat, price_rules=CAST(:rules AS jsonb) WHERE model_code=:code"
                 ),
                 {
                     "code": code, "name": name, "cat": category, "price": price,
