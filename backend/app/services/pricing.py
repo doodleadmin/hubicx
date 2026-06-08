@@ -84,7 +84,13 @@ def calculate_generation_cost(model: AIModel, validated_inputs: dict[str, Any]) 
 
 # ── новый движок (model_pricing.price_rules) ───────────────────────────
 def _normalize_resolution(res: str) -> str:
-    return res.upper().replace("K", "K") if res else res
+    if not res:
+        return res
+    r = res.strip()
+    # "1k" -> "1K", "720p" -> "720p", "1080p" -> "1080p"
+    if r.lower().endswith("k") and len(r) <= 3:
+        return r.upper()
+    return r.lower()
 
 
 def _normalize_duration(dur: Any) -> str:
