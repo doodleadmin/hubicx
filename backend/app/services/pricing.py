@@ -1,7 +1,11 @@
 import math
 from typing import Any
 
-from backend.app.db.models import AIModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.app.db.models import AIModel, ModelPricing
+from backend.app.utils.errors import AppError
 
 
 def _as_number(value: Any, default: float = 0) -> float:
@@ -18,12 +22,13 @@ def _mapped_number(mapping: dict[str, Any], value: Any, default: float) -> float
     return _as_number(mapping.get(key, mapping.get(str(value), default)), default)
 
 
-def calculate_generation_cost_breakdown(model: AIModel, validated_inputs: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+def calculate_generation_cost_breakdown(model: AIModel, validated_inputs: dict[str, Any], base_price_override: int | None = None) -> tuple[int, list[dict[str, Any]]]:
     rules = (model.form_schema or {}).get("price_rules") or {}
+    model_base_price = int(base_price_override if base_price_override is not None else model.price_credits)
     if not isinstance(rules, dict) or not rules:
-        return int(model.price_credits), [{"type": "base", "label": "base", "amount": int(model.price_credits)}]
+        return model_base_price, [{"type": "base", "label": "base", "amount": model_base_price}]
 
-    base = _as_number(rules.get("base"), float(model.price_credits))
+    base = float(model_base_price) if base_price_override is not None else _as_number(rules.get("base"), float(model.price_credits))
     total = base
     breakdown: list[dict[str, Any]] = [{"type": "base", "label": "base", "amount": base}]
 
@@ -71,4 +76,26 @@ def calculate_generation_cost_breakdown(model: AIModel, validated_inputs: dict[s
 
 def calculate_generation_cost(model: AIModel, validated_inputs: dict[str, Any]) -> int:
     final_cost, _ = calculate_generation_cost_breakdown(model, validated_inputs)
+    return final_cost
+
+
+async def get_model_pricing(session: AsyncSession, model_code: str) -> ModelPricing | None:
+    return await session.scalar(select(ModelPricing).where(ModelPricing.model_code == model_code))
+
+
+async def effective_model_base_price(session: AsyncSession, model: AIModel) -> int:
+    pricing = await get_model_pricing(session, model.code)
+    if pricing:
+        if not pricing.is_enabled:
+            raise AppError("model_inactive", "Модель временно отключена")
+        return int(pricing.price_tokens)
+    return int(model.price_credits)
+
+
+async def calculate_generation_cost_breakdown_from_db(session: AsyncSession, model: AIModel, validated_inputs: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
+    return calculate_generation_cost_breakdown(model, validated_inputs, await effective_model_base_price(session, model))
+
+
+async def calculate_generation_cost_from_db(session: AsyncSession, model: AIModel, validated_inputs: dict[str, Any]) -> int:
+    final_cost, _ = await calculate_generation_cost_breakdown_from_db(session, model, validated_inputs)
     return final_cost

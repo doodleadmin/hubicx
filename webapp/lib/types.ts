@@ -100,16 +100,22 @@ export type AdminUser = {
   telegram_id: number;
   username?: string;
   first_name?: string;
+  language_code?: string;
   balance_credits: number;
   is_admin: boolean;
   ref_code: string;
   created_at?: string;
+  last_active_at?: string | null;
 };
 
 export type AdminTask = {
   id: number;
   user_id: number;
   model_id?: number;
+  model_code?: string;
+  model_title?: string;
+  telegram_id?: number;
+  username?: string;
   task_type: string;
   status: string;
   prompt?: string;
@@ -118,6 +124,42 @@ export type AdminTask = {
   output_file_url?: string;
   created_at?: string;
   completed_at?: string;
+};
+
+export type AdminModelPricing = {
+  id: number;
+  model_code: string;
+  display_name: string;
+  category: "image" | "video" | "text";
+  price_tokens: number;
+  is_enabled: boolean;
+  is_featured: boolean;
+  admin_note?: string;
+};
+
+export type TokenPackage = {
+  id: number;
+  code: string;
+  title: string;
+  tokens: number;
+  price_rub: number;
+  bonus_tokens: number;
+  is_active: boolean;
+  sort_order: number;
+};
+
+export type BalanceLedgerItem = {
+  id: number;
+  user_id: number;
+  amount: number;
+  balance_before: number;
+  balance_after: number;
+  operation_type: string;
+  reason?: string;
+  task_id?: number;
+  payment_id?: number;
+  admin_user_id?: number;
+  created_at?: string;
 };
 
 export type AdminTransaction = {

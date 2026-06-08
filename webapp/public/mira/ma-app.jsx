@@ -184,8 +184,24 @@ function App(){
 function Topup({ tokens, onClose }){
   const { Star } = window.MiraCore;
   const t = window.t || ((k)=>k);
-  const packs=[{n:50,p:'149 ₽'},{n:150,p:'399 ₽',tag:t('profile.good_deal')},{n:500,p:'1 190 ₽'}];
+  const fallbackPacks=[
+    {code:'starter',title:'100 токенов',tokens:100,price_rub:149,bonus_tokens:0},
+    {code:'basic',title:'300 токенов',tokens:300,price_rub:399,bonus_tokens:0},
+    {code:'pro',title:'700 токенов',tokens:700,price_rub:849,bonus_tokens:0},
+    {code:'max',title:'1500 токенов',tokens:1500,price_rub:1690,bonus_tokens:0},
+  ];
+  const [packs, setPacks] = uS(fallbackPacks);
   const [sel, setSel] = uS(1);
+  React.useEffect(()=>{
+    let alive=true;
+    if(window.HubicxApi && window.HubicxApi.pricing){
+      window.HubicxApi.pricing().then(data=>{
+        if(alive && data && Array.isArray(data.token_packages) && data.token_packages.length) setPacks(data.token_packages);
+      }).catch(()=>{});
+    }
+    return ()=>{ alive=false; };
+  }, []);
+  const chosen = packs[sel] || packs[0];
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={e=>e.stopPropagation()}>
       <div className="sheet-card">
@@ -198,15 +214,16 @@ function Topup({ tokens, onClose }){
               style={{border:'1px solid '+(sel===i?'rgba(77,155,245,.7)':'var(--glass-line)'),
                 borderRadius:14,padding:'13px 14px',background:sel===i?'rgba(47,128,237,.14)':'rgba(255,255,255,.03)'}}>
               <Star s={20} c="#3e92f0"/>
-              <span style={{fontWeight:700,fontSize:17}}>{p.n} {t('common.tokens')}</span>
-              {p.tag && <span style={{fontSize:12,fontWeight:700,color:'#fff',background:'#2f80ed',
-                padding:'3px 9px',borderRadius:8}}>{p.tag}</span>}
-              <span style={{marginLeft:'auto',fontWeight:700,fontSize:16}}>{p.p}</span>
+              <span style={{fontWeight:700,fontSize:17}}>{p.tokens} {t('common.tokens')}</span>
+              {p.bonus_tokens > 0 && <span style={{fontSize:12,fontWeight:700,color:'#fff',background:'#2f80ed',
+                padding:'3px 9px',borderRadius:8}}>+{p.bonus_tokens}</span>}
+              <span style={{marginLeft:'auto',fontWeight:700,fontSize:16}}>{p.price_rub} ₽</span>
             </div>
           ))}
         </div>
+        <div className="muted" style={{fontSize:13,marginTop:14}}>Покупка токенов скоро будет доступна</div>
       </div>
-      <button className="sheet-cta" onClick={onClose}>{t('profile.pay',{price:packs[sel].p})}</button>
+      <button className="sheet-cta" disabled style={{opacity:.55,cursor:'not-allowed'}} onClick={e=>e.preventDefault()}>Скоро будет доступно · {chosen.price_rub} ₽</button>
     </div>
   </div>;
 }

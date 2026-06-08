@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from backend.app.db.models import AIModel, GenerationTask, Template, User
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
 from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
-from backend.app.services.pricing import calculate_generation_cost
+from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
 
 MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
@@ -51,20 +51,21 @@ async def create_generation_task(
             provider_input = build_provider_input_from_resolved(resolved_inputs, model.form_schema)
             if prompt and "prompt" not in provider_input:
                 provider_input["prompt"] = prompt
+            provider_input = {**(model.default_params or {}), **provider_input}
             logger.info(
                 "VALIDATED_PROVIDER_INPUT model_code=%s keys=%s prompt_preview=%s",
                 model.code,
                 sorted(provider_input.keys()),
                 _provider_prompt_preview(provider_input),
             )
-            task_params = {**(model.default_params or {}), **provider_input}
+            task_params = provider_input
         else:
             validated_inputs = inputs or {}
             provider_input = inputs or {}
             task_params = {**(model.default_params or {}), **(params or {})}
             if prompt:
                 task_params["prompt"] = prompt
-        price = calculate_generation_cost(model, validated_inputs)
+        price = await calculate_generation_cost_from_db(session, model, validated_inputs)
     else:
         template = await session.scalar(select(Template).where(Template.code == template_code))
         if not template:

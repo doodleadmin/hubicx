@@ -90,6 +90,7 @@
     getInitData:initData,
     request,
     me:()=>request('/auth/me'),
+    pricing:()=>request('/pricing'),
     models:()=>request('/models'),
     model:(code)=>request(`/models/${encodeURIComponent(code)}`),
     pricePreview,

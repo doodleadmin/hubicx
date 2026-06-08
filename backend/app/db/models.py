@@ -70,6 +70,32 @@ class AIModel(Base, TimestampMixin):
     webapp_route: Mapped[str | None] = mapped_column(String(255))
 
 
+class TokenPackage(Base, TimestampMixin):
+    __tablename__ = "token_packages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    tokens: Mapped[int] = mapped_column(Integer)
+    price_rub: Mapped[int] = mapped_column(Integer)
+    bonus_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ModelPricing(Base, TimestampMixin):
+    __tablename__ = "model_pricing"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    model_code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    category: Mapped[str] = mapped_column(String(32))
+    price_tokens: Mapped[int] = mapped_column(Integer)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    admin_note: Mapped[str | None] = mapped_column(Text)
+
+
 class Template(Base, TimestampMixin):
     __tablename__ = "templates"
 
@@ -130,6 +156,23 @@ class Transaction(Base):
     generation_task_id: Mapped[int | None] = mapped_column(ForeignKey("generation_tasks.id"))
     payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"))
     comment: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BalanceLedger(Base):
+    __tablename__ = "balance_ledger"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    amount: Mapped[int] = mapped_column(Integer)
+    balance_before: Mapped[int] = mapped_column(Integer)
+    balance_after: Mapped[int] = mapped_column(Integer)
+    operation_type: Mapped[str] = mapped_column(String(32), index=True)
+    reason: Mapped[str | None] = mapped_column(Text)
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("generation_tasks.id"), nullable=True)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"), nullable=True)
+    admin_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
