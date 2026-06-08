@@ -228,6 +228,15 @@ body{
 .sheet > .sheet-cta{flex:0 0 auto;margin-top:12px}
 .sheet-card,.result-detail{padding-bottom:16px}
 
+/* Topup sheet: CTA inside sheet, not outside */
+.topup-sheet{display:flex;flex-direction:column;overflow:hidden;padding:0}
+.topup-card{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px}
+.topup-cta-wrap{flex:0 0 auto;position:sticky;bottom:0;z-index:10;padding:8px 18px 18px;
+  background:linear-gradient(180deg,rgba(15,24,38,0) 0%,rgba(15,24,38,.92) 22%,rgba(15,24,38,1) 50%)}
+.topup-cta-btn{width:100%;height:54px;border:none;border-radius:16px;
+  background:linear-gradient(180deg,#5aa0ec,#3f86e0);color:#fff;font-size:17px;font-weight:700;
+  box-shadow:0 8px 22px rgba(47,128,237,.4);pointer-events:none}
+
 /* big primary */
 .btn-primary{width:100%;height:56px;border-radius:16px;border:none;font-size:17px;font-weight:700;
   color:#fff;background:var(--blue);cursor:pointer}

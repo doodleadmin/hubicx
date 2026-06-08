@@ -222,11 +222,15 @@ function Topup({ tokens, onClose }){
   const customValid = customAmount && !isNaN(customNum) && customNum >= 99;
 
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={e=>e.stopPropagation()}>
-      <div className="sheet-card">
+    <div className="sheet topup-sheet" onClick={e=>e.stopPropagation()}>
+      <div className="sheet-card topup-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">{t('profile.topup')}</div>
-        <div className="muted" style={{fontSize:14,marginBottom:14}}>{t('profile.current_balance',{tokens})}</div>
+
+        {/* Баланс — реальный, не 0 */}
+        <div className="muted" style={{fontSize:14,marginBottom:14}}>
+          {tokens > 0 ? t('profile.current_balance',{tokens}) : t('profile.current_balance',{tokens: tokens})}
+        </div>
 
         {/* Готовые пакеты */}
         <div className="label-sec" style={{marginBottom:8}}>Готовые пакеты</div>
@@ -266,11 +270,15 @@ function Topup({ tokens, onClose }){
           <div className="muted" style={{fontSize:12,marginTop:4}}>Бонус: 0 · 1 ₽ = 1 токен</div>
         </div>}
 
-        <div className="muted" style={{fontSize:13,marginTop:14}}>Оплата скоро будет доступна</div>
+        <div className="muted" style={{fontSize:13,marginTop:14,marginBottom:6}}>Оплата скоро будет доступна</div>
       </div>
-      <button className="sheet-cta" disabled style={{opacity:.55,cursor:'not-allowed'}} onClick={e=>e.preventDefault()}>
-        Скоро будет доступно{customValid ? ` · ${customNum} ₽` : chosen ? ` · ${chosen.price_rub} ₽` : ''}
-      </button>
+
+      {/* CTA внутри sheet, снизу card */}
+      <div className="topup-cta-wrap">
+        <button className="sheet-cta topup-cta-btn" disabled style={{opacity:.55,cursor:'not-allowed'}} onClick={e=>e.preventDefault()}>
+          Скоро будет доступно{customValid ? ` · ${customNum} ₽` : chosen ? ` · ${chosen.price_rub} ₽` : ''}
+        </button>
+      </div>
     </div>
   </div>;
 }
