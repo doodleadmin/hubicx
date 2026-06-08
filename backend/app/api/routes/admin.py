@@ -323,6 +323,8 @@ async def create_token_package(payload: dict = Body(...), user: User = Depends(c
         tokens=tokens,
         price_rub=price_rub,
         bonus_tokens=int(payload.get("bonus_tokens") or 0),
+        base_tokens=int(payload.get("base_tokens") or 0) or None,
+        total_tokens=int(payload.get("total_tokens") or 0) or None,
         is_active=bool(payload.get("is_active", True)),
         sort_order=int(payload.get("sort_order") or 0),
     )
@@ -342,7 +344,7 @@ async def update_token_package(package_id: int, payload: dict = Body(...), user:
     for field in ("code", "title"):
         if field in payload:
             setattr(pkg, field, str(payload[field]).strip())
-    for field in ("tokens", "price_rub", "bonus_tokens", "sort_order"):
+    for field in ("tokens", "price_rub", "bonus_tokens", "sort_order", "base_tokens", "total_tokens"):
         if field in payload:
             setattr(pkg, field, int(payload[field]))
     if "is_active" in payload:
@@ -394,12 +396,25 @@ async def update_model_pricing(model_code: str, payload: dict = Body(...), user:
         if next_price < 0:
             raise AppError("invalid_price", "Цена не может быть отрицательной")
         price.price_tokens = next_price
+    if "price_rules" in payload:
+        rules = payload["price_rules"]
+        if isinstance(rules, str):
+            import json
+            try:
+                rules = json.loads(rules)
+            except json.JSONDecodeError:
+                raise AppError("invalid_json", "price_rules должен быть валидным JSON")
+        if rules is not None and not isinstance(rules, dict):
+            raise AppError("invalid_json", "price_rules должен быть объектом JSON")
+        price.price_rules = rules
     if "is_enabled" in payload:
         price.is_enabled = bool(payload["is_enabled"])
     if "is_featured" in payload:
         price.is_featured = bool(payload["is_featured"])
     if "admin_note" in payload:
         price.admin_note = str(payload["admin_note"] or "")[:2000] or None
+    if "provider_cost_note" in payload:
+        price.provider_cost_note = str(payload["provider_cost_note"] or "")[:2000] or None
     await session.commit()
     await session.refresh(price)
     logger.info("ADMIN_MODEL_PRICING_UPDATE admin_user_id=%s model_code=%s price_tokens=%s", user.id, model_code, price.price_tokens)

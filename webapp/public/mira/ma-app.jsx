@@ -185,13 +185,16 @@ function Topup({ tokens, onClose }){
   const { Star } = window.MiraCore;
   const t = window.t || ((k)=>k);
   const fallbackPacks=[
-    {code:'starter',title:'100 токенов',tokens:100,price_rub:149,bonus_tokens:0},
-    {code:'basic',title:'300 токенов',tokens:300,price_rub:399,bonus_tokens:0},
-    {code:'pro',title:'700 токенов',tokens:700,price_rub:849,bonus_tokens:0},
-    {code:'max',title:'1500 токенов',tokens:1500,price_rub:1690,bonus_tokens:0},
+    {code:'start',title:'160 токенов',tokens:160,price_rub:149,bonus_tokens:11,base_tokens:149,total_tokens:160,effective_price_per_token:0.93},
+    {code:'basic',title:'450 токенов',tokens:450,price_rub:399,bonus_tokens:51,base_tokens:399,total_tokens:450,effective_price_per_token:0.89},
+    {code:'pro',title:'1000 токенов',tokens:1000,price_rub:849,bonus_tokens:151,base_tokens:849,total_tokens:1000,effective_price_per_token:0.85},
+    {code:'max',title:'2200 токенов',tokens:2200,price_rub:1690,bonus_tokens:510,base_tokens:1690,total_tokens:2200,effective_price_per_token:0.77},
+    {code:'ultra',title:'4200 токенов',tokens:4200,price_rub:2990,bonus_tokens:1210,base_tokens:2990,total_tokens:4200,effective_price_per_token:0.71},
   ];
   const [packs, setPacks] = uS(fallbackPacks);
   const [sel, setSel] = uS(1);
+  const [customAmount, setCustomAmount] = uS('');
+  const [customError, setCustomError] = uS('');
   React.useEffect(()=>{
     let alive=true;
     if(window.HubicxApi && window.HubicxApi.pricing){
@@ -202,28 +205,67 @@ function Topup({ tokens, onClose }){
     return ()=>{ alive=false; };
   }, []);
   const chosen = packs[sel] || packs[0];
+
+  const handleCustomChange = (v) => {
+    const num = parseInt(v, 10);
+    setCustomAmount(v);
+    if (!v || isNaN(num)) { setCustomError(''); return; }
+    if (num < 99) { setCustomError('Минимум 99 ₽'); return; }
+    setCustomError('');
+  };
+  const customNum = parseInt(customAmount, 10);
+  const customValid = customAmount && !isNaN(customNum) && customNum >= 99;
+
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={e=>e.stopPropagation()}>
       <div className="sheet-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">{t('profile.topup')}</div>
         <div className="muted" style={{fontSize:14,marginBottom:14}}>{t('profile.current_balance',{tokens})}</div>
+
+        {/* Готовые пакеты */}
+        <div className="label-sec" style={{marginBottom:8}}>Готовые пакеты</div>
         <div style={{display:'flex',flexDirection:'column',gap:10}}>
           {packs.map((p,i)=>(
             <div key={i} className="opt" onClick={()=>setSel(i)}
               style={{border:'1px solid '+(sel===i?'rgba(77,155,245,.7)':'var(--glass-line)'),
                 borderRadius:14,padding:'13px 14px',background:sel===i?'rgba(47,128,237,.14)':'rgba(255,255,255,.03)'}}>
               <Star s={20} c="#3e92f0"/>
-              <span style={{fontWeight:700,fontSize:17}}>{p.tokens} {t('common.tokens')}</span>
-              {p.bonus_tokens > 0 && <span style={{fontSize:12,fontWeight:700,color:'#fff',background:'#2f80ed',
-                padding:'3px 9px',borderRadius:8}}>+{p.bonus_tokens}</span>}
-              <span style={{marginLeft:'auto',fontWeight:700,fontSize:16}}>{p.price_rub} ₽</span>
+              <div style={{flex:1}}>
+                <span style={{fontWeight:700,fontSize:17}}>{(p.total_tokens || p.tokens)} {t('common.tokens')}</span>
+                {p.bonus_tokens > 0 && <span style={{fontSize:12,fontWeight:700,color:'#2f80ed',marginLeft:6}}>+{p.bonus_tokens} бонус</span>}
+                <div className="muted" style={{fontSize:11,marginTop:2}}>
+                  {p.effective_price_per_token != null ? `${p.effective_price_per_token} ₽ за токен` : `${p.price_rub} ₽`}
+                </div>
+              </div>
+              <span style={{fontWeight:700,fontSize:16}}>{p.price_rub} ₽</span>
             </div>
           ))}
         </div>
-        <div className="muted" style={{fontSize:13,marginTop:14}}>Покупка токенов скоро будет доступна</div>
+
+        {/* Своя сумма */}
+        <div className="label-sec" style={{marginTop:18,marginBottom:8}}>Своя сумма</div>
+        <div style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,.04)',borderRadius:12,padding:'10px 14px',border:'1px solid var(--glass-line)'}}>
+          <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
+            onChange={e=>handleCustomChange(e.target.value)}
+            style={{flex:1,background:'transparent',border:'none',color:'#fff',fontSize:16,fontWeight:600,outline:'none',
+              fontFamily:'inherit',MozAppearance:'textfield'}} min="99"/>
+          <span style={{fontWeight:700,fontSize:15,color:'rgba(255,255,255,.5)'}}>₽</span>
+        </div>
+        {customError && <div className="muted" style={{fontSize:12,marginTop:6,color:'#ff4d3d'}}>{customError}</div>}
+        {customValid && <div style={{marginTop:8,padding:'10px 14px',background:'rgba(47,128,237,.08)',borderRadius:10}}>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:14}}>
+            <span style={{color:'rgba(255,255,255,.6)'}}>{customNum} ₽</span>
+            <span style={{fontWeight:700}}>{customNum} токенов</span>
+          </div>
+          <div className="muted" style={{fontSize:12,marginTop:4}}>Бонус: 0 · 1 ₽ = 1 токен</div>
+        </div>}
+
+        <div className="muted" style={{fontSize:13,marginTop:14}}>Оплата скоро будет доступна</div>
       </div>
-      <button className="sheet-cta" disabled style={{opacity:.55,cursor:'not-allowed'}} onClick={e=>e.preventDefault()}>Скоро будет доступно · {chosen.price_rub} ₽</button>
+      <button className="sheet-cta" disabled style={{opacity:.55,cursor:'not-allowed'}} onClick={e=>e.preventDefault()}>
+        Скоро будет доступно{customValid ? ` · ${customNum} ₽` : chosen ? ` · ${chosen.price_rub} ₽` : ''}
+      </button>
     </div>
   </div>;
 }

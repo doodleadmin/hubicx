@@ -91,6 +91,7 @@
     request,
     me:()=>request('/auth/me'),
     pricing:()=>request('/pricing'),
+    orderPreview:(payload)=>request('/payments/orders/preview', {method:'POST', body:JSON.stringify(payload)}),
     models:()=>request('/models'),
     model:(code)=>request(`/models/${encodeURIComponent(code)}`),
     pricePreview,

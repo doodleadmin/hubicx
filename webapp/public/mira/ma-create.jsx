@@ -222,7 +222,12 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
       {hasField('generate_audio') && <button className="pill" onClick={()=>setAudio(!audio)} style={{justifyContent:'center'}}>{audio?t('gen.with_audio'):t('gen.no_audio')}</button>}
     </div>
 
-    {price && <div className="muted" style={{fontSize:13,marginTop:12}}>{price.error ? price.error : <>{t('common.cost')}: <b>{price.final_price_credits}</b> {t('common.tokens')}</>}</div>}
+    {price && <div className="muted" style={{fontSize:13,marginTop:12}}>
+      {price.error ? price.error : <>
+        {t('common.cost')}: <b>{price.final_price_credits}</b> {t('common.tokens')}
+        {price.applied_rules_summary && <span style={{marginLeft:6,fontSize:11}}>({price.applied_rules_summary})</span>}
+      </>}
+    </div>}
     {status && <div className="muted" style={{fontSize:13,marginTop:8}}>{status}</div>}
     {result && <div className="card result-card" style={{marginTop:12,padding:12}}>
       <div style={{fontWeight:800,marginBottom:8}}>{resultTitle(result)}</div>

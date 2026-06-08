@@ -9,7 +9,7 @@ from backend.app.db.models import AIModel
 from backend.app.db.session import get_session
 from backend.app.schemas.models import AIModelOut
 from backend.app.services.input_validation import validate_inputs_against_schema
-from backend.app.services.pricing import calculate_generation_cost_breakdown_from_db
+from backend.app.services.pricing import calculate_generation_cost_breakdown_from_db, get_model_pricing
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -52,11 +52,34 @@ async def preview_model_price(
         raise AppError("validation_error", "inputs must be an object")
     validated_inputs, _ = validate_inputs_against_schema(model.form_schema or {}, inputs, model.default_params)
     final_price, breakdown = await calculate_generation_cost_breakdown_from_db(session, model, validated_inputs)
+
+    # Определяем pricing_source из breakdown
+    pricing_source = next(
+        (item.get("value") for item in breakdown if item.get("label") == "pricing_source"),
+        "fallback",
+    )
+    applied_rules_summary = next(
+        (item.get("value") for item in breakdown if item.get("label") == "applied_rules"),
+        "",
+    )
+
     base_price = next((item.get("amount") for item in breakdown if item.get("type") == "base"), model.price_credits)
-    return {
+
+    response = {
         "model_code": model.code,
+        "price_tokens": final_price,
         "base_price_credits": int(base_price),
         "final_price_credits": final_price,
+        "pricing_source": pricing_source,
+        "model_code_out": model.code,
+        "applied_rules_summary": applied_rules_summary,
         "currency": "credits",
         "breakdown": breakdown,
     }
+
+    # Добавляем price_rules из model_pricing для фронтенда
+    pricing = await get_model_pricing(session, model.code)
+    if pricing and pricing.price_rules:
+        response["price_rules"] = pricing.price_rules
+
+    return response

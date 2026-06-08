@@ -79,6 +79,8 @@ class TokenPackage(Base, TimestampMixin):
     tokens: Mapped[int] = mapped_column(Integer)
     price_rub: Mapped[int] = mapped_column(Integer)
     bonus_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    base_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
@@ -91,9 +93,11 @@ class ModelPricing(Base, TimestampMixin):
     display_name: Mapped[str] = mapped_column(String(255))
     category: Mapped[str] = mapped_column(String(32))
     price_tokens: Mapped[int] = mapped_column(Integer)
+    price_rules: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
     admin_note: Mapped[str | None] = mapped_column(Text)
+    provider_cost_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class Template(Base, TimestampMixin):
