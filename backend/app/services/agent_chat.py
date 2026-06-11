@@ -59,8 +59,14 @@ def _build_profile_context(profile: UserProfileSettings | None) -> str:
     about = _parse_json_field(profile.about_user)
     if about.get("name"):
         parts.append(f"Имя пользователя: {about['name']}")
+    if about.get("gender") and about["gender"] not in ("Не указывать", ""):
+        parts.append(f"Пол: {about['gender']}")
+    if about.get("age"):
+        parts.append(f"Возраст: {about['age']}")
     if about.get("location"):
         parts.append(f"Город: {about['location']}")
+    if about.get("timezone"):
+        parts.append(f"Часовой пояс: {about['timezone']}")
     if about.get("activity"):
         parts.append(f"Чем занимается: {about['activity']}")
     if about.get("interests"):
