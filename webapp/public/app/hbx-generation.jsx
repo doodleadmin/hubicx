@@ -1,6 +1,6 @@
 /* ============ Generation screen ============ */
 function GenerationScreen({ tokens, authHint, onTopup, onCreatePhoto, onCreateVideo, onTemplate, history=[], historyHint='', onRefreshHistory, onBalanceRefresh }){
-  const { Ic, Star, TEMPLATES } = window.MiraCore;
+  const { Ic, Star, TEMPLATES } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   useEffect(()=>{ if(onRefreshHistory) onRefreshHistory(); }, []);
   return <div className="screen scr-enter">

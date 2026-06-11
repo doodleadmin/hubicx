@@ -1,4 +1,4 @@
-/* ============ Mira core: icons, data, shared UI ============ */
+/* ============ Hubicx core: icons, data, shared UI ============ */
 const { useState, useEffect, useRef } = React;
 
 /* ---- inline icons (stroke) ---- */
@@ -104,7 +104,7 @@ const MODELS = [
   {id:'chat', code:'ai_chat', t:'AI Chat', title:'AI Chat', type:'text', s:'Текст · чат', subtitle:'Текст · чат', sKey:'model.text_chat'},
   {id:'prompt-helper', code:'prompt_helper', t:'Prompt Helper', title:'Prompt Helper', type:'text', s:'Текст · промпты', subtitle:'Текст · промпты', sKey:'model.text_prompt'},
 ];
-const MIRA_MODELS = MODELS;
+const HUBICX_MODELS = MODELS;
 const modelByCode = (code)=>MODELS.find(m=>m.code===code || m.id===code);
 const modelsByType = (type)=>MODELS.filter(m=>m.type===type);
 const defaultModelForMode = (mode)=>modelByCode(mode==='video' ? 'seedance_2_t2v' : mode==='text' ? 'ai_chat' : 'nano_banana_2') || MODELS[0];
@@ -118,4 +118,4 @@ const ASPECTS = [
   {id:'16:9', t:'16:9', s:'Широкий', sKey:'aspect.wide'},
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, BottomNav, HERO, TEMPLATES, CREATE_TPL, MODELS, MIRA_MODELS, ASPECTS, modelByCode, modelsByType, defaultModelForMode, modelTypeForMode, isModelAllowedForMode };
+window.HubicxCore = { Ic, Star, TokenBadge, BottomNav, HERO, TEMPLATES, CREATE_TPL, MODELS, HUBICX_MODELS, ASPECTS, modelByCode, modelsByType, defaultModelForMode, modelTypeForMode, isModelAllowedForMode };

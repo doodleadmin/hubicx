@@ -14,7 +14,7 @@ Hubicx — это AI-агрегатор для генерации изображ
 Все операции — внутри WebApp, бот используется только для точки входа и стартового сообщения.
 
 **Ссылки:**
-- WebApp: https://app.hubicx.ru/mira/Mira.html?v=20260608_agent_backend_chats
+- WebApp: https://app.hubicx.ru/app/index.html
 - API: https://api.hubicx.ru
 - Документы внутри WebApp: Профиль → Документы
 
@@ -129,7 +129,7 @@ Hubicx — это AI-агрегатор для генерации изображ
 
 ### WebApp
 
-- [ ] Mira загружается (React 18, Babel inline)
+- [ ] Hubicx WebApp загружается (React 18, Babel inline)
 - [ ] Работает Telegram WebApp API (ready, expand, colors)
 - [ ] Все страницы доступны: Agent, Generation, Profile
 - [ ] Agent Chat: отправка сообщений, ответ AI, история

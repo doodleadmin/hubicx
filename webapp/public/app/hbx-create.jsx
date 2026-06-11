@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen (sub-screen) ============ */
 function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickModel, onPickAspect, onTaskDone, onNewGeneration, onContinueChat }){
-  const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.MiraCore;
+  const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [tab, setTab] = useState('tpl');          // tpl | prompt
   const [sel, setSel] = useState(preset ? preset.t : null);
@@ -260,7 +260,7 @@ window.CreateScreen = CreateScreen;
 
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }){
-  const { Ic } = window.MiraCore;
+  const { Ic } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const safeCurrent = options.find(o=>current && o.id===current.id) || options[0];
   const [val, setVal] = useState(safeCurrent && safeCurrent.id);

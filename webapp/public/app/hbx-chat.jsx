@@ -9,7 +9,7 @@ const BOT_LINES = [
 const GENERAL_QUICK = ['chat.quick.help','chat.quick.plan','chat.quick.short'];
 
 function ChatScreen({ chat, onBack, onSend, onModeChange }){
-  const { Ic } = window.MiraCore;
+  const { Ic } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [val, setVal] = useState(chat.draft || "");
   const [modeSheet, setModeSheet] = useState(false);

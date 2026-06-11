@@ -26,10 +26,10 @@
   --hbx-content-safe-bottom:0px;
   --hbx-content-safe-left:0px;
   --hbx-content-safe-right:0px;
-  --mira-top-offset:100px;
-  --mira-agent-lift:50px;
-  --mira-dock-height:92px;
-  --mira-sheet-action-gap:16px;
+  --hbx-top-offset:100px;
+  --hbx-agent-lift:50px;
+  --hbx-dock-height:92px;
+  --hbx-sheet-action-gap:16px;
   --app-height:100dvh;
   --glass:rgba(22,30,44,.55);
   --glass-line:rgba(255,255,255,.10);
@@ -87,11 +87,11 @@ body{
   height:var(--app-height);min-height:var(--app-height);
   margin:0;border-radius:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:0 max(16px, var(--hbx-safe-left)) calc(var(--nav-h) + 16px + var(--hbx-safe-bottom)) max(16px, var(--hbx-safe-right));
-  padding-top:var(--mira-top-offset)!important;
+  padding-top:var(--hbx-top-offset)!important;
 }
-.scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-top:var(--mira-top-offset);padding-bottom:calc(110px + var(--hbx-safe-bottom));-webkit-overflow-scrolling:touch}
-.agent-screen{padding-top:calc(var(--mira-top-offset) - var(--mira-agent-lift))!important}
-.agent-screen .scroll,.agent-screen .main-scroll,.agent-screen .page-scroll{padding-top:calc(var(--mira-top-offset) - var(--mira-agent-lift))}
+.scroll,.main-scroll,.page-scroll{height:var(--app-height);overflow-y:auto;padding-top:var(--hbx-top-offset);padding-bottom:calc(110px + var(--hbx-safe-bottom));-webkit-overflow-scrolling:touch}
+.agent-screen{padding-top:calc(var(--hbx-top-offset) - var(--hbx-agent-lift))!important}
+.agent-screen .scroll,.agent-screen .main-scroll,.agent-screen .page-scroll{padding-top:calc(var(--hbx-top-offset) - var(--hbx-agent-lift))}
 
 /* hide scrollbars on horizontal rails */
 .rail{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:4px}
@@ -274,7 +274,7 @@ body{
 @media (prefers-reduced-motion: no-preference){
   .chat-wrap{animation:chatIn .28s ease}
 }
-.chat-top{display:flex;align-items:center;gap:10px;padding:calc(16px + var(--mira-top-offset)) 16px 12px;border-bottom:1px solid var(--line)}
+.chat-top{display:flex;align-items:center;gap:10px;padding:calc(16px + var(--hbx-top-offset)) 16px 12px;border-bottom:1px solid var(--line)}
 .chat-back{width:38px;height:38px;border-radius:12px;flex:0 0 auto;display:flex;align-items:center;
   justify-content:center;background:rgba(255,255,255,.07);cursor:pointer}
 .chat-id{display:flex;align-items:center;gap:10px}

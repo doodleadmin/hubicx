@@ -98,7 +98,7 @@
     const tg = getTg();
 
     if (!tg) {
-      document.documentElement.classList.add("hbx-preview-mode", "preview-mode", "mira-preview-mode");
+      document.documentElement.classList.add("hbx-preview-mode", "preview-mode");
       window.HubicxTelegram = { tg: null, available: false, initData: "", isPreview: true };
       window.__HUBICX_TG_DEBUG__ = {
         hasTelegram: !!window.Telegram,

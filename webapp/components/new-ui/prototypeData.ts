@@ -81,7 +81,7 @@ export const MOTION = [
 ];
 
 export const ACTORS = [
-  { id: "susan", cov: "port1", name: "Susan", model: "Gemini 3.0 + Kling 2.6" }, { id: "mira", cov: "port2", name: "Mira", model: "Nano Banana + Veo 3.1" }, { id: "leo", cov: "port3", name: "Leo", model: "Seedream 4 + Kling 2.5" }, { id: "nova", cov: "sq4", name: "Nova", model: "Flux 2 + Hailuo 02" },
+  { id: "susan", cov: "port1", name: "Susan", model: "Gemini 3.0 + Kling 2.6" }, { id: "maya", cov: "port2", name: "Maya", model: "Nano Banana + Veo 3.1" }, { id: "leo", cov: "port3", name: "Leo", model: "Seedream 4 + Kling 2.5" }, { id: "nova", cov: "sq4", name: "Nova", model: "Flux 2 + Hailuo 02" },
 ];
 
 export const TEMPLATES = [

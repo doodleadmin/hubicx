@@ -11,7 +11,7 @@ const HUBICX_AGENTS = [
 function getAgentByCode(code){ return HUBICX_AGENTS.find(a=>a.code===code) || HUBICX_AGENTS[0]; }
 
 function AgentScreen({ tokens, authHint, onBuyPro, onCreatePhoto, onCreateVideo, onTopup, onStartChat, onAddToChat, chats, onOpenChat, onDeleteChat }){
-  const { Ic, TokenBadge, HERO } = window.MiraCore;
+  const { Ic, TokenBadge, HERO } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [val, setVal] = useState("");
   const send = ()=>{ const txt=val.trim(); if(!txt) return; setVal(""); onStartChat(txt); };

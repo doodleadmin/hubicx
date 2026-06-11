@@ -50,7 +50,7 @@ function fromBackendProfile(profile, current){
 }
 
 function ProfileScreen({ tokens, authHint, onTopup, onDocs, onSupport, history=[], historyHint='', onRefreshHistory, onBalanceRefresh, onProfileChange }){
-  const { Ic, Star } = window.MiraCore;
+  const { Ic, Star } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [p, setP] = useState(()=>{ try{ return {...PROF_DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF_KEY))||{})}; }catch(e){ return {...PROF_DEFAULTS}; } });
   const [editor, setEditor] = useState(null);
@@ -193,7 +193,7 @@ function ProfileScreen({ tokens, authHint, onTopup, onDocs, onSupport, history=[
 
 /* ---- editor sheets ---- */
 function OptsSheet({ title, options, current, onSave, onClose }){
-  const { Ic } = window.MiraCore;
+  const { Ic } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [val, setVal] = useState(current);
   return <div className="sheet-ov" onClick={onClose}>

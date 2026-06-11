@@ -1,8 +1,8 @@
 /* ============ App shell ============ */
 const { useState: uS } = React;
-const TOK_KEY='mira_tokens_v1', TAB_KEY='mira_tab_v1', CHATS_KEY='hbx_chats_v1', PROF_KEY='hbx_profile_v1';
+const TOK_KEY='hbx_tokens_v1', TAB_KEY='hbx_tab_v1', CHATS_KEY='hbx_chats_v1', PROF_KEY='hbx_profile_v1';
 
-function loadMiraProfile(){
+function loadHubicxProfile(){
   try{ return JSON.parse(localStorage.getItem(PROF_KEY)) || JSON.parse(localStorage.getItem('hubicx-profile')) || {}; }
   catch(e){ return {}; }
 }
@@ -10,7 +10,7 @@ function loadMiraProfile(){
 function profileLine(label, value){ return value ? `- ${label}: ${value}` : ''; }
 
 function composeProfilePrefix(profile){
-  const p = profile || loadMiraProfile();
+  const p = profile || loadHubicxProfile();
   let about = p.about_user || '';
   let personality = p.hubicx_personality || '';
   try{ const a = JSON.parse(about); about = [a.name, a.activity, a.interests, a.location].filter(Boolean).join('; '); }catch(e){}
@@ -26,7 +26,7 @@ function composeProfilePrefix(profile){
 }
 
 function App(){
-  const { BottomNav, Star, defaultModelForMode, isModelAllowedForMode, modelsByType, modelTypeForMode } = window.MiraCore;
+  const { BottomNav, Star, defaultModelForMode, isModelAllowedForMode, modelsByType, modelTypeForMode } = window.HubicxCore;
   const [lang, setLang] = uS(()=>window.HubicxI18n ? window.HubicxI18n.getLang() : 'ru');
   const t = window.t || ((k)=>k);
   const [tab, setTab] = uS(()=>localStorage.getItem(TAB_KEY)||'agent');
@@ -35,7 +35,7 @@ function App(){
   const [topup, setTopup] = uS(false);
   const [history, setHistory] = uS([]);
   const [historyHint, setHistoryHint] = uS('');
-  const [profile, setProfile] = uS(()=>loadMiraProfile());
+  const [profile, setProfile] = uS(()=>loadHubicxProfile());
   const [showDocs, setShowDocs] = uS(false);
 
   // chats
@@ -49,7 +49,7 @@ function App(){
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
   const [model, setModel] = uS(()=>defaultModelForMode('photo'));
-  const [aspect, setAspect] = uS(()=>window.MiraCore.ASPECTS[1]);
+  const [aspect, setAspect] = uS(()=>window.HubicxCore.ASPECTS[1]);
   const [picker, setPicker] = uS(null); // 'model' | 'aspect' | null
 
   React.useEffect(()=>{ localStorage.setItem(TAB_KEY, tab); }, [tab]);
@@ -302,14 +302,14 @@ function App(){
     {topup && <Topup tokens={tokens} onClose={()=>setTopup(false)}/>}
     {picker==='model' && <window.PickerSheet title={t('gen.model')} options={modelsByType(modelTypeForMode(mode))}
       current={model} onSelect={setModel} onClose={()=>setPicker(null)}/>}
-    {picker==='aspect' && <window.PickerSheet title={t('gen.aspect')} options={window.MiraCore.ASPECTS}
+    {picker==='aspect' && <window.PickerSheet title={t('gen.aspect')} options={window.HubicxCore.ASPECTS}
       current={aspect} onSelect={setAspect} onClose={()=>setPicker(null)}/>}
     {showDocs && window.DocsList && <window.DocsList onClose={()=>setShowDocs(false)}/>}
   </div>;
 }
 
 function Topup({ tokens, onClose }){
-  const { Star } = window.MiraCore;
+  const { Star } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const fallbackPacks=[
     {code:'start',title:'160 токенов',tokens:160,price_rub:149,bonus_tokens:11,base_tokens:149,total_tokens:160,effective_price_per_token:0.93},

@@ -1,4 +1,4 @@
-/* ============ Mira i18n ru/en/es/pt ============ */
+/* ============ Hubicx i18n ru/en/es/pt ============ */
 (function(){
   const LANGS = ['ru','en','es','pt'];
   const D = {

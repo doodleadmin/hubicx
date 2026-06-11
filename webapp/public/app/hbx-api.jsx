@@ -1,4 +1,4 @@
-/* ============ Hubicx API adapter for Mira ============ */
+/* ============ Hubicx API adapter for Hubicx ============ */
 (function(){
   const DEFAULT_API_URL = 'https://api.hubicx.ru';
   const TIMEOUT_MS = 20000;
