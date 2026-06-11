@@ -88,6 +88,7 @@
   window.HubicxApiError = HubicxApiError;
   window.HubicxApi = {
     getInitData:initData,
+    getBase:apiBase,
     request,
     me:()=>request('/auth/me'),
     pricing:()=>request('/pricing'),
@@ -110,7 +111,6 @@
     agentGetChat:(chatId)=>request(`/agent/chats/${encodeURIComponent(chatId)}`),
     agentUpdateChat:(chatId, patch)=>request(`/agent/chats/${encodeURIComponent(chatId)}`, {method:'PATCH', body:JSON.stringify(patch)}),
     agentSendMessage:(chatId, content)=>request(`/agent/chats/${encodeURIComponent(chatId)}/messages`, {method:'POST', body:JSON.stringify({content})}),
-    agentReplyToMessage:(chatId, userMessageId, content, taskId)=>request(`/agent/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(userMessageId)}/reply`, {method:'POST', body:JSON.stringify({content, task_id:taskId})}),
     agentArchiveChat:(chatId)=>request(`/agent/chats/${encodeURIComponent(chatId)}`, {method:'DELETE'}),
   };
 })();

@@ -131,74 +131,90 @@ function App(){
     if(!theChat) return;
     setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:true}:c));
 
-    // --- Backend chat flow ---
+    // --- Backend streaming chat flow ---
     if(theChat.backendId && window.HubicxApi && window.HubicxApi.getInitData()){
-      window.HubicxApi.agentSendMessage(theChat.backendId, text)
-        .then(res=>{
-          if(!res || !res.task_id) return;
-          // Show user message immediately
-          setChats(cs=>cs.map(c=>c.id===chatId?{...c, msgs:[...c.msgs,{role:'user',text:text,id:res.user_message&&res.user_message.id}]}:c));
-          // Poll task
-          let polled = false;
-          const poll = () => {
-            if(polled) return;
-            window.HubicxApi.getTask(res.task_id).then(task=>{
-              if(task.status === 'completed'){
-                polled = true;
-                const output = task.output_text || task.output_file_url || '';
-                if(output && res.user_message && res.user_message.id){
-                  window.HubicxApi.agentReplyToMessage(theChat.backendId, res.user_message.id, output, res.task_id)
-                    .then(() => {
-                      // Reload chat messages
-                      window.HubicxApi.agentGetChat(theChat.backendId).then(chatData => {
-                        if(chatData && chatData.chat && Array.isArray(chatData.chat.messages)){
-                          const msgs = chatData.chat.messages.map(m => ({role:m.role==='assistant'?'bot':'user', text:m.content, id:m.id}));
-                          setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs, title:chatData.chat.title}:c));
-                        }
-                        refreshAfterTask();
-                      }).catch(() => { refreshAfterTask(); });
-                    }).catch(() => { refreshAfterTask(); });
-                } else { refreshAfterTask(); }
-              } else if(task.status === 'failed' || task.status === 'error'){
-                polled = true;
-                setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:task.error_message || 'Ошибка генерации'}]}:c));
-                refreshAfterTask();
-              } else {
-                setTimeout(poll, 1200);
-              }
-            }).catch(() => { setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false}:c)); });
-          };
-          setTimeout(poll, 1200);
-        })
-        .catch(err=>{
-          setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:err.message||'Не удалось отправить сообщение'}]}:c));
+      const initData = window.HubicxApi.getInitData();
+      const apiBase = window.HubicxApi.getBase ? window.HubicxApi.getBase() : (window.BACKEND_URL || '');
+      const streamUrl = `${apiBase}/api/agent/chats/${theChat.backendId}/stream`;
+      const botMsgId = 'stream_' + Date.now();
+
+      // Add placeholder bot message for streaming
+      setChats(cs=>cs.map(c=>c.id===chatId?{...c, msgs:[...c.msgs,{role:'bot',text:'',id:botMsgId,streaming:true}]}:c));
+
+      const tryStream = () => {
+        let streamText = '';
+        let gotStream = false;
+
+        fetch(streamUrl, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','X-Telegram-Init-Data':initData},
+          body: JSON.stringify({content: text}),
+        }).then(resp => {
+          if(!resp.ok || !resp.body) throw new Error('stream_unsupported');
+          gotStream = true;
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          const pump = () => reader.read().then(({done, value}) => {
+            if(done){
+              setChats(cs=>cs.map(c=>c.id===chatId
+                ? {...c, typing:false, msgs: c.msgs.map(m=>m.id===botMsgId ? {...m, streaming:false} : m)}
+                : c));
+              refreshAfterTask();
+              return;
+            }
+            const lines = decoder.decode(value, {stream:true}).split('\n');
+            lines.forEach(line => {
+              if(!line.startsWith('data: ')) return;
+              const raw = line.slice(6).trim();
+              if(raw === '[DONE]') return;
+              try {
+                const evt = JSON.parse(raw);
+                if(evt.text){
+                  streamText += evt.text;
+                  setChats(cs=>cs.map(c=>c.id===chatId
+                    ? {...c, msgs: c.msgs.map(m=>m.id===botMsgId ? {...m, text:streamText} : m)}
+                    : c));
+                } else if(evt.error){
+                  setChats(cs=>cs.map(c=>c.id===chatId
+                    ? {...c, typing:false, msgs: c.msgs.map(m=>m.id===botMsgId ? {...m, text:evt.error, streaming:false} : m)}
+                    : c));
+                  refreshAfterTask();
+                }
+              } catch(e){}
+            });
+            return pump();
+          }).catch(() => {
+            setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs: c.msgs.map(m=>m.id===botMsgId?{...m,streaming:false}:m)}:c));
+          });
+          return pump();
+        }).catch(() => {
+          // Fallback to non-streaming send_message
+          setChats(cs=>cs.map(c=>c.id===chatId?{...c, msgs:c.msgs.filter(m=>m.id!==botMsgId)}:c));
+          window.HubicxApi.agentSendMessage(theChat.backendId, text)
+            .then(res=>{
+              if(!res) return;
+              const botText = (res.assistant_message && res.assistant_message.content) || '';
+              setChats(cs=>cs.map(c=>c.id===chatId
+                ? {...c, typing:false, msgs:[...c.msgs, {role:'bot', text:botText, id:res.assistant_message&&res.assistant_message.id}]}
+                : c));
+              refreshAfterTask();
+            })
+            .catch(err=>{
+              setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:err.message||'Не удалось отправить сообщение'}]}:c));
+            });
         });
+      };
+
+      tryStream();
       return;
     }
 
-    // --- Local fallback ---
+    // --- Local fallback (no auth) ---
     const fallback = ()=>{
       const line = window.BOT_LINES[Math.floor(Math.random()*window.BOT_LINES.length)];
       setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:line}]}:c));
     };
-    if(!window.HubicxApi || !window.HubicxApi.getInitData()){
-      setTimeout(fallback, 900);
-      return;
-    }
-    const agent = window.getAgentByCode ? window.getAgentByCode(agentMode) : null;
-    const rolePrefix = (agent && agent.prompt) || '';
-    const profilePrefix = composeProfilePrefix(profile);
-    const fullPrefix = [profilePrefix, rolePrefix].filter(Boolean).join('\n\n');
-    window.HubicxApi.chat({prompt: fullPrefix ? `${fullPrefix}\n\nЗапрос пользователя: ${text}` : text})
-      .then(res=>{
-        setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, lastTaskId:res.task && res.task.id, msgs:[...c.msgs,{role:'bot',text:res.text || 'Готово'}]}:c));
-        refreshAfterTask();
-      })
-      .catch(err=>{
-        const msg = (err && err.message) || t('agent.no_answer');
-        setChats(cs=>cs.map(c=>c.id===chatId?{...c, typing:false, msgs:[...c.msgs,{role:'bot',text:msg}]}:c));
-        refreshAfterTask();
-      });
+    setTimeout(fallback, 900);
   };
   const startChat = (text) => {
     const id = 'c'+Date.now();

@@ -6,7 +6,7 @@ function IconChip({ bg, children }){
 
 const PROF_KEY='hbx_profile_v1';
 const LLM_CODE = {'AI Chat':'ai_chat','Prompt Helper':'prompt_helper'};
-const CODE_LLM = {ai_chat:'AI Chat', prompt_helper:'Prompt Helper'};
+const CODE_LLM = {ai_chat:'AI Chat',prompt_helper:'Prompt Helper'};
 const PROF_DEFAULTS = {
   llm:'AI Chat', lang:'ru', daily:false,
   style:'', hubicxLang:'', emoji:'✨', traits:'',
@@ -14,7 +14,7 @@ const PROF_DEFAULTS = {
   activity:'', interests:'', timezone:'Дубай (UTC+4)',
 };
 const OPTS = {
-  llm:['AI Chat','Prompt Helper','MiniMax M2.5','GPT-4o','Claude 3.5 Sonnet','Gemini 2.0 Pro','DeepSeek V3','Llama 3.3'],
+  llm:['AI Chat','Prompt Helper'],
   lang:['ru','en','es','pt'],
   style:['Дружелюбный','Формальный','Краткий и по делу','Подробный','С юмором','Вдохновляющий'],
   hubicxLang:['Русский','English','Español','Deutsch','Français','中文'],

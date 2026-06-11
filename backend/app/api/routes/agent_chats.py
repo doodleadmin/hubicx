@@ -3,25 +3,23 @@
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import desc, func, select
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.app.api.deps import current_user
-from backend.app.db.models import AgentChat, AgentChatMessage, AIModel, BalanceLedger, GenerationTask, User, UserProfileSettings
+from backend.app.db.models import AgentChat, AgentChatMessage, User
 from backend.app.db.session import get_session
-from backend.app.services.agent_modes import DEFAULT_MODE, VALID_MODES, get_system_prompt, list_modes, mode_name
-from backend.app.services.balance import apply_balance_operation
+from backend.app.services.agent_chat import run_chat_turn, stream_chat_turn
+from backend.app.services.agent_modes import DEFAULT_MODE, VALID_MODES, list_modes
 from backend.app.utils.errors import AppError
-from worker.generation_worker import process_generation_task
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 logger = logging.getLogger(__name__)
 
-AI_CHAT_COST = 3
-MAX_CONTEXT_MESSAGES = 20
 MAX_TITLE_LENGTH = 60
 
 
@@ -42,36 +40,7 @@ class MessageCreate(BaseModel):
     content: str
 
 
-class MessageReply(BaseModel):
-    content: str
-    task_id: int | None = None
-
-
 # --- Helpers ---
-
-def _generate_title(text: str) -> str:
-    words = text.strip().split()
-    title = " ".join(words[:8])
-    if len(title) > MAX_TITLE_LENGTH:
-        title = title[:MAX_TITLE_LENGTH].rsplit(" ", 1)[0] + "…"
-    return title or "Новый чат"
-
-
-async def _get_profile_context(session: AsyncSession, user_id: int) -> str:
-    profile = await session.scalar(select(UserProfileSettings).where(UserProfileSettings.user_id == user_id))
-    if not profile:
-        return ""
-    lines = []
-    if profile.about_user:
-        lines.append(f"О пользователе: {profile.about_user[:500]}")
-    if profile.communication_style:
-        lines.append(f"Стиль общения: {profile.communication_style[:200]}")
-    if profile.hubicx_personality:
-        lines.append(f"Личность помощника: {profile.hubicx_personality[:500]}")
-    if profile.persona_emoji:
-        lines.append(f"Эмодзи персоны: {profile.persona_emoji}")
-    return "\n".join(lines) if lines else ""
-
 
 def _serialize_chat(chat: AgentChat) -> dict:
     return {
@@ -83,7 +52,7 @@ def _serialize_chat(chat: AgentChat) -> dict:
         "last_message_at": chat.last_message_at.isoformat() if chat.last_message_at else None,
         "created_at": chat.created_at.isoformat() if chat.created_at else None,
         "updated_at": chat.updated_at.isoformat() if chat.updated_at else None,
-        "message_count": len(chat.messages) if chat.messages else 0,
+        "message_count": chat._message_count if hasattr(chat, "_message_count") else (len(chat.messages) if chat.messages is not None else 0),
     }
 
 
@@ -130,12 +99,33 @@ async def list_chats(
     include_archived: bool = Query(default=False),
     limit: int = Query(default=50, ge=1, le=200),
 ) -> dict:
-    stmt = select(AgentChat).where(AgentChat.user_id == user.id)
+    from sqlalchemy import func
+    from backend.app.db.models import AgentChatMessage as Msg
+
+    stmt = (
+        select(AgentChat)
+        .where(AgentChat.user_id == user.id)
+        .order_by(desc(AgentChat.last_message_at))
+        .limit(limit)
+    )
     if not include_archived:
         stmt = stmt.where(AgentChat.is_archived.is_(False))
-    stmt = stmt.options(selectinload(AgentChat.messages)).order_by(desc(AgentChat.last_message_at)).limit(limit)
+
     result = await session.execute(stmt)
     chats = list(result.scalars().all())
+
+    # Efficient message counts via subquery — no eager-loading all messages
+    if chats:
+        chat_ids = [c.id for c in chats]
+        counts_result = await session.execute(
+            select(Msg.chat_id, func.count(Msg.id).label("cnt"))
+            .where(Msg.chat_id.in_(chat_ids))
+            .group_by(Msg.chat_id)
+        )
+        counts = {row.chat_id: row.cnt for row in counts_result}
+        for c in chats:
+            c._message_count = counts.get(c.id, 0)
+
     return {"chats": [_serialize_chat(c) for c in chats]}
 
 
@@ -151,13 +141,14 @@ async def create_chat(
     now = datetime.now(timezone.utc)
     chat = AgentChat(
         user_id=user.id,
-        title=_generate_title(payload.first_message) if payload.first_message else "Новый чат",
+        title="Новый чат",
         agent_mode=mode,
         language_code=user.language_code or "ru",
         last_message_at=now,
     )
     session.add(chat)
     await session.flush()
+
     if payload.first_message:
         msg = AgentChatMessage(
             chat_id=chat.id,
@@ -167,8 +158,8 @@ async def create_chat(
         )
         session.add(msg)
         chat.last_message_at = now
+
     await session.commit()
-    # Reload with messages eager-loaded
     chat = await session.scalar(
         select(AgentChat)
         .where(AgentChat.id == chat.id)
@@ -202,7 +193,6 @@ async def update_chat(
     if payload.is_archived is not None:
         chat.is_archived = payload.is_archived
     await session.commit()
-    # Reload with eager-loaded messages
     chat = await session.scalar(
         select(AgentChat)
         .where(AgentChat.id == chat_id)
@@ -218,8 +208,7 @@ async def archive_chat(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     chat = await session.scalar(
-        select(AgentChat)
-        .where(AgentChat.id == chat_id, AgentChat.user_id == user.id)
+        select(AgentChat).where(AgentChat.id == chat_id, AgentChat.user_id == user.id)
     )
     if not chat:
         raise AppError("chat_not_found", "Чат не найден", 404)
@@ -247,127 +236,42 @@ async def send_message(
     if not chat:
         raise AppError("chat_not_found", "Чат не найден", 404)
 
-    now = datetime.now(timezone.utc)
-
-    # Save user message
-    user_msg = AgentChatMessage(
-        chat_id=chat.id,
-        user_id=user.id,
-        role="user",
-        content=content,
-    )
-    session.add(user_msg)
-    await session.flush()
-
-    # Update title on first user message
-    existing_user_msgs = [m for m in (chat.messages or []) if m.role == "user"]
-    if len(existing_user_msgs) <= 1:
-        chat.title = _generate_title(content)
-
-    # Build context
-    system_parts = [get_system_prompt(chat.agent_mode)]
-
-    profile_ctx = await _get_profile_context(session, user.id)
-    if profile_ctx:
-        system_parts.append(profile_ctx)
-
-    system_prompt = "\n\n".join(system_parts)
-
-    # Get recent message history
-    history_msgs = [m for m in (chat.messages or []) if m.role in ("user", "assistant")][-MAX_CONTEXT_MESSAGES:]
-    conversation = [{"role": m.role, "content": m.visible_content or m.content} for m in history_msgs]
-    conversation.append({"role": "user", "content": content})
-
-    # Build full prompt for ai_chat generation
-    prompt_lines = [f"[System: {system_prompt}]"]
-    for msg in conversation:
-        role_label = "User" if msg["role"] == "user" else "Assistant"
-        prompt_lines.append(f"{role_label}: {msg['content']}")
-    full_prompt = "\n".join(prompt_lines)
-
-    # Charge tokens
-    balance_before, balance_after = await apply_balance_operation(
-        session, user.id, -AI_CHAT_COST, "agent_chat_debit",
-        reason=f"Agent chat {chat.id} message",
-        metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode},
-    )
-
-    # Create generation task
-    model = await session.scalar(select(AIModel).where(AIModel.code == "ai_chat"))
-    if not model:
-        raise AppError("model_not_found", "AI Chat model not found", 500)
-
-    task = GenerationTask(
-        user_id=user.id,
-        model_id=model.id,
-        provider=model.provider,
-        task_type="text",
-        status="queued",
-        prompt=full_prompt[:4000],
-        cost_credits=AI_CHAT_COST,
-    )
-    session.add(task)
-    await session.flush()
-
-    # Enqueue generation
-    process_generation_task.delay(task.id)
-
-    chat.last_message_at = now
-    await session.commit()
-
-    logger.info(
-        "AGENT_CHAT_MESSAGE chat_id=%s user_id=%s task_id=%s mode=%s cost=%s balance=%s→%s",
-        chat.id, user.id, task.id, chat.agent_mode, AI_CHAT_COST, balance_before, balance_after,
-    )
+    user_msg, assistant_msg = await run_chat_turn(session, user.id, chat, content)
 
     return {
         "user_message": _serialize_message(user_msg),
-        "task_id": task.id,
-        "balance_before": balance_before,
-        "balance_after": balance_after,
-        "cost": AI_CHAT_COST,
+        "assistant_message": _serialize_message(assistant_msg),
+        "cost": assistant_msg.token_cost or 0,
     }
 
 
-@router.post("/chats/{chat_id}/messages/{user_message_id}/reply")
-async def reply_to_message(
+@router.post("/chats/{chat_id}/stream")
+async def stream_message(
     chat_id: int,
-    user_message_id: int,
-    payload: MessageReply,
+    payload: MessageCreate,
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
-) -> dict:
-    chat = await _require_chat_owner(session, chat_id, user.id)
+) -> StreamingResponse:
     content = (payload.content or "").strip()
     if not content:
-        raise AppError("empty_reply", "Ответ не может быть пустым")
+        raise AppError("empty_message", "Сообщение не может быть пустым")
 
-    # Verify user message exists and belongs to this chat
-    user_msg = await session.get(AgentChatMessage, user_message_id)
-    if not user_msg or user_msg.chat_id != chat.id or user_msg.role != "user":
-        raise AppError("message_not_found", "Сообщение не найдено", 404)
-
-    now = datetime.now(timezone.utc)
-
-    assistant_msg = AgentChatMessage(
-        chat_id=chat.id,
-        user_id=user.id,
-        role="assistant",
-        content=content,
-        task_id=payload.task_id,
-        token_cost=AI_CHAT_COST,
+    chat = await session.scalar(
+        select(AgentChat)
+        .where(AgentChat.id == chat_id, AgentChat.user_id == user.id, AgentChat.is_archived.is_(False))
+        .options(selectinload(AgentChat.messages))
     )
-    session.add(assistant_msg)
-    chat.last_message_at = now
-    await session.commit()
-    await session.refresh(assistant_msg)
+    if not chat:
+        raise AppError("chat_not_found", "Чат не найден", 404)
 
-    logger.info(
-        "AGENT_CHAT_REPLY chat_id=%s user_message_id=%s assistant_message_id=%s",
-        chat.id, user_message_id, assistant_msg.id,
+    return StreamingResponse(
+        stream_chat_turn(session, user.id, chat, content),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
-
-    return {"assistant_message": _serialize_message(assistant_msg)}
 
 
 # --- Admin endpoints ---
