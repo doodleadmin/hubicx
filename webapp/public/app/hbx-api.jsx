@@ -94,6 +94,7 @@
     pricing:()=>request('/pricing'),
     orderPreview:(payload)=>request('/payments/orders/preview', {method:'POST', body:JSON.stringify(payload)}),
     models:()=>request('/models'),
+    templates:()=>request('/templates'),
     model:(code)=>request(`/models/${encodeURIComponent(code)}`),
     pricePreview,
     upload,

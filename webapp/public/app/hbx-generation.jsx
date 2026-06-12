@@ -32,7 +32,7 @@ function GenerationScreen({ tokens, authHint, onTopup, onCreatePhoto, onCreateVi
 
     <div className="sec-h">
       <h2>{t('gen.templates')}</h2>
-      <span className="all">{t('common.show_all')}</span>
+      <span className="all" onClick={onCreatePhoto}>{t('common.show_all')}</span>
     </div>
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
       {TEMPLATES.map((t,i)=>(
@@ -56,7 +56,7 @@ function taskKind(t){
 }
 function taskUrl(t){ return t.output_file_url || (t.params && (t.params.output_file_url || t.params.url)); }
 function taskText(t){ return t.output_text || (t.params && (t.params.output_text || t.params.text)) || ''; }
-function taskDate(t){ try{ return new Date(t.created_at).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function taskDate(t){ try{ const lang=(window.HubicxI18n&&window.HubicxI18n.getLang())||'ru'; const loc=lang==='ru'?'ru-RU':'en-US'; return new Date(t.created_at).toLocaleString(loc,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
 function taskTitle(t){ return t.title || t.model_code || ((window.t||((k)=>k))('common.task')); }
 function statusLabel(st){
   const t = window.t || ((k)=>k);
@@ -89,17 +89,19 @@ function HistoryBlock({ items=[], hint='', onRefresh, onBalanceRefresh }){
     {hint && <div className="muted" style={{fontSize:12,marginBottom:8}}>{hint}</div>}
     <div className="history-list">
       {items.length===0 && <div className="card" style={{padding:14}}><div className="muted" style={{fontSize:14}}>{t('history.empty')}</div></div>}
-      {items.slice(0,10).map(t=>{
-        const url = taskUrl(t), text = taskText(t), kind = taskKind(t);
-        return <div className="history-item" key={t.id} onClick={()=>{ setDetail(t); setCopyMsg(''); }}>
-          {url && kind==='image' ? <img className="history-thumb" src={url} alt=""/> : <div className={'history-kind '+kind}>{kind}</div>}
+      {items.slice(0,10).map(task=>{
+        const url = taskUrl(task), text = taskText(task), kind = taskKind(task);
+        return <div className="history-item" key={task.id} onClick={()=>{ setDetail(task); setCopyMsg(''); }}>
+          {url && kind==='image' ? <img className="history-thumb" src={url} alt=""/>
+            : url && kind==='video' ? <video className="history-thumb" src={url} muted playsInline style={{objectFit:'cover'}}/>
+            : <div className={'history-kind '+kind}>{kind}</div>}
           <div style={{flex:1,minWidth:0}}>
-            <div className="history-title">{taskTitle(t)} · #{t.id}</div>
-            <div className="muted" style={{fontSize:12}}>{kind} · {statusLabel(t.status)} · {t.cost_credits||0} кр · {taskDate(t)}</div>
+            <div className="history-title">{taskTitle(task)} · #{task.id}</div>
+            <div className="muted" style={{fontSize:12}}>{kind} · {statusLabel(task.status)} · {task.cost_credits||0} {t('common.credits')} · {taskDate(task)}</div>
             {text && <div className="history-preview">{text}</div>}
-            {t.status==='failed' && <div className="muted" style={{fontSize:12,color:'#ffb4b4'}}>{t.error_message || (window.t||((k)=>k))('history.failed')}</div>}
+            {(task.status==='failed'||task.status==='error') && <div className="muted" style={{fontSize:12,color:'#ffb4b4'}}>{task.error_message || t('history.failed')}</div>}
           </div>
-          {t.status==='completed' && <button className="history-send" onClick={e=>{ e.stopPropagation(); send(t); }}>TG</button>}
+          {task.status==='completed' && <button className="history-send" onClick={e=>{ e.stopPropagation(); send(task); }}>TG</button>}
         </div>;
       })}
     </div>
@@ -123,6 +125,7 @@ function ResultDetailSheet({ task, onClose, onSend, onCopy, copyMsg, sendMsg }){
         </div>
         <div style={{fontWeight:800,marginBottom:10}}>{taskTitle(task)}</div>
         {url && kind==='image' && <img className="result-img" src={url} alt={t('result.ready')}/>}
+        {url && kind==='video' && <video className="result-img" src={url} controls playsInline style={{width:'100%',borderRadius:12,maxHeight:320}}/>}
         {text && <div className="result-text">{text}</div>}
         {(task.status==='failed' || task.status==='error' || task.status==='refunded') && <div className="muted" style={{fontSize:14,color:'#ffb4b4'}}>{task.error_message || t('history.failed')}</div>}
         <div className="result-actions">

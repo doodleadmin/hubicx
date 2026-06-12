@@ -3,7 +3,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
   const { Ic, Star, CREATE_TPL, isModelAllowedForMode } = window.HubicxCore;
   const t = window.t || ((k)=>k);
   const [tab, setTab] = useState('tpl');          // tpl | prompt
-  const [sel, setSel] = useState(preset ? preset.t : null);
+  const [sel, setSel] = useState(preset || null);
   const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState(null);
   const [uploaded, setUploaded] = useState(null);
@@ -55,7 +55,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     return 'square_hd';
   }
   function currentPrompt(){
-    return tab==='prompt' ? prompt.trim() : (sel ? `Шаблон: ${sel}` : '');
+    return tab==='prompt' ? prompt.trim() : (sel ? (sel.prompt || sel.t || '') : '');
   }
   function buildInputs(){
     const input = {};
@@ -102,20 +102,25 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     try{
       const body = {model_code:code, prompt:currentPrompt(), inputs:buildInputs()};
       const queued = await window.HubicxApi.createGeneration(body);
+      const isVideo = code && (code.includes('seedance') || code.includes('kling') || code.includes('video'));
+      const maxPolls = isVideo ? 80 : 45;
       let task = null;
-      for(let i=0;i<45;i++){
+      for(let i=0;i<maxPolls;i++){
         task = await window.HubicxApi.getTask(queued.task_id);
-        if(task.status==='completed' || task.status==='failed') break;
+        if(['completed','failed','refunded','error'].includes(task.status)) break;
         setStatus(t('gen.task_status',{status:task.status}));
-        await new Promise(r=>setTimeout(r, 1500));
+        await new Promise(r=>setTimeout(r, i < 10 ? 1500 : 3000));
       }
       if(task && task.status==='completed'){
         setResult(task);
         setStatus(t('common.ready'));
         if(onTaskDone) onTaskDone(task);
-      }else if(task && task.status==='failed'){
+      }else if(task && (task.status==='failed' || task.status==='error')){
         setResult(task);
         setStatus(task.error_message || t('gen.generation_failed'));
+      }else if(task && task.status==='refunded'){
+        setResult(task);
+        setStatus(task.error_message || t('result.refunded'));
       }else setStatus(t('gen.long_task'));
     }catch(err){ setStatus((err && err.message) || t('gen.create_failed')); }
     finally{ setSubmitting(false); }
@@ -178,13 +183,13 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
 
     {tab==='tpl'
       ? <div className="rail" style={{marginTop:14}}>
-          {CREATE_TPL.map((t,i)=>(
-            <div className="thumb" key={i} onClick={()=>setSel(t.t)}
+          {CREATE_TPL.map((tpl,i)=>(
+            <div className="thumb" key={i} onClick={()=>setSel(tpl)}
               style={{width:124,height:150,scrollSnapAlign:'start',
-                outline:sel===t.t?'2.5px solid #2f80ed':'none',outlineOffset:-1}}>
-              <img src={t.img} alt=""/>
+                outline:sel && sel.t===tpl.t?'2.5px solid #2f80ed':'none',outlineOffset:-1}}>
+              <img src={tpl.img} alt=""/>
               <div className="shade"></div>
-              <div className="lbl" style={{fontSize:13}}>{t.t}</div>
+              <div className="lbl" style={{fontSize:13}}>{tpl.t}</div>
             </div>
           ))}
         </div>
@@ -204,15 +209,17 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
         </div>
         <span className="chev" style={{marginLeft:'auto'}}><Ic n="chev" s={20}/></span>
       </div>
-      <div className="divider"></div>
-      <div className="row-link" onClick={onPickAspect}>
-        <Ic n="aspect" s={22} c="#cfe0ff"/>
-        <div>
-          <div className="muted" style={{fontSize:13}}>{t('gen.aspect')}</div>
-          <div style={{fontWeight:600,fontSize:15}}>{aspect.t}</div>
+      {(!modelInfo || hasField('aspect_ratio') || hasField('image_size')) && <>
+        <div className="divider"></div>
+        <div className="row-link" onClick={onPickAspect}>
+          <Ic n="aspect" s={22} c="#cfe0ff"/>
+          <div>
+            <div className="muted" style={{fontSize:13}}>{t('gen.aspect')}</div>
+            <div style={{fontWeight:600,fontSize:15}}>{aspect.t}</div>
+          </div>
+          <span className="chev" style={{marginLeft:'auto'}}><Ic n="chev" s={20}/></span>
         </div>
-        <span className="chev" style={{marginLeft:'auto'}}><Ic n="chev" s={20}/></span>
-      </div>
+      </>}
     </div>
 
     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginTop:12}}>
@@ -235,7 +242,9 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
         ? <div className="muted" style={{fontSize:14}}>{resultText(result)}</div>
         : resultUrl(result)
           ? <>
-              <img className="result-img" src={resultUrl(result)} alt={t('result.ready')}/>
+              {taskKind(result)==='video'
+                ? <video className="result-img" src={resultUrl(result)} controls playsInline style={{width:'100%',borderRadius:12,maxHeight:320}}/>
+                : <img className="result-img" src={resultUrl(result)} alt={t('result.ready')}/>}
               <div className="result-actions">
                 <a className="pill" href={resultUrl(result)} target="_blank" rel="noreferrer">{t('result.open')}</a>
                 {result.status==='completed' && <button className="pill" onClick={sendToTelegram}>{t('result.send_tg')}</button>}
@@ -253,7 +262,7 @@ function CreateScreen({ tokens, mode, setMode, preset, model, aspect, onPickMode
     </div>}
 
     <div style={{height:18}}/>
-    <button className="btn-primary" disabled={!ready || !modelAllowed || submitting || uploading} onClick={submit}>{btnLabel}</button>
+    <button className="btn-primary" disabled={!ready || !modelAllowed || submitting || uploading || !!(price && price.error)} onClick={submit}>{btnLabel}</button>
   </div>;
 }
 window.CreateScreen = CreateScreen;

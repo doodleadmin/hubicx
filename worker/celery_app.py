@@ -9,4 +9,10 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     imports=("worker.generation_worker", "worker.polling_worker", "worker.refund_worker"),
+    beat_schedule={
+        "refund-stuck-tasks-every-10min": {
+            "task": "worker.refund_worker.refund_failed_tasks",
+            "schedule": 600.0,
+        },
+    },
 )

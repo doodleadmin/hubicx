@@ -77,18 +77,18 @@ const HERO = [
   {img:'assets/cov/hero3.png'},
 ];
 const TEMPLATES = [
-  {t:'Ты из MadMax', img:'assets/cov/m1.png'},
-  {t:'Полет в доспехах', img:'assets/cov/m2.png'},
-  {t:'Мой день за 15 сек', img:'assets/cov/m3.png'},
-  {t:'Скетч-шарж', img:'assets/cov/m4.png'},
-  {t:'Пластилиновый мир', img:'assets/cov/m5.png'},
-  {t:'Анти-стресс открытка', img:'assets/cov/m6.png'},
+  {t:'Ты из MadMax', img:'assets/cov/m1.png', prompt:'A post-apocalyptic portrait in Mad Max style, desaturated harsh tones, weathered leather armor, dust storm and fire background, cinematic lighting, hyper-realistic photography'},
+  {t:'Полет в доспехах', img:'assets/cov/m2.png', prompt:'A heroic flying knight in shining iron armor soaring through dramatic storm clouds, epic fantasy painting, cinematic wide angle, golden hour light rays'},
+  {t:'Мой день за 15 сек', img:'assets/cov/m3.png', prompt:'A vibrant lifestyle collage showing morning coffee, city walk, productive work session and cozy evening, warm cinematic tones, candid photography'},
+  {t:'Скетч-шарж', img:'assets/cov/m4.png', prompt:'A humorous caricature sketch portrait with expressive exaggerated facial features, detailed pencil line art, warm sepia tones, professional editorial illustration style'},
+  {t:'Пластилиновый мир', img:'assets/cov/m5.png', prompt:'A charming stop-motion clay animation style scene, colorful plasticine characters in a miniature world, soft studio lighting, ultra-detailed texture'},
+  {t:'Анти-стресс открытка', img:'assets/cov/m6.png', prompt:'A calming zen anti-stress greeting card illustration, soft pastel watercolor, wildflowers, peaceful forest stream, minimalist cozy style'},
 ];
 const CREATE_TPL = [
-  {t:'Скетч-шарж', img:'assets/cov/m4.png'},
-  {t:'Анти-стресс открытка', img:'assets/cov/m6.png'},
-  {t:'Гадание по ладони', img:'assets/cov/m7.png'},
-  {t:'Мой день за 15 сек', img:'assets/cov/m3.png'},
+  {t:'Скетч-шарж', img:'assets/cov/m4.png', prompt:'A humorous caricature sketch portrait with expressive exaggerated facial features, detailed pencil line art, warm sepia tones, professional editorial illustration style'},
+  {t:'Анти-стресс открытка', img:'assets/cov/m6.png', prompt:'A calming zen anti-stress greeting card illustration, soft pastel watercolor, wildflowers, peaceful forest stream, minimalist cozy style'},
+  {t:'Гадание по ладони', img:'assets/cov/m7.png', prompt:'A mystical palm reading fortune-telling illustration, glowing tarot lines on an open hand, cosmic purple and gold background, mystical aura, detailed art'},
+  {t:'Мой день за 15 сек', img:'assets/cov/m3.png', prompt:'A vibrant lifestyle collage showing morning coffee, city walk, productive work session and cozy evening, warm cinematic tones, candid photography'},
 ];
 const MODELS = [
   {id:'nano2', code:'nano_banana_2', t:'Nano Banana 2', title:'Nano Banana 2', type:'image', s:'Фото · быстро', subtitle:'Фото · быстро', sKey:'model.image_fast'},
