@@ -8,8 +8,9 @@ const PROF_KEY = 'hbx_profile_v1';
 const PROF_DEFAULTS = {
   llm:'MiniMax M2.5', lang:'Русский', daily:false,
   style:'', hubicxLang:'', emoji:'✨', traits:'',
-  name:'Булочка', gender:'Другое', age:'', location:'Саратов',
-  activity:'', interests:'', timezone:'Дубай (UTC+4)',
+  name:'', gender:'Другое', age:'', location:'',
+  activity:'', interests:'', timezone:'',
+  _apiLoaded: false,
 };
 const OPTS = {
   llm:['MiniMax M2.5','GPT-4o','Claude 3.5 Sonnet','Gemini 2.0 Pro','DeepSeek V3','Llama 3.3'],
@@ -22,6 +23,47 @@ const OPTS = {
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
 
+const LANG_MAP = {'ru':'Русский','en':'English','es':'Español','de':'Deutsch','fr':'Français','zh':'中文'};
+const LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Deutsch':'de','Français':'fr','中文':'zh'};
+
+function serverToUI(data) {
+  var about = {};
+  try { about = JSON.parse(data.about_user || '{}'); } catch(e) {}
+  var personality = {};
+  try { personality = JSON.parse(data.hubicx_personality || '{}'); } catch(e) {}
+  return {
+    lang: LANG_MAP[data.language_code] || 'Русский',
+    daily: !!data.daily_enabled,
+    style: data.communication_style || '',
+    hubicxLang: LANG_MAP[data.language_code] || '',
+    emoji: data.persona_emoji || '✨',
+    traits: personality.traits || '',
+    name: about.name || '',
+    gender: about.gender || 'Другое',
+    age: about.age || '',
+    location: about.location || '',
+    activity: about.activity || '',
+    interests: about.interests || '',
+    timezone: about.timezone || '',
+    _apiLoaded: true,
+  };
+}
+
+function uiToServer(p) {
+  return {
+    language_code: LANG_MAP_REV[p.lang] || 'ru',
+    daily_enabled: !!p.daily,
+    communication_style: p.style || null,
+    persona_emoji: p.emoji || null,
+    hubicx_personality: JSON.stringify({ traits: p.traits || '' }),
+    about_user: JSON.stringify({
+      name: p.name || '', gender: p.gender || '', age: p.age || '',
+      location: p.location || '', activity: p.activity || '',
+      interests: p.interests || '', timezone: p.timezone || '',
+    }),
+  };
+}
+
 function ProfileScreen({ tokens, onTopup, onTab }) {
   const { Ic, Star, TopNav } = window.MiraCore;
   const [p, setP] = useState(() => {
@@ -29,7 +71,32 @@ function ProfileScreen({ tokens, onTopup, onTab }) {
     catch(e) { return { ...PROF_DEFAULTS }; }
   });
   const [editor, setEditor] = useState(null);
-  useEffect(() => { localStorage.setItem(PROF_KEY, JSON.stringify(p)); }, [p]);
+  const saveTimerRef = useRef(null);
+
+  // Save to localStorage on every change
+  useEffect(() => {
+    var toStore = Object.assign({}, p);
+    delete toStore._apiLoaded;
+    localStorage.setItem(PROF_KEY, JSON.stringify(toStore));
+    // Sync to API (debounced 800ms), only after API data has loaded
+    if (!p._apiLoaded || !window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(function() {
+      window.HubicxApi.updateProfile(uiToServer(p)).catch(function() {});
+    }, 800);
+  }, [p]);
+
+  // Load from API on mount
+  useEffect(() => {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    var alive = true;
+    window.HubicxApi.profile().then(function(data) {
+      if (!alive) return;
+      setP(function(prev) { return Object.assign({}, prev, serverToUI(data)); });
+    }).catch(function() {});
+    return function() { alive = false; };
+  }, []);
+
   const set = (k, v) => setP(s => ({ ...s, [k]:v }));
 
   const openOpts = (field, title) => setEditor({ kind:'opts', field, title, options:OPTS[field] });

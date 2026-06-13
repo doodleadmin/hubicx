@@ -335,6 +335,7 @@ body {
   align-self: flex-start; background: var(--card); border: 1px solid var(--line);
   border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm);
 }
+.bubble.bot.err { background: #fef0ee; border-color: #f5c0ba; color: #a83428; }
 .bubble.typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
 .bubble.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); animation: tdot 1.2s infinite; }
 .bubble.typing span:nth-child(2) { animation-delay: .2s; }

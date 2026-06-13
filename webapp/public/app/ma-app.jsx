@@ -1,19 +1,49 @@
 /* ============ App shell ============ */
-const { useState: uS } = React;
-const TOK_KEY = 'mira_tokens_v1', TAB_KEY = 'mira_tab_v1', CHATS_KEY = 'hbx_chats_v1';
+const { useState: uS, useEffect: uE, useRef: uR } = React;
+const TAB_KEY = 'mira_tab_v1';
+
+/* Convert server chat messages to local format */
+function serverMsgsToLocal(msgs) {
+  return (msgs || []).map(function(m) {
+    return { role: m.role === 'assistant' ? 'bot' : 'user', text: m.content || '' };
+  });
+}
 
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
-  const [tokens] = uS(() => { const v = localStorage.getItem(TOK_KEY); return v == null ? 10 : +v; });
+  const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
 
-  // chats
-  const [chats, setChats] = uS(() => {
-    try { return JSON.parse(localStorage.getItem(CHATS_KEY)) || []; } catch(e) { return []; }
-  });
+  // Load user balance on mount
+  uE(() => {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    window.HubicxApi.me().then(function(u) { setUser(u); }).catch(function() {});
+  }, []);
+
+  const tokens = user ? user.balance_credits : '…';
+  const refreshBalance = () => {
+    if (window.HubicxApi && window.HubicxApi.hasAuth()) {
+      window.HubicxApi.me().then(function(u) { setUser(u); }).catch(function() {});
+    }
+  };
+
+  // chats: {id: number, title, msgs: [{role:'user'|'bot', text, streaming?}], loaded}
+  const [chats, setChats] = uS([]);
   const [activeChat, setActiveChat] = uS(null);
-  React.useEffect(() => { localStorage.setItem(CHATS_KEY, JSON.stringify(chats)); }, [chats]);
+  const streamCtrl = uR(null); // AbortController for current SSE stream
+
+  // Load chat list on mount
+  uE(() => {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    window.HubicxApi.agentChats().then(function(data) {
+      if (data && Array.isArray(data.chats)) {
+        setChats(data.chats.map(function(c) {
+          return { id: c.id, title: c.title || 'Чат', msgs: [], loaded: false };
+        }));
+      }
+    }).catch(function() {});
+  }, []);
 
   // create sub-screen
   const [createOpen, setCreateOpen] = uS(false);
@@ -21,33 +51,118 @@ function App() {
   const [preset, setPreset] = uS(null);
   const [model, setModel] = uS(() => window.MiraCore.MODELS[0]);
   const [aspect, setAspect] = uS(() => window.MiraCore.ASPECTS[1]);
-  const [picker, setPicker] = uS(null); // 'model' | 'aspect' | null
+  const [picker, setPicker] = uS(null);
 
-  React.useEffect(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
+  uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
   const openCreate = (m, p = null) => { setMode(m); setPreset(p); setCreateOpen(true); };
   const goTab = (t) => { setCreateOpen(false); setActiveChat(null); setTab(t); };
 
-  // chat logic
-  const botReply = (chatId) => {
-    setChats(cs => cs.map(c => c.id === chatId ? { ...c, typing:true } : c));
-    setTimeout(() => {
-      const line = window.BOT_LINES[Math.floor(Math.random() * window.BOT_LINES.length)];
-      setChats(cs => cs.map(c => c.id === chatId ? { ...c, typing:false, msgs:[...c.msgs,{role:'bot',text:line}] } : c));
-    }, 1100);
+  // Append streaming text chunk to last bot message
+  const appendBotChunk = (chatId, chunk) => {
+    setChats(cs => cs.map(c => {
+      if (c.id !== chatId) return c;
+      var msgs = c.msgs.slice();
+      var last = msgs[msgs.length - 1];
+      if (last && last.streaming) {
+        msgs[msgs.length - 1] = { ...last, text: last.text + chunk };
+      }
+      return { ...c, msgs: msgs };
+    }));
   };
+
+  // Mark last bot message as done
+  const finishBotMsg = (chatId) => {
+    setChats(cs => cs.map(c => {
+      if (c.id !== chatId) return c;
+      var msgs = c.msgs.map(function(m, i) {
+        return (i === c.msgs.length - 1 && m.streaming) ? { role: m.role, text: m.text } : m;
+      });
+      return { ...c, msgs: msgs };
+    }));
+    refreshBalance();
+  };
+
+  // Replace last bot message with error
+  const errorBotMsg = (chatId, errText) => {
+    setChats(cs => cs.map(c => {
+      if (c.id !== chatId) return c;
+      var msgs = c.msgs.map(function(m, i) {
+        return (i === c.msgs.length - 1 && m.streaming)
+          ? { role: 'bot', text: errText || 'Ошибка — попробуйте ещё раз', isError: true }
+          : m;
+      });
+      return { ...c, msgs: msgs };
+    }));
+  };
+
+  // Start SSE stream for a chat turn
+  const doStream = (chatId, content) => {
+    if (streamCtrl.current) streamCtrl.current.abort();
+    // Add streaming placeholder
+    setChats(cs => cs.map(c => c.id === chatId
+      ? { ...c, msgs: [...c.msgs, { role: 'bot', text: '', streaming: true }] }
+      : c
+    ));
+    streamCtrl.current = window.HubicxApi.agentStreamMessage(
+      chatId, content,
+      function(chunk) { appendBotChunk(chatId, chunk); },
+      function() { finishBotMsg(chatId); },
+      function(err) { errorBotMsg(chatId, err); }
+    );
+  };
+
+  // Start a new chat
   const startChat = (text) => {
-    const id = 'c' + Date.now();
-    const title = text.length > 34 ? text.slice(0, 34) + '…' : text;
-    setChats(cs => [{ id, title, msgs:[{ role:'user', text }], typing:false }, ...cs]);
-    setActiveChat(id);
-    botReply(id);
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    window.HubicxApi.agentCreateChat('default', text).then(function(data) {
+      var c = data.chat;
+      var serverMsgs = serverMsgsToLocal(c.messages);
+      setChats(cs => [{ id: c.id, title: c.title || 'Новый чат', msgs: serverMsgs, loaded: true }, ...cs]);
+      setActiveChat(c.id);
+      doStream(c.id, text);
+    }).catch(function(err) {
+      alert((err && err.message) || 'Не удалось создать чат');
+    });
   };
+
+  // Send message in existing chat
   const sendInChat = (text) => {
-    setChats(cs => cs.map(c => c.id === activeChat ? { ...c, msgs:[...c.msgs,{ role:'user', text }] } : c));
-    botReply(activeChat);
+    if (!activeChat) return;
+    setChats(cs => cs.map(c => c.id === activeChat
+      ? { ...c, msgs: [...c.msgs, { role: 'user', text: text }] }
+      : c
+    ));
+    doStream(activeChat, text);
   };
-  const deleteChat = (id) => setChats(cs => cs.filter(c => c.id !== id));
+
+  // Delete (archive) chat
+  const deleteChat = (id) => {
+    if (window.HubicxApi && window.HubicxApi.hasAuth()) {
+      window.HubicxApi.agentArchiveChat(id).catch(function() {});
+    }
+    setChats(cs => cs.filter(c => c.id !== id));
+    if (activeChat === id) setActiveChat(null);
+  };
+
+  // Open existing chat — load messages if not loaded yet
+  const openChat = (id) => {
+    setActiveChat(id);
+    setChats(cs => {
+      var chat = cs.find(c => c.id === id);
+      if (chat && !chat.loaded && window.HubicxApi && window.HubicxApi.hasAuth()) {
+        window.HubicxApi.agentGetChat(id).then(function(data) {
+          var serverMsgs = serverMsgsToLocal(data.chat.messages);
+          setChats(cs2 => cs2.map(c => c.id === id
+            ? { ...c, msgs: serverMsgs, loaded: true, title: data.chat.title || c.title }
+            : c
+          ));
+        }).catch(function() {});
+      }
+      return cs;
+    });
+  };
+
   const curChat = chats.find(c => c.id === activeChat);
 
   let body;
@@ -60,7 +175,8 @@ function App() {
     body = <AgentScreen tokens={tokens} onBuyPro={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
       onTopup={() => setTopup(true)} onTab={goTab}
-      onStartChat={startChat} chats={chats} onOpenChat={(id) => setActiveChat(id)} onDeleteChat={deleteChat}/>;
+      onStartChat={startChat} chats={chats}
+      onOpenChat={openChat} onDeleteChat={deleteChat}/>;
   } else if (tab === 'gen') {
     body = <GenerationScreen tokens={tokens} onTopup={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
@@ -94,9 +210,9 @@ function Topup({ tokens, onClose }) {
   const [customAmount, setCustomAmount] = uS('');
   const [customError, setCustomError] = uS('');
 
-  React.useEffect(() => {
+  uE(() => {
     let alive = true;
-    if (window.HubicxApi && window.HubicxApi.pricing) {
+    if (window.HubicxApi && window.HubicxApi.hasAuth()) {
       window.HubicxApi.pricing().then(data => {
         if (alive && data && Array.isArray(data.token_packages) && data.token_packages.length)
           setPacks(data.token_packages);
@@ -163,7 +279,7 @@ function Topup({ tokens, onClose }) {
         <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>
       </div>
       <button className="sheet-cta" disabled style={{ opacity:.55, cursor:'not-allowed' }}>
-        Скоро будет доступно{customValid ? ` · ${customNum} ₽` : ` · ${chosen.price_rub} ₽`}
+        Скоро будет доступно{customValid ? ` · ${customNum} ₽` : ` · ${chosen ? chosen.price_rub : ''} ₽`}
       </button>
     </div>
   </div>;

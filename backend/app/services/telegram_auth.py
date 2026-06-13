@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from urllib.parse import parse_qsl
 
 from fastapi import Header
@@ -14,6 +15,8 @@ from backend.app.services.users import get_or_create_user
 from backend.app.utils.errors import AppError
 
 logger = logging.getLogger(__name__)
+
+AUTH_DATE_TTL = 86400  # 24 hours — reject initData older than this
 
 
 def validate_init_data(init_data: str) -> dict:
@@ -28,6 +31,15 @@ def validate_init_data(init_data: str) -> dict:
     expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected_hash, received_hash):
         raise AppError("invalid_init_data", "Invalid Telegram initData signature", 401)
+    # Check auth_date TTL to prevent replay of leaked initData
+    auth_date = parsed.get("auth_date")
+    if auth_date:
+        try:
+            age_seconds = time.time() - int(auth_date)
+            if age_seconds > AUTH_DATE_TTL:
+                raise AppError("init_data_expired", "Telegram initData has expired. Please reopen the app.", 401)
+        except (ValueError, TypeError):
+            raise AppError("invalid_init_data", "Invalid auth_date in Telegram initData", 401)
     if "user" not in parsed:
         raise AppError("invalid_init_data", "Telegram user is missing", 401)
     parsed["user"] = json.loads(parsed["user"])
