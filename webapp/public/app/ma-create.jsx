@@ -1,7 +1,7 @@
 /* ============ Create photo/video screen ============ */
 
 const POLL_INTERVAL_MS = 3000;
-const POLL_MAX_ATTEMPTS = 80; // ~4 minutes
+const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
 
 function pollTask(taskId, onUpdate, onDone, onError) {
   var cancelled = false;
@@ -17,7 +17,7 @@ function pollTask(taskId, onUpdate, onDone, onError) {
         return;
       }
       attempts++;
-      if (attempts >= POLL_MAX_ATTEMPTS) { onError('Превышено время ожидания'); return; }
+      if (attempts >= POLL_MAX_ATTEMPTS) { onError('Генерация занимает дольше обычного. Результат появится в разделе «Генерация» → История, как только будет готов.'); return; }
       setTimeout(check, POLL_INTERVAL_MS);
     }).catch(function(err) {
       if (cancelled) return;
@@ -188,7 +188,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
   // ── Generating view ──
   if (genState === 'generating') {
     var statusLabel = 'В очереди…';
-    if (currentTask && currentTask.status === 'running') statusLabel = 'Генерация…';
+    if (currentTask && (currentTask.status === 'processing' || currentTask.status === 'running')) statusLabel = 'Генерация…';
     return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <div className="cr-head">
         <div className="cr-back" onClick={resetGen}><Ic n="back" s={20}/></div>
