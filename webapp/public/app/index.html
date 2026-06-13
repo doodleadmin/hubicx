@@ -17,30 +17,20 @@
 <script>
 (function() {
   var tg = window.Telegram && window.Telegram.WebApp;
-  // Telegram desktop platforms: tdesktop, macos, linux, web, weba
+  // Telegram desktop platforms
   var TG_PC = ['tdesktop', 'macos', 'linux', 'web', 'weba'];
-  var isTgPc = tg && TG_PC.indexOf(tg.platform) !== -1;
 
   if (tg) {
     tg.ready();
-    if (isTgPc) {
-      // Desktop Telegram: use desktop layout, no fullscreen
-      document.documentElement.classList.add('desktop');
-    } else {
-      // Mobile Telegram: request fullscreen, add 100px top safe area
-      if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
-      document.body.classList.add('tg-fs');
+    if (TG_PC.indexOf(tg.platform) !== -1) {
+      // Telegram на ПК → сразу открываем desktop-версию
+      window.location.replace('desktop.html');
+      return;
     }
+    // Мобильный Telegram → fullscreen + 100px safe area сверху
+    if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
+    document.body.classList.add('tg-fs');
   }
-
-  // Browser: apply desktop layout based on viewport width
-  function applyBrowserLayout() {
-    if (!tg) {
-      document.documentElement.classList.toggle('desktop', window.innerWidth >= 768);
-    }
-  }
-  applyBrowserLayout();
-  window.addEventListener('resize', applyBrowserLayout);
 
   window.BOT_LINES = [
     'Привет! Как я могу помочь?',
