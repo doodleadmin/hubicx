@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     s3_secret_key: str = ""
     s3_bucket: str = ""
     s3_public_url: str = ""
+    yookassa_shop_id: str = ""
+    yookassa_secret_key: str = ""
+    yookassa_return_url: str = "https://app.hubicx.ru"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

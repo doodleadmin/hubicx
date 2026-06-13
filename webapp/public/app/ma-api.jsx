@@ -150,6 +150,6 @@
     agentGetChat:   function(chatId)    { return request('/agent/chats/' + chatId); },
     agentArchiveChat: function(chatId)  { return request('/agent/chats/' + chatId, { method:'DELETE' }); },
     agentStreamMessage: agentStreamMessage,
-    createPayment:  function(credits)   { return request('/payments/create', { method:'POST', body:JSON.stringify({ credits:credits }) }); },
+    createPayment:  function(p)         { return request('/payments/create', { method:'POST', body:JSON.stringify(p) }); },
   };
 })();

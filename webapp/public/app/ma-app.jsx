@@ -197,16 +197,21 @@ function Topup({ tokens, onClose }) {
     { code:'ultra',  title:'4200 токенов', tokens:4200, price_rub:2990, bonus_tokens:1210,total_tokens:4200, effective_price_per_token:0.71 },
   ];
   const [packs, setPacks] = uS(fallbackPacks);
+  const [paymentsEnabled, setPaymentsEnabled] = uS(false);
   const [sel, setSel] = uS(1);
   const [customAmount, setCustomAmount] = uS('');
   const [customError, setCustomError] = uS('');
+  const [paying, setPaying] = uS(false);
+  const [payError, setPayError] = uS('');
 
   uE(() => {
     let alive = true;
     if (window.HubicxApi && window.HubicxApi.hasAuth()) {
       window.HubicxApi.pricing().then(data => {
-        if (alive && data && Array.isArray(data.token_packages) && data.token_packages.length)
+        if (!alive) return;
+        if (data && Array.isArray(data.token_packages) && data.token_packages.length)
           setPacks(data.token_packages);
+        if (data && data.payments_enabled) setPaymentsEnabled(true);
       }).catch(() => {});
     }
     return () => { alive = false; };
@@ -223,6 +228,40 @@ function Topup({ tokens, onClose }) {
   const customNum = parseInt(customAmount, 10);
   const customValid = customAmount && !isNaN(customNum) && customNum >= 99;
 
+  const handlePay = () => {
+    if (paying || !window.HubicxApi) return;
+    setPayError('');
+    setPaying(true);
+    var payload;
+    if (customValid) {
+      payload = { amount_rub: customNum, credits: customNum };
+    } else if (chosen) {
+      payload = { amount_rub: chosen.price_rub, credits: chosen.total_tokens || chosen.tokens, package_code: chosen.code };
+    } else {
+      setPaying(false);
+      return;
+    }
+    window.HubicxApi.createPayment(payload).then(function(data) {
+      setPaying(false);
+      if (data.payment_url) {
+        var tg = window.Telegram && window.Telegram.WebApp;
+        if (tg && tg.openLink) {
+          tg.openLink(data.payment_url);
+        } else {
+          window.open(data.payment_url, '_blank');
+        }
+        onClose();
+      } else {
+        setPayError(data.message || 'Не удалось создать платёж');
+      }
+    }).catch(function(err) {
+      setPaying(false);
+      setPayError((err && err.message) || 'Ошибка при создании платежа');
+    });
+  };
+
+  const ctaPrice = customValid ? customNum : (chosen ? chosen.price_rub : '');
+
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={e => e.stopPropagation()}>
       <div className="sheet-card">
@@ -233,9 +272,9 @@ function Topup({ tokens, onClose }) {
         <div className="label-sec" style={{ marginBottom:8 }}>Готовые пакеты</div>
         <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
           {packs.map((p, i) => (
-            <div key={i} className="opt" onClick={() => setSel(i)}
-              style={{ border:'1px solid ' + (sel === i ? 'var(--ink)' : 'var(--line)'),
-                borderRadius:14, padding:'13px 14px', background: sel === i ? '#f8f7f2' : 'transparent' }}>
+            <div key={i} className="opt" onClick={() => { setSel(i); setCustomAmount(''); setCustomError(''); }}
+              style={{ border:'1px solid ' + (sel === i && !customValid ? 'var(--ink)' : 'var(--line)'),
+                borderRadius:14, padding:'13px 14px', background: (sel === i && !customValid) ? '#f8f7f2' : 'transparent' }}>
               <Star s={20} c="#c9c7f4"/>
               <div style={{ flex:1 }}>
                 <span style={{ fontWeight:800, fontSize:16 }}>{p.total_tokens || p.tokens} токенов</span>
@@ -251,7 +290,7 @@ function Topup({ tokens, onClose }) {
 
         <div className="label-sec" style={{ marginTop:16, marginBottom:8 }}>Своя сумма</div>
         <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
-          padding:'10px 14px', border:'1px solid var(--line)' }}>
+          padding:'10px 14px', border:'1px solid ' + (customValid ? 'var(--ink)' : 'var(--line)') }}>
           <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
             onChange={e => handleCustomChange(e.target.value)}
             style={{ flex:1, background:'transparent', border:'none', color:'var(--ink)', fontSize:15,
@@ -267,10 +306,16 @@ function Topup({ tokens, onClose }) {
           <div className="muted" style={{ fontSize:11.5, marginTop:3 }}>Бонус: 0 · 1 ₽ = 1 токен</div>
         </div>}
 
-        <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>
+        {payError && <div style={{ fontSize:12.5, marginTop:10, color:'#c0473e', fontWeight:600 }}>{payError}</div>}
+        {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>}
       </div>
-      <button className="sheet-cta" disabled style={{ opacity:.55, cursor:'not-allowed' }}>
-        Скоро будет доступно{customValid ? ` · ${customNum} ₽` : ` · ${chosen ? chosen.price_rub : ''} ₽`}
+      <button className="sheet-cta" onClick={handlePay}
+        disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
+        style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
+                 cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>
+        {paying ? 'Создаём платёж…'
+          : paymentsEnabled ? `Оплатить · ${ctaPrice} ₽`
+          : `Скоро будет доступно · ${ctaPrice} ₽`}
       </button>
     </div>
   </div>;

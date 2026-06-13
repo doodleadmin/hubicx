@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.config import settings
 from backend.app.db.models import ModelPricing, TokenPackage
 from backend.app.db.session import get_session
 
@@ -49,15 +50,16 @@ async def public_pricing(session: AsyncSession = Depends(get_session)) -> dict:
         select(TokenPackage).where(TokenPackage.is_active.is_(True)).order_by(TokenPackage.sort_order, TokenPackage.id)
     )
     prices_result = await session.execute(select(ModelPricing).order_by(ModelPricing.category, ModelPricing.model_code))
+    payments_enabled = bool(settings.yookassa_shop_id and settings.yookassa_secret_key)
     return {
         "token_packages": [serialize_package(pkg) for pkg in packages_result.scalars().all()],
         "custom_topup": {
             "enabled": True,
-            "payments_enabled": False,
+            "payments_enabled": payments_enabled,
             "min_amount_rub": 99,
             "rub_to_token_rate": 1,
             "bonus_tokens": 0,
         },
         "model_prices": [serialize_model_price(price) for price in prices_result.scalars().all()],
-        "payments_enabled": False,
+        "payments_enabled": payments_enabled,
     }
