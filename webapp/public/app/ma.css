@@ -362,60 +362,59 @@ body {
   padding-top: max(env(safe-area-inset-top, 0px), 100px);
 }
 
-/* ══ Desktop layout (≥768px) ══════════════════════════════════════
-   Transforms the single-column mobile layout into a sidebar + content
-   two-column desktop layout.
-═══════════════════════════════════════════════════════════════════ */
-@media (min-width: 768px) {
-  #root { background: var(--nav-bg); align-items: flex-start; }
+/* ══ Desktop layout — browser ≥768px OR Telegram PC ═══════════════
+   html.desktop class is toggled by JS (index.html init script).
+   Triggered by: viewport ≥768px in browser, OR tdesktop/macos/web
+   platform in Telegram.
+══════════════════════════════════════════════════════════════════ */
+html.desktop #root { align-items: flex-start; }
 
-  .phone {
-    max-width: 100%; min-height: 100dvh;
-    box-shadow: 0 0 0 1px var(--line);
-  }
-
-  /* Screen wrapper: switch from column to row */
-  .phone > div:first-child {
-    flex-direction: row !important;
-    height: 100dvh !important;
-    overflow: hidden;
-  }
-
-  /* ── Left sidebar nav ── */
-  .topnav {
-    width: 220px; min-width: 220px; flex-direction: column;
-    height: 100dvh; position: sticky; top: 0;
-    border-bottom: none; border-right: 1px solid var(--line);
-    padding: 28px 14px 24px; gap: 14px; align-items: stretch;
-    overflow-y: auto;
-  }
-  .tn-seg {
-    flex-direction: column; border-radius: 16px; padding: 5px; gap: 3px;
-  }
-  .tn-item {
-    height: 44px; border-radius: 13px; font-size: 14px;
-    justify-content: flex-start; padding: 0 16px; flex: 0 0 auto;
-  }
-  .tn-icon { margin-top: auto; }
-
-  /* ── Scrollable content area ── */
-  .screen {
-    flex: 1; height: 100dvh; overflow-y: auto;
-    max-width: 760px; padding: 0 40px 48px;
-  }
-
-  /* ── Chat overlay: shift right of sidebar ── */
-  .chat-wrap {
-    left: 220px; width: calc(100vw - 220px);
-    max-width: none; transform: none;
-  }
-
-  /* ── Bottom sheet: centered ── */
-  .sheet { max-width: 480px; margin: 0 auto; }
-
-  /* ── Wider content ── */
-  .act-grid { grid-template-columns: repeat(4, 1fr); }
-  .idea-grid { grid-template-columns: repeat(4, 1fr); }
-  .greeting { font-size: 34px; margin-top: 32px; }
-  .askbar { height: 62px; border-radius: 22px; }
+html.desktop .phone {
+  max-width: 100%; min-height: 100dvh;
+  box-shadow: 0 0 0 1px var(--line);
 }
+
+/* Screen wrapper: column → row */
+html.desktop .phone > div:first-child {
+  flex-direction: row !important;
+  height: 100dvh !important;
+  overflow: hidden;
+}
+
+/* ── Left sidebar nav ── */
+html.desktop .topnav {
+  width: 220px; min-width: 220px; flex-direction: column;
+  height: 100dvh; position: sticky; top: 0;
+  border-bottom: none; border-right: 1px solid var(--line);
+  padding: 28px 14px 24px; gap: 14px; align-items: stretch;
+  overflow-y: auto;
+}
+html.desktop .tn-seg {
+  flex-direction: column; border-radius: 16px; padding: 5px; gap: 3px;
+}
+html.desktop .tn-item {
+  height: 44px; border-radius: 13px; font-size: 14px;
+  justify-content: flex-start; padding: 0 16px; flex: 0 0 auto;
+}
+html.desktop .tn-icon { margin-top: auto; }
+
+/* ── Scrollable content area ── */
+html.desktop .screen {
+  flex: 1; height: 100dvh; overflow-y: auto;
+  max-width: 760px; padding: 0 40px 48px;
+}
+
+/* ── Chat overlay: shift right of sidebar ── */
+html.desktop .chat-wrap {
+  left: 220px; width: calc(100vw - 220px);
+  max-width: none; transform: none;
+}
+
+/* ── Bottom sheet: centered ── */
+html.desktop .sheet { max-width: 480px; margin: 0 auto; }
+
+/* ── Wider content ── */
+html.desktop .act-grid { grid-template-columns: repeat(4, 1fr); }
+html.desktop .idea-grid { grid-template-columns: repeat(4, 1fr); }
+html.desktop .greeting { font-size: 34px; margin-top: 32px; }
+html.desktop .askbar { height: 62px; border-radius: 22px; }
