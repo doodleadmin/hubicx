@@ -10,12 +10,16 @@ from backend.app.db.models import GenerationTask, User
 from backend.app.db.session import get_session
 from backend.app.schemas.generations import GenerationCreate, GenerationOut, GenerationQueued
 from backend.app.services.generations import create_generation_task, get_user_task, history
+from backend.app.services.rate_limit import check_rate_limit
 from backend.app.services.telegram_sender import send_generation_result_to_chat
 from backend.app.utils.errors import AppError
 from worker.generation_worker import process_generation_task
 
 router = APIRouter(prefix="/generations", tags=["generations"])
 logger = logging.getLogger(__name__)
+
+GENERATION_RATE_LIMIT = 10  # max generations
+GENERATION_RATE_WINDOW = 60  # per 60 seconds
 
 
 def serialize_task(task: GenerationTask) -> GenerationOut:
@@ -40,6 +44,7 @@ def serialize_task(task: GenerationTask) -> GenerationOut:
 
 @router.post("", response_model=GenerationQueued)
 async def create_generation(payload: GenerationCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> GenerationQueued:
+    await check_rate_limit(f"gen:{user.id}", GENERATION_RATE_LIMIT, GENERATION_RATE_WINDOW)
     task = await create_generation_task(session, user, payload.model_code, payload.template_code, payload.prompt, payload.input_file_url, payload.params, payload.inputs)
     process_generation_task.delay(task.id)
     return GenerationQueued(task_id=task.id, status=task.status)
