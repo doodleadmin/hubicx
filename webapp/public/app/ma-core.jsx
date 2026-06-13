@@ -46,6 +46,7 @@ function TokenBadge({ n }) {
 
 /* ---- top segmented nav ---- */
 function TopNav({ active, onTab }) {
+  if (window.DESKTOP_MODE) return null;
   const icon = active === 'gen' ? 'sliders' : active === 'profile' ? 'gear' : 'bell';
   return <div className="topnav">
     <div className="tn-seg">

@@ -1,5 +1,45 @@
 /* ============ App shell ============ */
 const { useState: uS, useEffect: uE, useRef: uR } = React;
+const DESKTOP = !!window.DESKTOP_MODE;
+
+function DesktopWrap({ tab, onTab, tokens, onTopup, children }) {
+  const { Ic, Star } = window.MiraCore;
+  const navItems = [
+    { id: 'agent', label: 'Агент',     icon: 'chat'  },
+    { id: 'gen',   label: 'Генерация', icon: 'image' },
+    { id: 'profile', label: 'Профиль', icon: 'user'  },
+  ];
+  return <div className="pc-outer">
+    <div className="pc-win">
+      <div className="pc-titlebar">
+        <div className="pc-lights"><i/><i/><i/></div>
+        <div className="pc-wtitle">Hubicx</div>
+      </div>
+      <div className="pc-body">
+        <div className="pc-side">
+          <div className="pc-brand">
+            <div className="pc-logo">✦</div>
+            <div className="pc-word">Hubicx</div>
+          </div>
+          <div className="pc-navs">
+            {navItems.map(function(n) {
+              return <div key={n.id} className={'pc-nav' + (tab === n.id ? ' on' : '')} onClick={() => onTab(n.id)}>
+                <span className="pc-ni"><Ic n={n.icon} s={18}/></span>
+                {n.label}
+              </div>;
+            })}
+          </div>
+          <div className="pc-bal">
+            <div className="pc-bal-lbl">Баланс</div>
+            <div className="pc-bal-num"><Star s={16} c="#c9c7f4"/> {tokens}</div>
+            <button className="pc-topup" onClick={onTopup}>Пополнить</button>
+          </div>
+        </div>
+        <div className="pc-main">{children}</div>
+      </div>
+    </div>
+  </div>;
+}
 const TAB_KEY = 'mira_tab_v1';
 
 /* Convert server chat messages to local format */
@@ -180,9 +220,22 @@ function App() {
     body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab}/>;
   }
 
-  return <div className="phone">
+  const mainContent = <React.Fragment>
     {body}
     {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat}/>}
+  </React.Fragment>;
+
+  if (DESKTOP) {
+    return <React.Fragment>
+      <DesktopWrap tab={tab} onTab={goTab} tokens={tokens} onTopup={() => setTopup(true)}>
+        {mainContent}
+      </DesktopWrap>
+      {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>}
+    </React.Fragment>;
+  }
+
+  return <div className="phone">
+    {mainContent}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>}
   </div>;
 }
