@@ -1,55 +1,106 @@
 from typing import Any
 import asyncio
+import logging
 
 import httpx
 
 from backend.app.config import settings
 from backend.app.providers.base import BaseProvider, ProviderResult, provider_model_configured
 
+logger = logging.getLogger(__name__)
+
 
 class FalProvider(BaseProvider):
     base_url = "https://queue.fal.run"
 
+    def _auth_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Key {settings.fal_key}"}
+
     async def _submit(self, model_id: str, payload: dict[str, Any]) -> ProviderResult:
+        """Submit to Fal async queue. Returns immediately with response_url for polling."""
         if not settings.fal_key:
             return ProviderResult(False, error="API key is missing: FAL_KEY")
         if not provider_model_configured(model_id):
             return ProviderResult(False, error="Model provider ID is not configured")
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                response = await client.post(f"{self.base_url}/{model_id}", headers={"Authorization": f"Key {settings.fal_key}"}, json=payload)
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(
+                    f"{self.base_url}/{model_id}",
+                    headers=self._auth_headers(),
+                    json=payload,
+                )
                 response.raise_for_status()
                 data = response.json()
-                data = await self._wait_for_result(client, data)
+
+            response_url = data.get("response_url")
+            request_id = data.get("request_id")
+
+            # Fal returned a synchronous result (unlikely but possible)
             output_url = self._extract_output_url(data)
-            if not output_url:
-                return ProviderResult(False, error="Provider response has no output URL")
-            return ProviderResult(True, provider_task_id=data.get("request_id") or data.get("id"), output_url=output_url)
+            if output_url:
+                return ProviderResult(
+                    True,
+                    provider_task_id=request_id or data.get("id"),
+                    output_url=output_url,
+                )
+
+            # Async queue: polling worker will fetch result via response_url
+            if response_url:
+                return ProviderResult(
+                    success=False,
+                    provider_task_id=request_id,
+                    response_url=response_url,
+                )
+
+            return ProviderResult(False, error="Unexpected Fal response: no output_url or response_url")
+
         except httpx.TimeoutException:
-            return ProviderResult(False, error="Provider timeout")
+            return ProviderResult(False, error="Provider timeout during submission")
         except httpx.HTTPStatusError as exc:
             return ProviderResult(False, error=f"Provider HTTP {exc.response.status_code}: {exc.response.text[:300]}")
         except Exception as exc:
             return ProviderResult(False, error=f"Provider error: {exc}")
 
-    async def _wait_for_result(self, client: httpx.AsyncClient, data: dict[str, Any]) -> dict[str, Any]:
-        response_url = data.get("response_url")
-        if not response_url or self._extract_output_url(data):
-            return data
+    async def fetch_result(self, response_url: str) -> ProviderResult | None:
+        """
+        Poll a Fal response_url once.
+        Returns ProviderResult if done (success or error), None if still in progress.
+        """
+        if not settings.fal_key:
+            return ProviderResult(False, error="API key is missing: FAL_KEY")
+        try:
+            async with httpx.AsyncClient(timeout=20) as client:
+                response = await client.get(response_url, headers=self._auth_headers())
 
-        for _ in range(30):
-            await asyncio.sleep(2)
-            response = await client.get(response_url, headers={"Authorization": f"Key {settings.fal_key}"})
-            if response.status_code in {200, 201}:
-                result = response.json()
-                if isinstance(result, dict):
-                    result.setdefault("request_id", data.get("request_id"))
-                    return result
+            # Still in progress
+            if response.status_code == 202:
+                return None
+            if response.status_code == 404:
+                return None
             if response.status_code == 400 and "still in progress" in response.text.lower():
-                continue
-            if response.status_code not in {202, 404}:
-                response.raise_for_status()
-        raise TimeoutError("Fal result timeout")
+                return None
+
+            if response.status_code in {200, 201}:
+                data = response.json()
+                if isinstance(data, dict):
+                    data.setdefault("request_id", None)
+                output_url = self._extract_output_url(data)
+                if output_url:
+                    return ProviderResult(
+                        True,
+                        provider_task_id=data.get("request_id"),
+                        output_url=output_url,
+                    )
+                return ProviderResult(False, error="Provider response has no output URL")
+
+            return ProviderResult(False, error=f"Provider HTTP {response.status_code}: {response.text[:200]}")
+
+        except httpx.TimeoutException:
+            logger.warning("fetch_result timeout for %s", response_url)
+            return None  # treat timeout as still-in-progress, retry next cycle
+        except Exception as exc:
+            logger.exception("fetch_result error for %s: %s", response_url, exc)
+            return None
 
     async def generate_image(self, model_id: str, prompt: str | None, input_file_url: str | None, params: dict[str, Any] | None = None) -> ProviderResult:
         payload = {"prompt": prompt or ""}

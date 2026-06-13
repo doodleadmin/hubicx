@@ -114,6 +114,14 @@ async def _process_generation_task(task_id: int) -> None:
         else:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
 
+        if result.response_url:
+            # Fal async queue: save response_url, polling worker will complete the task
+            task.provider_task_id = result.provider_task_id
+            task.provider_response_url = result.response_url
+            await session.commit()
+            log_task(task, "submitted_async")
+            return
+
         if result.success:
             task.status = "completed"
             task.provider_task_id = result.provider_task_id

@@ -128,6 +128,7 @@ class GenerationTask(Base):
     template_id: Mapped[int | None] = mapped_column(ForeignKey("templates.id"))
     provider: Mapped[str] = mapped_column(String(32))
     provider_task_id: Mapped[str | None] = mapped_column(String(255))
+    provider_response_url: Mapped[str | None] = mapped_column(Text)
     task_type: Mapped[str] = mapped_column(String(32))
     status: Mapped[str] = mapped_column(String(32), default="created", index=True)
     prompt: Mapped[str | None] = mapped_column(Text)

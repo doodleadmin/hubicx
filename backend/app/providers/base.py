@@ -9,6 +9,7 @@ class ProviderResult:
     output_url: str | None = None
     output_text: str | None = None
     error: str | None = None
+    response_url: str | None = None  # Fal async queue: poll this URL for result
 
     def as_dict(self) -> dict[str, Any]:
         return {
