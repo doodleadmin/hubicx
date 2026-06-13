@@ -49,9 +49,6 @@ function App() {
   const [createOpen, setCreateOpen] = uS(false);
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
-  const [model, setModel] = uS(() => window.MiraCore.MODELS[0]);
-  const [aspect, setAspect] = uS(() => window.MiraCore.ASPECTS[1]);
-  const [picker, setPicker] = uS(null);
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
@@ -168,9 +165,7 @@ function App() {
   let body;
   if (createOpen) {
     body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset}
-      model={model} aspect={aspect}
-      onPickModel={() => setPicker('model')} onPickAspect={() => setPicker('aspect')}
-      onBack={() => setCreateOpen(false)}/>;
+      onBack={() => setCreateOpen(false)} refreshBalance={refreshBalance}/>;
   } else if (tab === 'agent') {
     body = <AgentScreen tokens={tokens} onBuyPro={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
@@ -189,10 +184,6 @@ function App() {
     {body}
     {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat}/>}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>}
-    {picker === 'model' && <window.PickerSheet title="Модель" options={window.MiraCore.MODELS}
-      current={model} onSelect={setModel} onClose={() => setPicker(null)}/>}
-    {picker === 'aspect' && <window.PickerSheet title="Соотношение сторон" options={window.MiraCore.ASPECTS}
-      current={aspect} onSelect={setAspect} onClose={() => setPicker(null)}/>}
   </div>;
 }
 

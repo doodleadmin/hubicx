@@ -1,6 +1,45 @@
 /* ============ Generation screen ============ */
 function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTemplate, onTab }) {
   const { Ic, Star, TopNav, TEMPLATES } = window.MiraCore;
+  const [history, setHistory] = useState([]);
+  const [histLoaded, setHistLoaded] = useState(false);
+  const [viewTask, setViewTask] = useState(null);
+
+  useEffect(function() {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setHistLoaded(true); return; }
+    window.HubicxApi.history().then(function(items) {
+      if (Array.isArray(items)) setHistory(items);
+      setHistLoaded(true);
+    }).catch(function() { setHistLoaded(true); });
+  }, []);
+
+  if (viewTask) {
+    const isVideo = viewTask.task_type === 'video' || /\.(mp4|webm|mov)$/i.test(viewTask.output_file_url || '');
+    return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      <TopNav active="gen" onTab={onTab}/>
+      <div className="screen scr-enter" style={{ paddingTop:14 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
+          <div style={{ cursor:'pointer', padding:'4px 6px' }} onClick={() => setViewTask(null)}>
+            <Ic n="back" s={22}/>
+          </div>
+          <div style={{ fontWeight:800, fontSize:17, flex:1 }}>{viewTask.title || 'Результат'}</div>
+        </div>
+        {isVideo
+          ? <video src={viewTask.output_file_url} controls playsInline
+              style={{ width:'100%', maxHeight:340, borderRadius:18, objectFit:'cover', background:'#000' }}/>
+          : <img src={viewTask.output_file_url} alt="Результат"
+              style={{ width:'100%', maxHeight:400, borderRadius:18, objectFit:'cover' }}/>}
+        {viewTask.prompt && <div className="muted" style={{ fontSize:13, marginTop:10 }}>{viewTask.prompt}</div>}
+        <div style={{ marginTop:16, display:'flex', gap:10 }}>
+          <button className="btn-secondary" style={{ flex:1 }} onClick={function() {
+            if (window.HubicxApi) window.HubicxApi.sendToChat(viewTask.id).catch(function() {});
+          }}>📤 В Telegram</button>
+          <button className="btn-primary" style={{ flex:1 }} onClick={() => setViewTask(null)}>Назад</button>
+        </div>
+      </div>
+    </div>;
+  }
+
   return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
     <TopNav active="gen" onTab={onTab}/>
     <div className="screen scr-enter">
@@ -21,7 +60,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
           </div>
           <div>
             <div style={{ fontWeight:800, fontSize:15.5 }}>Создать фото</div>
-            <div className="muted" style={{ fontSize:12.5, marginTop:1 }}>Из текста или фото · 5 моделей</div>
+            <div className="muted" style={{ fontSize:12.5, marginTop:1 }}>Из текста или фото</div>
           </div>
           <span className="chev"><Ic n="chev" s={20}/></span>
         </div>
@@ -38,19 +77,52 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         </div>
       </div>
 
+      {/* History */}
+      {histLoaded && history.length > 0 && <>
+        <div className="sec-h rise" style={{ '--d':'.10s', marginTop:22 }}>
+          <h2>История генераций</h2>
+        </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+          {history.slice(0, 8).map(function(item) {
+            var isCompleted = item.status === 'completed';
+            var isFailed = item.status === 'failed' || item.status === 'refunded';
+            return <div key={item.id} className="chat-plate" style={{ alignItems:'center' }}
+              onClick={() => isCompleted && item.output_file_url && setViewTask(item)}>
+              <div style={{ width:46, height:46, borderRadius:12, overflow:'hidden', flex:'0 0 auto',
+                background:'var(--faint)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                {isCompleted && item.output_file_url
+                  ? <img src={item.output_file_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
+                  : <Ic n={isFailed ? 'close' : 'sparkle'} s={20} c={isFailed ? '#c0473e' : 'var(--muted)'}/>}
+              </div>
+              <div style={{ minWidth:0, flex:1 }}>
+                <div style={{ fontWeight:700, fontSize:14.5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {item.title || item.prompt || 'Генерация'}
+                </div>
+                <div className="muted" style={{ fontSize:12.5 }}>
+                  {isFailed ? '✗ Ошибка · возврат токенов'
+                    : isCompleted ? '✓ Готово · ' + item.cost_credits + ' ★'
+                    : '⏳ ' + (item.status === 'queued' ? 'В очереди' : 'Генерация…')}
+                </div>
+              </div>
+              {isCompleted && item.output_file_url && <span className="chev"><Ic n="chev" s={18}/></span>}
+            </div>;
+          })}
+        </div>
+      </>}
+
       <div className="sec-h rise" style={{ '--d':'.12s', marginTop:22 }}>
         <h2>Шаблоны</h2>
         <span className="all">Показать все</span>
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        {TEMPLATES.map((t, i) => (
-          <div className="thumb" key={i} style={{ aspectRatio:'0.82', cursor:'pointer' }}
+        {TEMPLATES.map(function(t, i) {
+          return <div className="thumb" key={i} style={{ aspectRatio:'0.82', cursor:'pointer' }}
             onClick={() => onTemplate(t)}>
             <img src={t.img} alt=""/>
             <div className="shade"></div>
             <div className="lbl">{t.t}</div>
-          </div>
-        ))}
+          </div>;
+        })}
       </div>
       <div style={{ height:8 }}/>
     </div>

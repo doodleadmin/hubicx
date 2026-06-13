@@ -47,8 +47,36 @@
     });
   }
 
+  // File upload — multipart/form-data, no JSON Content-Type
+  function uploadFile(file) {
+    var initData = getInitData();
+    if (!initData) return Promise.reject({ code: 'unauthorized', message: TELEGRAM_ERROR });
+    var ctrl = new AbortController();
+    var timer = setTimeout(function() { ctrl.abort(); }, 30000); // 30s for uploads
+    var formData = new FormData();
+    formData.append('file', file);
+    return fetch(API_URL + '/api/files/upload', {
+      method: 'POST',
+      headers: { 'X-Telegram-Init-Data': initData },
+      body: formData,
+      signal: ctrl.signal,
+      cache: 'no-store',
+    }).then(function(res) {
+      clearTimeout(timer);
+      if (!res.ok) {
+        return res.json().catch(function() { return {}; }).then(function(err) {
+          return Promise.reject({ code: String(err.code || ''), message: String(err.detail || 'Ошибка загрузки файла') });
+        });
+      }
+      return res.json();
+    }, function(err) {
+      clearTimeout(timer);
+      if (err && err.name === 'AbortError') return Promise.reject({ code: 'timeout', message: 'Загрузка файла прервана' });
+      return Promise.reject({ code: 'network', message: 'Ошибка загрузки' });
+    });
+  }
+
   // SSE streaming for agent chat
-  // Returns an AbortController — call .abort() to cancel
   function agentStreamMessage(chatId, content, onChunk, onDone, onError) {
     var initData = getInitData();
     if (!initData) { if (onError) onError(TELEGRAM_ERROR); return null; }
@@ -104,21 +132,24 @@
   }
 
   window.HubicxApi = {
-    hasAuth: function() { return !!getInitData(); },
-    me:             function()        { return request('/auth/me'); },
-    pricing:        function()        { return request('/pricing'); },
-    profile:        function()        { return request('/profile'); },
-    updateProfile:  function(data)    { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
-    history:        function()        { return request('/generations/history'); },
-    createGeneration: function(p)     { return request('/generations', { method:'POST', body:JSON.stringify(p) }); },
-    getTask:        function(id)      { return request('/generations/' + id); },
-    agentChats:     function()        { return request('/agent/chats'); },
+    hasAuth:        function()          { return !!getInitData(); },
+    me:             function()          { return request('/auth/me'); },
+    pricing:        function()          { return request('/pricing'); },
+    profile:        function()          { return request('/profile'); },
+    updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
+    models:         function(category)  { return request('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },
+    history:        function()          { return request('/generations/history'); },
+    createGeneration: function(p)       { return request('/generations', { method:'POST', body:JSON.stringify(p) }); },
+    getTask:        function(id)        { return request('/generations/' + id); },
+    sendToChat:     function(taskId)    { return request('/generations/' + taskId + '/send-to-chat', { method:'POST', body:'{}' }); },
+    uploadFile:     uploadFile,
+    agentChats:     function()          { return request('/agent/chats'); },
     agentCreateChat: function(mode, firstMessage) {
       return request('/agent/chats', { method:'POST', body:JSON.stringify({ agent_mode: mode || 'default', first_message: firstMessage }) });
     },
-    agentGetChat:   function(chatId)  { return request('/agent/chats/' + chatId); },
-    agentArchiveChat: function(chatId) { return request('/agent/chats/' + chatId, { method:'DELETE' }); },
+    agentGetChat:   function(chatId)    { return request('/agent/chats/' + chatId); },
+    agentArchiveChat: function(chatId)  { return request('/agent/chats/' + chatId, { method:'DELETE' }); },
     agentStreamMessage: agentStreamMessage,
-    createPayment:  function(credits) { return request('/payments/create', { method:'POST', body:JSON.stringify({ credits:credits }) }); },
+    createPayment:  function(credits)   { return request('/payments/create', { method:'POST', body:JSON.stringify({ credits:credits }) }); },
   };
 })();

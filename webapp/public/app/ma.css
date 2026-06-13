@@ -228,7 +228,22 @@ body {
   cursor: pointer; font-family: inherit; box-shadow: 0 8px 20px rgba(210,210,80,.4);
 }
 
+/* ── generation spinner ── */
+.gen-spinner {
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid var(--faint); border-top-color: var(--ink);
+  animation: gen-spin .75s linear infinite;
+}
+@keyframes gen-spin { to { transform: rotate(360deg); } }
+
 /* ── primary buttons ── */
+.btn-secondary {
+  width: 100%; height: 52px; border-radius: 17px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink); font-size: 15px; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+}
+.btn-secondary:active { opacity: .75; }
+.btn-secondary:disabled { opacity: .5; cursor: default; }
 .btn-primary {
   width: 100%; height: 56px; border-radius: 17px; border: none; font-size: 16px; font-weight: 800;
   color: var(--accent-ink); background: var(--accent); cursor: pointer; font-family: inherit;
