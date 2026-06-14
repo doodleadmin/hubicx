@@ -46,10 +46,74 @@ function dPollTask(taskId, onUpdate, onDone, onError) {
 }
 
 /* ============================================================
+   Notifications dropdown — derives items from generation history
+   ============================================================ */
+function timeAgo(iso) {
+  if (!iso) return '';
+  var d = new Date(iso); if (isNaN(d.getTime())) return '';
+  var sec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (sec < 60) return 'только что';
+  var min = Math.floor(sec / 60); if (min < 60) return min + ' мин';
+  var hr = Math.floor(min / 60); if (hr < 24) return hr + ' ч';
+  var day = Math.floor(hr / 24); if (day === 1) return 'вчера';
+  return day + ' дн';
+}
+
+function DeskNotifs({ items, onClose }) {
+  const { Ic } = window.MiraCore;
+  return <div className="dk-notif" onClick={e => e.stopPropagation()}>
+    <div className="dk-notif-top">
+      <span>Уведомления</span>
+    </div>
+    <div className="dk-notif-list">
+      {items.length === 0
+        ? <div className="dk-notif-empty">Пока нет уведомлений</div>
+        : items.map(function(n, i) {
+            return <div key={i} className="dk-notif-item">
+              <span className="dk-notif-ic" style={{ background:n.bg }}><Ic n={n.ic} s={18} c={n.c}/></span>
+              <div className="dk-notif-tx">
+                <div className="dk-notif-t">{n.title}</div>
+                <div className="dk-notif-s">{n.sub}</div>
+              </div>
+              <div className="dk-notif-time">{n.time}</div>
+            </div>;
+          })}
+    </div>
+  </div>;
+}
+
+/* ============================================================
    Shell: sidebar + topbar + content slot
    ============================================================ */
 function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtitle, chatsBadge, children }) {
   const { Ic, Star } = window.MiraCore;
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState([]);
+
+  useEffect(function() {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    window.HubicxApi.history().then(function(items) {
+      if (!Array.isArray(items)) return;
+      var list = [];
+      items.slice(0, 6).forEach(function(it) {
+        if (it.status === 'completed') {
+          var isVid = it.task_type === 'video';
+          list.push({ ic: isVid ? 'video' : 'image', c:'#5f9184', bg:'#e6efe9',
+            title: (isVid ? 'Видео готово' : 'Фото готово'),
+            sub: it.prompt || it.title || 'Результат в «Истории»', time: timeAgo(it.created_at || it.updated_at) });
+        } else if (it.status === 'refunded') {
+          list.push({ ic:'close', c:'#c0473e', bg:'#f6e7e4',
+            title:'Генерация не удалась', sub:'Токены возвращены на баланс', time: timeAgo(it.created_at) });
+        } else if (it.status === 'processing' || it.status === 'queued' || it.status === 'created') {
+          list.push({ ic:'sparkle', c:'#c98a4e', bg:'#fbeede',
+            title:'Генерация в работе', sub: it.prompt || 'Скоро будет готово', time: timeAgo(it.created_at) });
+        }
+      });
+      setNotifs(list);
+    }).catch(function() {});
+  }, []);
+
+  const hasUnread = notifs.length > 0;
   const nav = [
     { id:'home',    label:'Главная',   icon:'grid'    },
     { id:'gen',     label:'Генерация', icon:'wand'    },
@@ -62,7 +126,7 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
   const uname = (user && user.username) ? '@' + user.username : 'Hubicx';
   const initial = (name || 'H').trim().charAt(0).toUpperCase();
 
-  return <div className="dk">
+  return <div className="dk" onClick={() => notifOpen && setNotifOpen(false)}>
     <aside className="dk-side">
       <div className="dk-brand">
         <div className="dk-logo">✦</div>
@@ -111,7 +175,13 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
           <Star s={16} c="#c9c7f4"/> <span>{tokens}</span>
           <span className="dk-tok-plus"><Ic n="plus" s={15}/></span>
         </div>
-        <div className="dk-bell"><Ic n="bell" s={19} c="var(--muted)"/><span className="dk-bell-dot"></span></div>
+        <div className="dk-bell-wrap">
+          <div className="dk-bell" onClick={(e) => { e.stopPropagation(); setNotifOpen(o => !o); }}>
+            <Ic n="bell" s={19} c="var(--muted)"/>
+            {hasUnread && <span className="dk-bell-dot"></span>}
+          </div>
+          {notifOpen && <DeskNotifs items={notifs} onClose={() => setNotifOpen(false)}/>}
+        </div>
       </header>
       <div className="dk-content">{children}</div>
     </main>
@@ -122,14 +192,32 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
    Главная (home)
    ============================================================ */
 function DeskHome({ tokens, onGen, onStartChat, onTemplate }) {
-  const { Ic } = window.MiraCore;
+  const { Ic, ASPECTS } = window.MiraCore;
   const [hmode, setHmode] = useState('photo'); // photo | video | chat
   const [val, setVal] = useState('');
+  const [apiModels, setApiModels] = useState([]);
+  const [modelCode, setModelCode] = useState(null);
+  const [aspectId, setAspectId] = useState('2:3');
+  const [open, setOpen] = useState(null); // 'model' | 'aspect'
+
+  useEffect(function() {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    window.HubicxApi.models().then(function(m) { if (Array.isArray(m)) setApiModels(m); }).catch(function() {});
+  }, []);
+
+  const filtered = apiModels.filter(function(m) {
+    if (hmode === 'video') return m.category === 'video' || m.task_type === 'video';
+    return m.category !== 'video' && m.task_type !== 'video';
+  });
+  var curCode = modelCode || (filtered[0] && filtered[0].code);
+  var curModel = filtered.find(function(m) { return m.code === curCode; }) || filtered[0];
+  var modelLabel = curModel ? curModel.title : 'Seedream 4.5';
+  var aspectObj = ASPECTS.find(function(a) { return a.id === aspectId; }) || ASPECTS[1];
 
   const submit = function() {
     const t = val.trim();
     if (hmode === 'chat') { onStartChat(t || 'Привет!'); return; }
-    onGen(hmode, t);
+    onGen(hmode, t, { modelCode: curModel ? curModel.code : null, aspectId: aspectId });
   };
 
   const chips = ['Неоновый портрет','Оживить фото','Аватар в стиле аниме','Кадр из фильма','Минималистичный постер'];
@@ -159,8 +247,36 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate }) {
           value={val} onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
         {hmode !== 'chat' && <>
-          <div className="dk-ask-pill"><Ic n="sparkle" s={14}/> Seedream 4.5</div>
-          <div className="dk-ask-pill"><Ic n="aspect" s={14}/> 2:3</div>
+          <div className="dk-ask-pill-wrap">
+            <button className={'dk-ask-pill' + (open === 'model' ? ' on' : '')}
+              onClick={() => setOpen(open === 'model' ? null : 'model')}>
+              <Ic n="sparkle" s={14}/> {modelLabel} <Ic n="chev" s={13}/>
+            </button>
+            {open === 'model' && <div className="dk-ask-menu">
+              {filtered.length === 0
+                ? <div className="dk-ask-opt muted">Модели загружаются…</div>
+                : filtered.map(function(m) {
+                    return <div key={m.code} className={'dk-ask-opt' + (m.code === curCode ? ' on' : '')}
+                      onClick={() => { setModelCode(m.code); setOpen(null); }}>
+                      <span>{m.title}</span><span className="dk-ask-opt-p">{m.price_credits} ★</span>
+                    </div>;
+                  })}
+            </div>}
+          </div>
+          <div className="dk-ask-pill-wrap">
+            <button className={'dk-ask-pill' + (open === 'aspect' ? ' on' : '')}
+              onClick={() => setOpen(open === 'aspect' ? null : 'aspect')}>
+              <Ic n="aspect" s={14}/> {aspectObj.t} <Ic n="chev" s={13}/>
+            </button>
+            {open === 'aspect' && <div className="dk-ask-menu">
+              {ASPECTS.map(function(a) {
+                return <div key={a.id} className={'dk-ask-opt' + (a.id === aspectId ? ' on' : '')}
+                  onClick={() => { setAspectId(a.id); setOpen(null); }}>
+                  <span>{a.t}</span><span className="dk-ask-opt-p">{a.s}</span>
+                </div>;
+              })}
+            </div>}
+          </div>
         </>}
         <button className="dk-ask-cta" onClick={submit}><Ic n="sparkle" s={16}/> Создать</button>
       </div>
@@ -209,13 +325,14 @@ function DeskTplCard({ t, onClick }) {
 /* ============================================================
    Генерация (two-panel: form + canvas)
    ============================================================ */
-function DeskGen({ tokens, initMode, initPrompt, initTpl, refreshBalance }) {
+function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, refreshBalance }) {
   const { Ic, Star, ASPECTS } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
   const [apiModels, setApiModels] = useState([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [selectedModelCode, setSelectedModelCode] = useState(null);
-  const [selectedAspect, setSelectedAspect] = useState(ASPECTS[1]);
+  const [selectedModelCode, setSelectedModelCode] = useState(initModelCode || null);
+  const [selectedAspect, setSelectedAspect] = useState(
+    (initAspectId && ASPECTS.find(function(a) { return a.id === initAspectId; })) || ASPECTS[1]);
   const [open, setOpen] = useState(null); // 'model' | 'aspect'
   const [tab, setTab] = useState(initTpl ? 'tpl' : (initPrompt ? 'prompt' : 'tpl'));
   const [selTpl, setSelTpl] = useState(initTpl ? initTpl.t : null);
@@ -332,11 +449,11 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, refreshBalance }) {
 
       <div className="dk-lbl">Детали</div>
       <div className="dk-card">
-        <div className="dk-row" onClick={() => modelOpts.length > 1 && setOpen(open === 'model' ? null : 'model')}>
+        <div className="dk-row" onClick={() => modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
           <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
           <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
             <div className="dk-row-v">{!modelsLoaded ? 'Загрузка…' : curOpt ? curOpt.t + ' · ' + price + ' ★' : 'Нет моделей'}</div></div>
-          {modelOpts.length > 1 && <span className="chev"><Ic n="chev" s={19}/></span>}
+          {modelOpts.length > 0 && <span className="chev"><Ic n="chev" s={19}/></span>}
         </div>
         {open === 'model' && <div className="dk-drop-list">
           {modelOpts.map(function(o) {
@@ -621,7 +738,6 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
           <div className="dk-prof-name">{name} <span className="dk-pro">Pro</span></div>
           <div className="dk-prof-handle">{uname}</div>
           <div className="dk-prof-btns">
-            <button className="dk-btn-sec" onClick={onSettings}><Ic n="user" s={16}/> Редактировать</button>
             <button className="dk-btn-sec" onClick={onSettings}><Ic n="gear" s={16}/> Настройки</button>
           </div>
         </div>

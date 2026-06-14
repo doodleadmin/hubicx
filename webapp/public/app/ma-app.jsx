@@ -57,7 +57,7 @@ function App() {
 
   // Desktop-only routing state (ignored on mobile)
   const [dtab, setDtab] = uS('home');
-  const [genInit, setGenInit] = uS({ mode:'photo', prompt:'', tpl:null });
+  const [genInit, setGenInit] = uS({ mode:'photo', prompt:'', tpl:null, modelCode:null, aspectId:null });
   const [genKey, setGenKey] = uS(0);
   const [settingsOpen, setSettingsOpen] = uS(false);
 
@@ -243,17 +243,21 @@ function App() {
     };
     const meta = TITLES[dtab] || TITLES.home;
 
-    const goGen = (m, p) => { setGenInit({ mode: m, prompt: p || '', tpl: null }); setGenKey(k => k + 1); setDtab('gen'); };
+    const goGen = (m, p, opts) => {
+      setGenInit({ mode: m, prompt: p || '', tpl: null,
+        modelCode: (opts && opts.modelCode) || null, aspectId: (opts && opts.aspectId) || null });
+      setGenKey(k => k + 1); setDtab('gen');
+    };
     const onTemplate = (tpl) => {
       if (!tpl) { setDtab('tpl'); return; }
-      setGenInit({ mode: tpl.type === 'video' ? 'video' : 'photo', prompt: '', tpl: tpl });
+      setGenInit({ mode: tpl.type === 'video' ? 'video' : 'photo', prompt: '', tpl: tpl, modelCode: null, aspectId: null });
       setGenKey(k => k + 1); setDtab('gen');
     };
     const dStartChat = (text) => { startChat(text); setDtab('chat'); };
 
     let dbody;
     if (dtab === 'home') dbody = <DeskHome tokens={tokens} onGen={goGen} onStartChat={dStartChat} onTemplate={onTemplate}/>;
-    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} refreshBalance={refreshBalance}/>;
+    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} initModelCode={genInit.modelCode} initAspectId={genInit.aspectId} refreshBalance={refreshBalance}/>;
     else if (dtab === 'tpl') dbody = <DeskTemplates onTemplate={onTemplate}/>;
     else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat}/>;
     else if (dtab === 'history') dbody = <DeskHistory/>;
