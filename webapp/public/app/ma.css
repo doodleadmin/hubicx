@@ -377,6 +377,9 @@ body {
 .tg-fs .topnav {
   padding-top: max(env(safe-area-inset-top, 0px), 100px);
 }
+.tg-fs .chat-top {
+  padding-top: max(calc(12px + env(safe-area-inset-top)), 112px);
+}
 
 /* ══ Desktop layout — browser ≥768px OR Telegram PC ═══════════════
    html.desktop class is toggled by JS (index.html init script).

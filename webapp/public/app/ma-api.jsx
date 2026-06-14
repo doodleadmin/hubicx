@@ -9,6 +9,32 @@
     return tg ? (tg.initData || '') : '';
   }
 
+  function requestPublic(path, opts) {
+    opts = opts || {};
+    var ctrl = new AbortController();
+    var timer = setTimeout(function() { ctrl.abort(); }, TIMEOUT_MS);
+    var headers = { 'Content-Type': 'application/json' };
+    var initData = getInitData();
+    if (initData) headers['X-Telegram-Init-Data'] = initData;
+    return fetch(API_URL + '/api' + path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body || undefined,
+      signal: ctrl.signal,
+      cache: 'no-store',
+    }).then(function(res) {
+      clearTimeout(timer);
+      if (!res.ok) return res.json().catch(function() { return {}; }).then(function(err) {
+        return Promise.reject({ code: String(err.code || ''), message: String(err.detail || 'Ошибка запроса'), status: res.status });
+      });
+      return res.json();
+    }, function(err) {
+      clearTimeout(timer);
+      if (err && err.name === 'AbortError') return Promise.reject({ code: 'timeout', message: 'Превышено время ожидания' });
+      return Promise.reject({ code: 'network', message: 'Нет соединения с сервером' });
+    });
+  }
+
   function request(path, opts) {
     opts = opts || {};
     var initData = getInitData();
@@ -137,7 +163,7 @@
     pricing:        function()          { return request('/pricing'); },
     profile:        function()          { return request('/profile'); },
     updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
-    models:         function(category)  { return request('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },
+    models:         function(category)  { return requestPublic('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },
     history:        function()          { return request('/generations/history'); },
     createGeneration: function(p)       { return request('/generations', { method:'POST', body:JSON.stringify(p) }); },
     getTask:        function(id)        { return request('/generations/' + id); },

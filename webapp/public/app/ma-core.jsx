@@ -67,6 +67,20 @@ function TopNav({ active, onTab }) {
   </div>;
 }
 
+/* ---- fallback models (matches production DB seed) ---- */
+const FALLBACK_MODELS = [
+  { code:'nano_banana_2',      title:'Nano Banana 2',             category:'photo', task_type:'image', price_credits:40,  description:'Быстрая генерация' },
+  { code:'nano_banana_pro',    title:'Nano Banana Pro',           category:'photo', task_type:'image', price_credits:80,  description:'Pro · высокое разрешение' },
+  { code:'nano_banana_edit',   title:'Nano Banana Edit',          category:'photo', task_type:'image', price_credits:60,  description:'Редактирование фото', input_type:'image' },
+  { code:'seedream',           title:'Seedream',                  category:'photo', task_type:'image', price_credits:35,  description:'Фотореалистичный' },
+  { code:'flux_schnell',       title:'Fast Image',                category:'photo', task_type:'image', price_credits:30,  description:'Молниеносный' },
+  { code:'z_image',            title:'Z-Image',                   category:'photo', task_type:'image', price_credits:25,  description:'Доступный' },
+  { code:'seedance_2_t2v',     title:'Seedance 2 Text to Video',  category:'video', task_type:'video', price_credits:250, description:'Текст → видео' },
+  { code:'seedance_2_i2v_fast',title:'Seedance 2 Fast Image→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрый Image → видео', input_type:'image' },
+  { code:'seedance_2_i2v',     title:'Seedance 2 Image to Video', category:'video', task_type:'video', price_credits:250, description:'Качественный Image → видео', input_type:'image' },
+  { code:'kling_21_i2v',       title:'Kling 2.1 Image to Video',  category:'video', task_type:'video', price_credits:220, description:'Kling 2.1 Image → видео', input_type:'image' },
+];
+
 /* ---- data ---- */
 const HERO = [
   { img:'assets/cov/hero1.png' },
@@ -102,4 +116,4 @@ const ASPECTS = [
   { id:'16:9', t:'16:9', s:'Широкий' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, HERO, TEMPLATES, CREATE_TPL, MODELS, ASPECTS };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, HERO, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS };

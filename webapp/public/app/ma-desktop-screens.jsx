@@ -201,13 +201,16 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate }) {
   const [open, setOpen] = useState(null); // 'model' | 'aspect'
 
   useEffect(function() {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
-    window.HubicxApi.models().then(function(m) { if (Array.isArray(m)) setApiModels(m); }).catch(function() {});
+    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); return; }
+    window.HubicxApi.models().then(function(m) {
+      if (Array.isArray(m) && m.length > 0) setApiModels(m);
+      else setApiModels(window.MiraCore.FALLBACK_MODELS);
+    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); });
   }, []);
 
   const filtered = apiModels.filter(function(m) {
-    if (hmode === 'video') return m.category === 'video' || m.task_type === 'video';
-    return m.category !== 'video' && m.task_type !== 'video';
+    if (hmode === 'video') return m.task_type === 'video' || m.category === 'video';
+    return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
   var curCode = modelCode || (filtered[0] && filtered[0].code);
   var curModel = filtered.find(function(m) { return m.code === curCode; }) || filtered[0];
@@ -348,15 +351,18 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const cancelRef = useRef(null);
 
   useEffect(function() {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setModelsLoaded(true); return; }
-    window.HubicxApi.models().then(function(m) { if (Array.isArray(m)) setApiModels(m); setModelsLoaded(true); })
-      .catch(function() { setModelsLoaded(true); });
+    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
+    window.HubicxApi.models().then(function(m) {
+      if (Array.isArray(m) && m.length > 0) setApiModels(m);
+      else setApiModels(window.MiraCore.FALLBACK_MODELS);
+      setModelsLoaded(true);
+    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); });
   }, []);
   useEffect(function() { return function() { if (cancelRef.current) cancelRef.current(); }; }, []);
 
   const filtered = apiModels.filter(function(m) {
-    if (mode === 'video') return m.category === 'video' || m.task_type === 'video';
-    return m.category !== 'video' && m.task_type !== 'video';
+    if (mode === 'video') return m.task_type === 'video' || m.category === 'video';
+    return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
   const modelOpts = filtered.map(function(m) {
     return { id:m.code, t:m.title, s:(m.description || m.category || '') + ' · ' + m.price_credits + ' ★' };
@@ -606,10 +612,22 @@ function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDelete
             <button className={'dk-conv-send' + (val.trim() && !streaming ? ' on' : '')} onClick={send}><Ic n="arrowUp" s={19}/></button>
           </div>
         </div>
-      </> : <div className="dk-conv-empty">
-        <div className="dk-conv-empty-ic"><Ic n="chat" s={40} c="var(--faint)"/></div>
-        <div className="dk-canvas-et">Выберите чат или начните новый</div>
-        <div className="dk-canvas-es">AI-помощник ответит на вопросы, поможет с текстами и идеями</div>
+      </> : <div className="dk-conv-nochat">
+        <div className="dk-conv-empty" style={{ flex:1 }}>
+          <div className="dk-conv-empty-ic"><Ic n="chat" s={40} c="var(--faint)"/></div>
+          <div className="dk-canvas-et">Выберите чат или начните новый</div>
+          <div className="dk-canvas-es">AI-помощник ответит на вопросы, поможет с текстами и идеями</div>
+        </div>
+        <div className="dk-conv-input">
+          <div className="dk-conv-ask">
+            <input placeholder="Напишите что-нибудь, чтобы начать чат…" value={val} onChange={e => setVal(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { var t = val.trim(); if (t) { setVal(''); onStartChat(t); } } }}/>
+            <button className={'dk-conv-send' + (val.trim() ? ' on' : '')}
+              onClick={() => { var t = val.trim(); if (t) { setVal(''); onStartChat(t); } }}>
+              <Ic n="arrowUp" s={19}/>
+            </button>
+          </div>
+        </div>
       </div>}
     </div>
   </div>;

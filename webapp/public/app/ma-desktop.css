@@ -390,6 +390,7 @@ body { background: var(--bg); overflow: hidden; }
 .dk-conv-ask input { flex: 1; border: none; background: none; outline: none; font-family: inherit; font-size: 14.5px; color: var(--ink); }
 .dk-conv-send { width: 40px; height: 40px; border-radius: 12px; border: none; flex: 0 0 auto; background: var(--nav-bg); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .dk-conv-send.on { background: var(--accent); color: var(--accent-ink); }
+.dk-conv-nochat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .dk-conv-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px; }
 .dk-conv-empty-ic { width: 84px; height: 84px; border-radius: 22px; background: #f1f0ea; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
 

@@ -95,14 +95,12 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
 
   // Load models on mount
   useEffect(function() {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) {
-      setModelsLoaded(true);
-      return;
-    }
+    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
     window.HubicxApi.models().then(function(models) {
-      if (Array.isArray(models)) setApiModels(models);
+      if (Array.isArray(models) && models.length > 0) setApiModels(models);
+      else setApiModels(window.MiraCore.FALLBACK_MODELS);
       setModelsLoaded(true);
-    }).catch(function() { setModelsLoaded(true); });
+    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); });
   }, []);
 
   // Cancel polling on unmount
@@ -110,10 +108,10 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
     return function() { if (pollCancelRef.current) pollCancelRef.current(); };
   }, []);
 
-  // Filter models by current mode
+  // Filter models by current mode (task_type is authoritative)
   const filteredModels = apiModels.filter(function(m) {
-    if (mode === 'video') return m.category === 'video' || m.task_type === 'video';
-    return m.category !== 'video' && m.task_type !== 'video';
+    if (mode === 'video') return m.task_type === 'video' || m.category === 'video';
+    return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
 
   // Picker-compatible model options
