@@ -85,7 +85,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
           {history.slice(0, 8).map(function(item) {
             var isCompleted = item.status === 'completed';
-            var isFailed = item.status === 'failed' || item.status === 'refunded';
+            var isFailed = item.status === 'refunded';
             return <div key={item.id} className="chat-plate" style={{ alignItems:'center' }}
               onClick={() => isCompleted && item.output_file_url && setViewTask(item)}>
               <div style={{ width:46, height:46, borderRadius:12, overflow:'hidden', flex:'0 0 auto',

@@ -12,7 +12,7 @@ function pollTask(taskId, onUpdate, onDone, onError) {
       if (cancelled) return;
       onUpdate(task);
       if (task.status === 'completed') { onDone(task); return; }
-      if (task.status === 'failed' || task.status === 'refunded') {
+      if (task.status === 'refunded') {
         onError(task.error_message || 'Произошла ошибка генерации');
         return;
       }
@@ -183,7 +183,9 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
     setGenError(null);
   };
 
-  var ready = (tab === 'tpl' && selTpl) || (tab === 'prompt' && prompt.trim().length > 0);
+  // Video "оживить фото": an uploaded image alone is enough — prompt is optional.
+  var hasTextInput = (tab === 'tpl' && selTpl) || (tab === 'prompt' && prompt.trim().length > 0);
+  var ready = hasTextInput || (mode === 'video' && !!uploadedFile);
 
   // ── Generating view ──
   if (genState === 'generating') {
@@ -347,7 +349,8 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
         disabled={!ready || uploading || !modelsLoaded || !currentModelFull}
         onClick={startGeneration}>
         {!modelsLoaded ? 'Загрузка…'
-          : !ready ? (tab === 'prompt' ? 'Укажите промпт' : 'Выберите шаблон')
+          : !ready ? (mode === 'video' ? 'Загрузите фото или укажите промпт'
+              : tab === 'prompt' ? 'Укажите промпт' : 'Выберите шаблон')
           : 'Создать · ' + currentPrice + ' ★'}
       </button>
     </div>
