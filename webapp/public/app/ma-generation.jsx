@@ -13,6 +13,20 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
     }).catch(function() { setHistLoaded(true); });
   }, []);
 
+  // Live-refresh while any task is still in progress (e.g. a minimized generation)
+  var hasPending = history.some(function(item) {
+    return item.status === 'queued' || item.status === 'created' || item.status === 'processing';
+  });
+  useEffect(function() {
+    if (!hasPending || !window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    var timer = setInterval(function() {
+      window.HubicxApi.history().then(function(items) {
+        if (Array.isArray(items)) setHistory(items);
+      }).catch(function() {});
+    }, 5000);
+    return function() { clearInterval(timer); };
+  }, [hasPending]);
+
   if (viewTask) {
     const isVideo = viewTask.task_type === 'video' || /\.(mp4|webm|mov)$/i.test(viewTask.output_file_url || '');
     return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
@@ -107,6 +121,21 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
               {isCompleted && item.output_file_url && <span className="chev"><Ic n="chev" s={18}/></span>}
             </div>;
           })}
+        </div>
+      </>}
+
+      {/* Empty state — no generations yet */}
+      {histLoaded && history.length === 0 && <>
+        <div className="sec-h rise" style={{ '--d':'.10s', marginTop:22 }}>
+          <h2>История генераций</h2>
+        </div>
+        <div className="card rise" style={{ '--d':'.12s', display:'flex', flexDirection:'column',
+          alignItems:'center', gap:8, padding:'28px 20px', textAlign:'center' }}>
+          <div style={{ fontSize:34 }}>✨</div>
+          <div style={{ fontWeight:700, fontSize:15 }}>Здесь появятся ваши работы</div>
+          <div className="muted" style={{ fontSize:13, maxWidth:230 }}>
+            Создайте первое фото или видео — результат сохранится в истории
+          </div>
         </div>
       </>}
 

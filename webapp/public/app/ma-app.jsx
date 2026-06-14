@@ -205,7 +205,7 @@ function App() {
   let body;
   if (createOpen) {
     body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset}
-      onBack={() => setCreateOpen(false)} refreshBalance={refreshBalance}/>;
+      onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} refreshBalance={refreshBalance}/>;
   } else if (tab === 'agent') {
     body = <AgentScreen tokens={tokens} onBuyPro={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}

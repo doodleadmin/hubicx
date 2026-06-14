@@ -13,15 +13,15 @@ function pollTask(taskId, onUpdate, onDone, onError) {
       onUpdate(task);
       if (task.status === 'completed') { onDone(task); return; }
       if (task.status === 'refunded') {
-        onError(task.error_message || 'Произошла ошибка генерации');
+        onError(task.error_message || 'Произошла ошибка генерации', 'refunded');
         return;
       }
       attempts++;
-      if (attempts >= POLL_MAX_ATTEMPTS) { onError('Генерация занимает дольше обычного. Результат появится в разделе «Генерация» → История, как только будет готов.'); return; }
+      if (attempts >= POLL_MAX_ATTEMPTS) { onError('Генерация занимает дольше обычного. Результат появится в разделе «Генерация» → История, как только будет готов.', 'timeout'); return; }
       setTimeout(check, POLL_INTERVAL_MS);
     }).catch(function(err) {
       if (cancelled) return;
-      onError((err && err.message) || 'Ошибка запроса');
+      onError((err && err.message) || 'Ошибка запроса', 'error');
     });
   }
   check();
@@ -62,7 +62,7 @@ function GenResult({ task, tokens, onNewGeneration }) {
   </div>;
 }
 
-function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance }) {
+function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refreshBalance }) {
   const { Ic, Star, ASPECTS, CREATE_TPL } = window.MiraCore;
 
   // Models from API
@@ -90,6 +90,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
   const [genState, setGenState] = useState('idle'); // idle | generating | done | error
   const [currentTask, setCurrentTask] = useState(null);
   const [genError, setGenError] = useState(null);
+  const [genErrorKind, setGenErrorKind] = useState('error'); // refunded | timeout | error
   const pollCancelRef = useRef(null);
 
   // Load models on mount
@@ -160,6 +161,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
 
     setGenState('generating');
     setGenError(null);
+    setGenErrorKind('error');
     setCurrentTask(null);
 
     window.HubicxApi.createGeneration(payload).then(function(data) {
@@ -167,12 +169,14 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
         data.task_id,
         function(task) { setCurrentTask(task); },
         function(task) { setCurrentTask(task); setGenState('done'); if (refreshBalance) refreshBalance(); },
-        function(errMsg) { setGenState('error'); setGenError(errMsg); if (refreshBalance) refreshBalance(); }
+        function(errMsg, kind) { setGenState('error'); setGenError(errMsg); setGenErrorKind(kind || 'error'); if (refreshBalance) refreshBalance(); }
       );
       pollCancelRef.current = cancel;
     }).catch(function(err) {
+      // Task was never created — nothing was charged, so no refund to report.
       setGenState('error');
       setGenError((err && err.message) || 'Ошибка создания задачи');
+      setGenErrorKind('error');
     });
   };
 
@@ -191,9 +195,10 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
   if (genState === 'generating') {
     var statusLabel = 'В очереди…';
     if (currentTask && (currentTask.status === 'processing' || currentTask.status === 'running')) statusLabel = 'Генерация…';
+    var minimize = onMinimize || resetGen;
     return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <div className="cr-head">
-        <div className="cr-back" onClick={resetGen}><Ic n="back" s={20}/></div>
+        <div className="cr-back" onClick={minimize}><Ic n="back" s={20}/></div>
         <div className="cr-title">Создание…</div>
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
@@ -201,11 +206,16 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
         justifyContent:'center', gap:18, minHeight:0 }}>
         <div className="gen-spinner"></div>
         <div style={{ fontWeight:700, fontSize:17 }}>{statusLabel}</div>
-        <div className="muted" style={{ fontSize:13.5, textAlign:'center', maxWidth:240 }}>
-          {mode === 'video' ? 'Видео генерируется 2–3 минуты — не закрывайте приложение' : 'Обычно занимает 15–40 секунд'}
+        <div className="muted" style={{ fontSize:13.5, textAlign:'center', maxWidth:260 }}>
+          {mode === 'video'
+            ? 'Видео генерируется 2–3 минуты. Можно свернуть — пришлём уведомление в Telegram, когда будет готово.'
+            : 'Обычно занимает 15–40 секунд.'}
         </div>
-        <button style={{ marginTop:4, fontSize:14, color:'var(--muted)', background:'none', border:'none', cursor:'pointer', padding:'8px 16px' }}
-          onClick={resetGen}>Отменить</button>
+        <button className="btn-secondary" style={{ marginTop:4, maxWidth:220 }}
+          onClick={minimize}>Свернуть</button>
+        <div className="muted" style={{ fontSize:12, textAlign:'center', maxWidth:240 }}>
+          Генерация продолжится в фоне и появится в разделе «Генерация»
+        </div>
       </div>
     </div>;
   }
@@ -226,17 +236,27 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, refreshBalance })
 
   // ── Error view ──
   if (genState === 'error') {
+    var isTimeout = genErrorKind === 'timeout';
+    var isRefunded = genErrorKind === 'refunded';
+    var headTitle = isTimeout ? 'Почти готово' : 'Ошибка';
+    var emoji = isTimeout ? '⏳' : '⚠️';
     return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <div className="cr-head">
         <div className="cr-back" onClick={resetGen}><Ic n="back" s={20}/></div>
-        <div className="cr-title">Ошибка</div>
+        <div className="cr-title">{headTitle}</div>
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
       <div className="screen" style={{ display:'flex', flexDirection:'column', alignItems:'center',
         justifyContent:'center', gap:14, minHeight:0 }}>
-        <div style={{ fontSize:42 }}>⚠️</div>
-        <div style={{ fontWeight:700, fontSize:16, textAlign:'center', maxWidth:260 }}>{genError}</div>
-        <button className="btn-primary" onClick={resetGen} style={{ marginTop:4 }}>Попробовать снова</button>
+        <div style={{ fontSize:42 }}>{emoji}</div>
+        <div style={{ fontWeight:700, fontSize:16, textAlign:'center', maxWidth:280 }}>{genError}</div>
+        {isRefunded && <div style={{ fontSize:13.5, fontWeight:700, color:'#5f9184',
+          background:'#eef5f1', borderRadius:12, padding:'9px 16px' }}>
+          ✓ Токены возвращены на баланс
+        </div>}
+        <button className="btn-primary" onClick={resetGen} style={{ marginTop:4 }}>
+          {isTimeout ? 'Понятно' : 'Попробовать снова'}
+        </button>
       </div>
     </div>;
   }
