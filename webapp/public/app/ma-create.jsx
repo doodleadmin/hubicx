@@ -50,7 +50,7 @@ function GenResult({ task, tokens, onNewGeneration }) {
       : <img src={task.output_file_url} alt="Результат"
           style={{ width:'100%', maxHeight:400, borderRadius:18, objectFit:'cover' }}/>}
 
-    {task.prompt && <div className="muted" style={{ fontSize:13, paddingHorizontal:2 }}>{task.prompt}</div>}
+    {task.prompt && <div className="muted" style={{ fontSize:13, padding:'0 2px' }}>{task.prompt}</div>}
 
     <div style={{ display:'flex', gap:10 }}>
       <button className="btn-secondary" style={{ flex:1 }} onClick={handleSendToChat}

@@ -9,12 +9,15 @@ from backend.app.db.models import TokenPackage, User
 from backend.app.db.session import get_session
 from backend.app.schemas.payments import PaymentCreate, PaymentOut, OrderPreviewRequest
 from backend.app.services.payments import create_payment, process_webhook
+from backend.app.services.rate_limit import check_rate_limit
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 logger = logging.getLogger(__name__)
 
 MIN_CUSTOM_TOPUP_RUB = 99
+WEBHOOK_RATE_LIMIT = 60
+WEBHOOK_RATE_WINDOW = 60
 
 
 @router.post("/create", response_model=PaymentOut)
@@ -35,6 +38,8 @@ async def create_payment_route(
 
 @router.post("/webhook")
 async def payment_webhook(request: Request, session: AsyncSession = Depends(get_session)) -> dict:
+    client_ip = request.client.host if request.client else "unknown"
+    await check_rate_limit(f"webhook:{client_ip}", WEBHOOK_RATE_LIMIT, WEBHOOK_RATE_WINDOW)
     try:
         event = await request.json()
     except Exception:

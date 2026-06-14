@@ -249,7 +249,7 @@ function Topup({ tokens, onClose }) {
     { code:'max',    title:'2200 токенов', tokens:2200, price_rub:1690, bonus_tokens:510, total_tokens:2200, effective_price_per_token:0.77 },
     { code:'ultra',  title:'4200 токенов', tokens:4200, price_rub:2990, bonus_tokens:1210,total_tokens:4200, effective_price_per_token:0.71 },
   ];
-  const [packs, setPacks] = uS(fallbackPacks);
+  const [packs, setPacks] = uS(null); // null = loading; set by API or fallback on error
   const [paymentsEnabled, setPaymentsEnabled] = uS(false);
   const [sel, setSel] = uS(1);
   const [customAmount, setCustomAmount] = uS('');
@@ -264,11 +264,26 @@ function Topup({ tokens, onClose }) {
         if (!alive) return;
         if (data && Array.isArray(data.token_packages) && data.token_packages.length)
           setPacks(data.token_packages);
+        else
+          setPacks(fallbackPacks);
         if (data && data.payments_enabled) setPaymentsEnabled(true);
-      }).catch(() => {});
+      }).catch(() => { if (alive) setPacks(fallbackPacks); });
+    } else {
+      setPacks(fallbackPacks);
     }
     return () => { alive = false; };
   }, []);
+
+  if (packs === null) {
+    return <div className="sheet-ov" onClick={onClose}>
+      <div className="sheet" onClick={e => e.stopPropagation()}>
+        <div className="sheet-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'36px 20px' }}>
+          <div className="gen-spinner"></div>
+          <div className="muted" style={{ fontSize:14 }}>Загружаем пакеты…</div>
+        </div>
+      </div>
+    </div>;
+  }
 
   const chosen = packs[sel] || packs[0];
   const handleCustomChange = (v) => {
