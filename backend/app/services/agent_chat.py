@@ -259,13 +259,20 @@ async def stream_chat_turn(
     system_prompt = _build_system_prompt(chat.agent_mode, chat.language_code, profile)
     messages = _build_messages(system_prompt, chat.messages or [], content)
 
-    # Charge upfront
-    await apply_balance_operation(
-        session, user_id, -AI_CHAT_COST, "agent_chat_debit",
-        reason=f"Agent chat {chat.id} stream",
-        metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode, "model": model_code},
-    )
-    await session.commit()
+    # Charge upfront — guard so a balance error becomes a clean SSE error event
+    # instead of aborting the already-open stream ("Соединение прервано").
+    try:
+        await apply_balance_operation(
+            session, user_id, -AI_CHAT_COST, "agent_chat_debit",
+            reason=f"Agent chat {chat.id} stream",
+            metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode, "model": model_code},
+        )
+        await session.commit()
+    except AppError as exc:
+        await session.rollback()
+        yield f"data: {json.dumps({'error': exc.message})}\n\n"
+        yield "data: [DONE]\n\n"
+        return
 
     provider = OpenRouterProvider()
     full_text = ""

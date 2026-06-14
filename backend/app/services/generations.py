@@ -45,6 +45,11 @@ async def create_generation_task(
         provider = model.provider
         task_type = model.task_type
 
+        # The webapp sends the prompt as a top-level field; schema validation expects it
+        # inside `inputs`. Merge it in so prompt-only generation works from any client.
+        if prompt and (not inputs or "prompt" not in inputs):
+            inputs = {**(inputs or {}), "prompt": prompt}
+
         if inputs and model.form_schema and model.form_schema.get("fields"):
             validated_inputs, provider_input = validate_inputs_against_schema(model.form_schema, inputs, model.default_params)
             resolved_inputs = await resolve_input_files(session, user.id, validated_inputs, model.form_schema)

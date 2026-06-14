@@ -388,6 +388,27 @@ function DeskTplCard({ t, onClick }) {
   </div>;
 }
 
+/* ---- centered picker modal (model / format) ---- */
+function DeskPicker({ title, options, current, onPick, onClose }) {
+  const { Ic } = window.MiraCore;
+  return <div className="dk-modal-ov" onClick={onClose}>
+    <div className="dk-picker" onClick={e => e.stopPropagation()}>
+      <div className="dk-picker-top">
+        <span>{title}</span>
+        <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
+      </div>
+      <div className="dk-picker-list">
+        {options.map(function(o) {
+          return <div key={o.id} className={'dk-picker-opt' + (o.id === current ? ' on' : '')} onClick={() => onPick(o.id)}>
+            <div><div className="dk-opt-t">{o.title}</div>{o.sub ? <div className="dk-opt-s">{o.sub}</div> : null}</div>
+            {o.id === current && <Ic n="check" s={20} c="var(--ink)"/>}
+          </div>;
+        })}
+      </div>
+    </div>
+  </div>;
+}
+
 /* ============================================================
    Генерация (two-panel: form + canvas)
    ============================================================ */
@@ -518,38 +539,27 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
 
       <div className="dk-lbl">Детали</div>
       <div className="dk-card">
-        <div className="dk-row" onClick={() => modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
+        <div className="dk-row" onClick={() => modelOpts.length > 0 && setOpen('model')}>
           <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
           <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
             <div className="dk-row-v">{!modelsLoaded ? 'Загрузка…' : curOpt ? curOpt.t + ' · ' + price + ' ★' : 'Нет моделей'}</div></div>
           {modelOpts.length > 0 && <span className="chev"><Ic n="chev" s={19}/></span>}
         </div>
-        {open === 'model' && <div className="dk-drop-list">
-          {modelOpts.map(function(o) {
-            return <div key={o.id} className={'dk-drop-opt' + (o.id === curCode ? ' on' : '')}
-              onClick={() => { setSelectedModelCode(o.id); setOpen(null); }}>
-              <div><div className="dk-opt-t">{o.t}</div><div className="dk-opt-s">{o.s}</div></div>
-              {o.id === curCode && <Ic n="check" s={20} c="var(--ink)"/>}
-            </div>;
-          })}
-        </div>}
         <div className="dk-row-div"></div>
-        <div className="dk-row" onClick={() => setOpen(open === 'aspect' ? null : 'aspect')}>
+        <div className="dk-row" onClick={() => setOpen('aspect')}>
           <div className="dk-row-ic"><Ic n="aspect" s={20} c="var(--ink)"/></div>
           <div className="dk-row-tx"><div className="dk-row-k">Формат</div>
             <div className="dk-row-v">{selectedAspect.t} · {selectedAspect.s}</div></div>
           <span className="chev"><Ic n="chev" s={19}/></span>
         </div>
-        {open === 'aspect' && <div className="dk-drop-list">
-          {ASPECTS.map(function(o) {
-            return <div key={o.id} className={'dk-drop-opt' + (o.id === selectedAspect.id ? ' on' : '')}
-              onClick={() => { setSelectedAspect(o); setOpen(null); }}>
-              <div><div className="dk-opt-t">{o.t}</div><div className="dk-opt-s">{o.s}</div></div>
-              {o.id === selectedAspect.id && <Ic n="check" s={20} c="var(--ink)"/>}
-            </div>;
-          })}
-        </div>}
       </div>
+
+      {open === 'model' && <DeskPicker title="Выберите модель" onClose={() => setOpen(null)}
+        options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:o.s }; })} current={curCode}
+        onPick={function(id){ setSelectedModelCode(id); setOpen(null); }}/>}
+      {open === 'aspect' && <DeskPicker title="Формат кадра" onClose={() => setOpen(null)}
+        options={ASPECTS.map(function(a){ return { id:a.id, title:a.t, sub:a.s }; })} current={selectedAspect.id}
+        onPick={function(id){ var a = ASPECTS.find(function(x){return x.id===id;}); if (a) setSelectedAspect(a); setOpen(null); }}/>}
 
       <button className="dk-cta" disabled={!ready || uploading || !modelsLoaded || !curModel || canvas === 'generating'} onClick={start}>
         <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : 'Сгенерировать · ' + price + ' ★'}

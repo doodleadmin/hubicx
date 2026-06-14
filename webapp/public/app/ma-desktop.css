@@ -435,6 +435,18 @@ body { background: var(--bg); overflow: hidden; }
 .dk-ref-link { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk-ref-copy { width: 36px; height: 34px; border-radius: 9px; border: none; background: var(--ink); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 
+/* ── picker modal (model / format) ── */
+.dk-picker {
+  width: 100%; max-width: 460px; max-height: 78vh; background: var(--card); border-radius: 22px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.28); display: flex; flex-direction: column; overflow: hidden;
+}
+.dk-picker-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 800; }
+.dk-picker-top .dk-modal-x { position: static; }
+.dk-picker-list { padding: 8px; overflow-y: auto; }
+.dk-picker-opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px; border-radius: 12px; cursor: pointer; }
+.dk-picker-opt:hover { background: #f6f5f0; }
+.dk-picker-opt.on { background: #f0efe8; }
+
 /* ════════════ AUTH (desktop login/register) ════════════ */
 .dk-auth { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
 .dk-auth-card {
