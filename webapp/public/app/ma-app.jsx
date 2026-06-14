@@ -55,6 +55,12 @@ function App() {
   const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
 
+  // Desktop-only routing state (ignored on mobile)
+  const [dtab, setDtab] = uS('home');
+  const [genInit, setGenInit] = uS({ mode:'photo', prompt:'', tpl:null });
+  const [genKey, setGenKey] = uS(0);
+  const [settingsOpen, setSettingsOpen] = uS(false);
+
   // Load user balance on mount
   uE(() => {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
@@ -226,11 +232,52 @@ function App() {
   </React.Fragment>;
 
   if (DESKTOP) {
+    const TITLES = {
+      home:    ['Главная',   'Создавайте фото, видео и общайтесь с AI'],
+      gen:     ['Генерация', 'Соберите кадр и нажмите «Сгенерировать»'],
+      tpl:     ['Шаблоны',   'Готовые стили для фото и видео'],
+      chat:    ['Чат с AI',  'Идеи, тексты и помощь в один клик'],
+      history: ['История',   'Все ваши генерации'],
+      fav:     ['Избранное', 'Сохранённые работы'],
+      profile: ['Профиль',   'Ваш аккаунт, баланс и подписка'],
+    };
+    const meta = TITLES[dtab] || TITLES.home;
+
+    const goGen = (m, p) => { setGenInit({ mode: m, prompt: p || '', tpl: null }); setGenKey(k => k + 1); setDtab('gen'); };
+    const onTemplate = (tpl) => {
+      if (!tpl) { setDtab('tpl'); return; }
+      setGenInit({ mode: tpl.type === 'video' ? 'video' : 'photo', prompt: '', tpl: tpl });
+      setGenKey(k => k + 1); setDtab('gen');
+    };
+    const dStartChat = (text) => { startChat(text); setDtab('chat'); };
+
+    let dbody;
+    if (dtab === 'home') dbody = <DeskHome tokens={tokens} onGen={goGen} onStartChat={dStartChat} onTemplate={onTemplate}/>;
+    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} refreshBalance={refreshBalance}/>;
+    else if (dtab === 'tpl') dbody = <DeskTemplates onTemplate={onTemplate}/>;
+    else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat}/>;
+    else if (dtab === 'history') dbody = <DeskHistory/>;
+    else if (dtab === 'fav') dbody = <DeskFavorites/>;
+    else dbody = <DeskProfile tokens={tokens} user={user} onTopup={() => setTopup(true)} onSettings={() => setSettingsOpen(true)}/>;
+
     return <React.Fragment>
-      <DesktopWrap tab={tab} onTab={goTab} tokens={tokens} onTopup={() => setTopup(true)}>
-        {mainContent}
-      </DesktopWrap>
-      {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>}
+      <DeskShell tab={dtab} onTab={setDtab} onProfile={() => setDtab('profile')}
+        tokens={tokens} user={user} onTopup={() => setTopup(true)}
+        title={meta[0]} subtitle={meta[1]} chatsBadge={chats.length || null}>
+        {dbody}
+      </DeskShell>
+      {topup && <DeskTopup tokens={tokens} onClose={() => setTopup(false)}/>}
+      {settingsOpen && <div className="dk-modal-ov" onClick={() => setSettingsOpen(false)}>
+        <div className="dk-settings" onClick={e => e.stopPropagation()}>
+          <div className="dk-settings-top">
+            <span>Настройки профиля</span>
+            <button className="dk-settings-x" onClick={() => setSettingsOpen(false)}>✕</button>
+          </div>
+          <div className="dk-settings-body">
+            <ProfileScreen tokens={tokens} onTopup={() => { setSettingsOpen(false); setTopup(true); }} onTab={() => setSettingsOpen(false)}/>
+          </div>
+        </div>
+      </div>}
     </React.Fragment>;
   }
 
