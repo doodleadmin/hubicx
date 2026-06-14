@@ -61,11 +61,33 @@ function App() {
   const [genKey, setGenKey] = uS(0);
   const [settingsOpen, setSettingsOpen] = uS(false);
 
+  // Desktop auth gate: true once we know whether the user is logged in
+  const [authChecked, setAuthChecked] = uS(false);
+
   // Load user balance on mount
   uE(() => {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
-    window.HubicxApi.me().then(function(u) { setUser(u); }).catch(function() {});
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setAuthChecked(true); return; }
+    window.HubicxApi.me().then(function(u) { setUser(u); setAuthChecked(true); })
+      .catch(function(e) {
+        // Stale/invalid desktop token → drop it so the auth screen shows
+        if (e && (e.code === 'token_expired' || e.code === 'invalid_token' || e.status === 401) && !window.HubicxApi.isTelegram()) {
+          window.HubicxApi.logout();
+        }
+        setAuthChecked(true);
+      });
   }, []);
+
+  const onDeskAuthed = (u) => {
+    if (u) setUser(u);
+    // Reload chats list for the freshly authenticated account
+    if (window.HubicxApi && window.HubicxApi.hasAuth()) {
+      window.HubicxApi.agentChats().then(function(data) {
+        if (data && Array.isArray(data.chats)) {
+          setChats(data.chats.map(function(c) { return { id: c.id, title: c.title || 'Чат', msgs: [], loaded: false }; }));
+        }
+      }).catch(function() {});
+    }
+  };
 
   const tokens = user ? user.balance_credits : '…';
   const refreshBalance = () => {
@@ -232,6 +254,13 @@ function App() {
   </React.Fragment>;
 
   if (DESKTOP) {
+    // Auth gate: in a plain browser (no Telegram) require email/password login.
+    const desktopAuthed = window.HubicxApi && window.HubicxApi.hasAuth();
+    if (!desktopAuthed) {
+      if (!authChecked) return <div className="dk-auth"><div className="gen-spinner"></div></div>;
+      return <DeskAuth onAuthed={onDeskAuthed}/>;
+    }
+
     const TITLES = {
       home:    ['Главная',   'Создавайте фото, видео и общайтесь с AI'],
       gen:     ['Генерация', 'Соберите кадр и нажмите «Сгенерировать»'],

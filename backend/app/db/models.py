@@ -19,7 +19,9 @@ class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     username: Mapped[str | None] = mapped_column(String(255))
     first_name: Mapped[str | None] = mapped_column(String(255))
     language_code: Mapped[str] = mapped_column(String(8), default="ru")
@@ -32,6 +34,10 @@ class User(Base, TimestampMixin):
     active_menu_message_id: Mapped[int | None] = mapped_column(BigInteger)
 
     referrer: Mapped["User | None"] = relationship(remote_side="User.id")
+
+    @property
+    def has_password(self) -> bool:
+        return bool(self.password_hash)
 
 
 class UserProfileSettings(Base, TimestampMixin):

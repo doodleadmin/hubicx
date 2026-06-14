@@ -83,6 +83,69 @@ function DeskNotifs({ items, onClose }) {
 }
 
 /* ============================================================
+   Auth screen (desktop browser — email/password login & register)
+   ============================================================ */
+function DeskAuth({ onAuthed }) {
+  const { Ic } = window.MiraCore;
+  const [tab, setTab] = useState('login'); // login | register
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = function() {
+    var em = email.trim();
+    if (!em || !password) { setErr('Введите email и пароль'); return; }
+    if (tab === 'register' && password.length < 6) { setErr('Пароль должен быть не короче 6 символов'); return; }
+    setBusy(true); setErr('');
+    var p = tab === 'register'
+      ? window.HubicxApi.register(em, password, name.trim())
+      : window.HubicxApi.login(em, password);
+    p.then(function(data) { setBusy(false); if (onAuthed) onAuthed(data && data.user); })
+      .catch(function(e) { setBusy(false); setErr((e && e.message) || 'Не удалось войти'); });
+  };
+
+  return <div className="dk-auth">
+    <div className="dk-auth-card">
+      <div className="dk-auth-brand"><div className="dk-logo">✦</div><div className="dk-word">Hubicx</div></div>
+      <div className="dk-auth-h">{tab === 'login' ? 'Вход в аккаунт' : 'Регистрация'}</div>
+      <div className="dk-auth-sub">Фото, видео и AI-чат на компьютере</div>
+
+      <div className="dk-seg" style={{ marginTop:20 }}>
+        <button className={tab === 'login' ? 'on' : ''} onClick={() => { setTab('login'); setErr(''); }}>Вход</button>
+        <button className={tab === 'register' ? 'on' : ''} onClick={() => { setTab('register'); setErr(''); }}>Регистрация</button>
+      </div>
+
+      <div className="dk-auth-fields">
+        {tab === 'register' && <input className="dk-auth-in" placeholder="Имя (необязательно)" value={name}
+          onChange={e => setName(e.target.value)}/>}
+        <input className="dk-auth-in" type="email" placeholder="Email" value={email}
+          autoComplete="email" onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
+        <input className="dk-auth-in" type="password" placeholder="Пароль" value={password}
+          autoComplete={tab === 'register' ? 'new-password' : 'current-password'}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
+      </div>
+
+      {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
+
+      <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>
+        {busy ? 'Подождите…' : tab === 'login' ? 'Войти' : 'Создать аккаунт'}
+      </button>
+
+      <div className="dk-auth-foot">
+        {tab === 'login'
+          ? <span>Нет аккаунта? <b onClick={() => { setTab('register'); setErr(''); }}>Зарегистрироваться</b></span>
+          : <span>Уже есть аккаунт? <b onClick={() => { setTab('login'); setErr(''); }}>Войти</b></span>}
+      </div>
+      <div className="dk-auth-note">Уже пользуетесь ботом в Telegram? Откройте «Настройки → Привязать email», чтобы входить с тем же балансом.</div>
+    </div>
+  </div>;
+}
+
+/* ============================================================
    Shell: sidebar + topbar + content slot
    ============================================================ */
 function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtitle, chatsBadge, children }) {
@@ -723,11 +786,57 @@ function DeskFavorites() {
   </div>;
 }
 
+/* ---- link-email modal (Telegram ↔ desktop account) ----
+   mode='create' → set a new email+password on this Telegram account (linkEmail)
+   mode='merge'  → connect an account already registered on the website (linkTelegram) */
+function DeskLinkEmail({ mode, onClose, onLinked }) {
+  const { Ic } = window.MiraCore;
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+  const isMerge = mode === 'merge';
+
+  const submit = function() {
+    var em = email.trim();
+    if (!em || password.length < 6) { setErr('Email и пароль (от 6 символов)'); return; }
+    setBusy(true); setErr('');
+    var p = isMerge ? window.HubicxApi.linkTelegram(em, password) : window.HubicxApi.linkEmail(em, password);
+    p.then(function(u) { setBusy(false); setDone(true); if (onLinked) onLinked(u && u.user ? u.user : u); })
+      .catch(function(e) { setBusy(false); setErr((e && e.message) || 'Не удалось привязать'); });
+  };
+
+  return <div className="dk-modal-ov" onClick={onClose}>
+    <div className="dk-modal" style={{ maxWidth:440 }} onClick={e => e.stopPropagation()}>
+      <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
+      <div className="dk-modal-title">{isMerge ? 'Войти в аккаунт сайта' : 'Привязать email'}</div>
+      <div className="dk-modal-sub">{isMerge
+        ? 'Введите email и пароль аккаунта, который вы создали на сайте — балансы объединятся.'
+        : 'Задайте email и пароль, чтобы входить с компьютера с тем же балансом.'}</div>
+      {done
+        ? <div className="dk-refund" style={{ marginTop:20 }}>✓ Готово. Аккаунты связаны.</div>
+        : <>
+          <div className="dk-auth-fields" style={{ marginTop:18 }}>
+            <input className="dk-auth-in" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
+            <input className="dk-auth-in" type="password" placeholder="Пароль (от 6 символов)" value={password} onChange={e => setPassword(e.target.value)}/>
+          </div>
+          {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
+          <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>{busy ? 'Сохраняем…' : (isMerge ? 'Связать аккаунты' : 'Привязать')}</button>
+        </>}
+    </div>
+  </div>;
+}
+
 /* ============================================================
    Профиль (dashboard)
    ============================================================ */
 function DeskProfile({ tokens, user, onTopup, onSettings }) {
   const { Ic, Star } = window.MiraCore;
+  const [linkMode, setLinkMode] = useState(null); // null | 'create' | 'merge'
+  const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
+  const hasPassword = user && user.has_password;
+  const logout = function() { if (window.HubicxApi) window.HubicxApi.logout(); window.location.reload(); };
   const [history, setHistory] = useState([]);
   useEffect(function() {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
@@ -806,7 +915,20 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
           <button className="dk-ref-copy" onClick={() => { try { navigator.clipboard.writeText('https://hubicx.ru/r/' + ((user && user.username) || 'you')); } catch(e) {} }}><Ic n="copy" s={15}/></button>
         </div>
       </div>
+
+      <div className="dk-card dk-pad">
+        <div className="dk-side-h"><Ic n="user" s={17} c="var(--muted)"/> Аккаунт</div>
+        {user && user.email && <div className="dk-kv"><span>Email</span><b>{user.email}</b></div>}
+        {isTelegram && !hasPassword && <>
+          <div className="dk-side-note" style={{ marginTop:0, marginBottom:10, textAlign:'left' }}>Привяжите email, чтобы входить с компьютера с тем же балансом.</div>
+          <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setLinkMode('create')}><Ic n="plus" s={16}/> Привязать email для ПК</button>
+          <div className="dk-auth-foot" style={{ marginTop:10 }}>Уже регистрировались на сайте? <b onClick={() => setLinkMode('merge')}>Связать аккаунт</b></div>
+        </>}
+        {isTelegram && hasPassword && <div className="dk-kv"><span>Вход с ПК</span><b style={{ color:'#5f9184' }}>включён</b></div>}
+        {!isTelegram && <button className="dk-btn-sec" style={{ width:'100%', marginTop:6 }} onClick={logout}>Выйти из аккаунта</button>}
+      </div>
     </div>
+    {linkMode && <DeskLinkEmail mode={linkMode} onClose={() => setLinkMode(null)} onLinked={() => {}}/>}
   </div>;
 }
 
@@ -896,6 +1018,7 @@ function DeskTopup({ tokens, onClose }) {
   </div>;
 }
 
+window.DeskAuth = DeskAuth;
 window.DeskShell = DeskShell;
 window.DeskHome = DeskHome;
 window.DeskGen = DeskGen;

@@ -55,11 +55,24 @@ async def get_current_user(
     authorization: str | None = Header(default=None),
     x_telegram_init_data: str | None = Header(default=None),
 ) -> User:
+    # 1) Email/password session — Authorization: Bearer <jwt>
+    if authorization and authorization.lower().startswith("bearer "):
+        from backend.app.db.models import User as UserModel
+        from backend.app.services.auth_jwt import decode_access_token
+
+        token = authorization[7:].strip()
+        user_id = decode_access_token(token)
+        user = await session.get(UserModel, user_id)
+        if not user:
+            raise AppError("invalid_token", "Аккаунт не найден", 401)
+        return user
+
+    # 2) Telegram WebApp — initData header (or Authorization: tma <initData>)
     init_data = x_telegram_init_data
     if authorization and authorization.lower().startswith("tma "):
         init_data = authorization[4:]
     if not init_data:
-        logger.warning("Telegram auth failed: initData header is missing")
-        raise AppError("invalid_init_data", "Telegram initData header is required", 401)
+        logger.warning("Auth failed: no Bearer token and no Telegram initData")
+        raise AppError("invalid_init_data", "Требуется авторизация", 401)
     tg_user = get_telegram_user_from_init_data(init_data)
     return await get_or_create_user(session, tg_user)

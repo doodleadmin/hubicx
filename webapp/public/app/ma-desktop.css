@@ -435,6 +435,26 @@ body { background: var(--bg); overflow: hidden; }
 .dk-ref-link { flex: 1; font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dk-ref-copy { width: 36px; height: 34px; border-radius: 9px; border: none; background: var(--ink); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 
+/* ════════════ AUTH (desktop login/register) ════════════ */
+.dk-auth { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+.dk-auth-card {
+  width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 24px; padding: 34px 32px 28px; box-shadow: 0 20px 60px rgba(0,0,0,.10);
+}
+.dk-auth-brand { display: flex; align-items: center; gap: 11px; justify-content: center; margin-bottom: 20px; }
+.dk-auth-h { font-size: 24px; font-weight: 800; letter-spacing: -.02em; text-align: center; }
+.dk-auth-sub { font-size: 13.5px; color: var(--muted); text-align: center; margin-top: 6px; }
+.dk-auth-fields { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.dk-auth-in {
+  height: 50px; border-radius: 14px; border: 1px solid var(--line); background: #f8f7f2;
+  padding: 0 16px; font-size: 15px; font-family: inherit; color: var(--ink); outline: none; box-sizing: border-box; width: 100%;
+}
+.dk-auth-in:focus { border-color: #c7c6bd; background: var(--card); }
+.dk-auth-in::placeholder { color: var(--faint); }
+.dk-auth-foot { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 16px; }
+.dk-auth-foot b { color: var(--link); font-weight: 700; cursor: pointer; }
+.dk-auth-note { text-align: center; font-size: 12px; color: var(--faint); margin-top: 14px; line-height: 1.5; }
+
 /* ════════════ MODALS ════════════ */
 .dk-modal-ov { position: fixed; inset: 0; z-index: 80; background: rgba(28,28,22,.42); display: flex; align-items: center; justify-content: center; padding: 24px; }
 .dk-modal { width: 100%; max-width: 720px; background: var(--card); border-radius: 26px; padding: 28px 30px 30px; position: relative; box-shadow: 0 30px 80px rgba(0,0,0,.28); }
