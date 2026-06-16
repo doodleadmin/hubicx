@@ -94,7 +94,6 @@ function serverMsgsToLocal(msgs) {
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
-  const [tabHistory, setTabHistory] = uS([]); // stack for BackButton navigation
   const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
   const [theme, setTheme] = uS(getInitialTheme);
@@ -151,7 +150,7 @@ function App() {
       });
   }, []);
 
-  // Telegram BackButton: show on sub-screens and tab history, hide on main tabs
+  // Telegram BackButton: show only on real inner screens, not on main tab switches
   var bbHandlerRef = uR(null);
   uE(() => {
     if (DESKTOP) return;
@@ -162,12 +161,12 @@ function App() {
     var handler = null;
     if (createOpen || activeChat) {
       handler = function() { setCreateOpen(false); setActiveChat(null); };
-    } else if (tabHistory.length > 0) {
-      handler = goBackTab;
+    } else if (templatesOpen) {
+      handler = function() { setTemplatesOpen(false); };
     }
     if (handler) { bb.show(); bb.onClick(handler); bbHandlerRef.current = handler; }
     else { bb.hide(); bbHandlerRef.current = null; }
-  }, [createOpen, activeChat, tabHistory]);
+  }, [createOpen, activeChat, templatesOpen]);
 
   const onDeskAuthed = (u) => {
     if (u) setUser(u);
@@ -209,21 +208,16 @@ function App() {
   const [createOpen, setCreateOpen] = uS(false);
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
+  const [createModelCode, setCreateModelCode] = uS(null);
+  const [templatesOpen, setTemplatesOpen] = uS(false);
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
-  const openCreate = (m, p = null) => { setMode(m); setPreset(p); setCreateOpen(true); };
+  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setCreateOpen(true); };
+  const openTemplates = () => { setCreateOpen(false); setActiveChat(null); setTemplatesOpen(true); };
   const goTab = (t) => {
-    if (t !== tab) { setTabHistory(h => [...h, tab]); }
-    setCreateOpen(false); setActiveChat(null); setTab(t);
-  };
-  const goBackTab = () => {
-    setTabHistory(h => {
-      if (h.length === 0) return h;
-      var prev = h[h.length - 1];
-      setTimeout(() => setTab(prev), 0);
-      return h.slice(0, -1);
-    });
+    if (t === 'templates') { openTemplates(); return; }
+    setCreateOpen(false); setActiveChat(null); setTemplatesOpen(false); setTab(t);
   };
 
   // Append streaming text chunk to last bot message
@@ -390,18 +384,21 @@ function App() {
 
   let body;
   if (createOpen) {
-    body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset}
+    body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
       onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} refreshBalance={refreshBalance}/>;
+  } else if (templatesOpen) {
+    body = <TemplatesScreen onBack={() => setTemplatesOpen(false)}
+      onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)}/>;
   } else if (tab === 'agent') {
     body = <AgentScreen tokens={tokens} onBuyPro={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
-      onTopup={() => setTopup(true)} onTab={goTab}
+      onTopup={() => setTopup(true)} onTab={goTab} onTemplates={openTemplates}
       onStartChat={startChat} chats={chats}
       onOpenChat={openChat} onDeleteChat={deleteChat}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)}/>;
   } else if (tab === 'gen') {
     body = <GenerationScreen tokens={tokens} onTopup={() => setTopup(true)}
-      onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
+      onCreatePhoto={() => openCreate('photo')} onCreateVideo={(modelCode) => openCreate('video', null, modelCode ? { modelCode:modelCode } : null)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
     body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme}/>;

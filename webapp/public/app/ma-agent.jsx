@@ -1,6 +1,6 @@
 /* ============ Agent (home) screen ============ */
 function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
-  onStartChat, chats, onOpenChat, onDeleteChat, onTab, onTemplate }) {
+  onStartChat, chats, onOpenChat, onDeleteChat, onTab, onTemplate, onTemplates }) {
   const { Ic, Star, TopNav, HERO, TEMPLATES } = window.MiraCore;
   const [val, setVal] = useState("");
   const send = () => { const t = val.trim(); if (!t) return; setVal(""); onStartChat(t); };
@@ -9,7 +9,7 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
     { t:"Создать фото", s:"Из описания или фото", ic:"image", bg:"#e6efe9", c:"#5f9184", go: onCreatePhoto },
     { t:"Создать видео", s:"Оживить изображение",  ic:"video", bg:"#eae8fb", c:"#6f6cc8", go: onCreateVideo },
     { t:"Написать в чат", s:"AI-помощник",          ic:"chat",  bg:"#e4eef4", c:"#5b8fb0", go: () => onStartChat("Привет!") },
-    { t:"Шаблоны",        s:"Готовые стили",         ic:"sparkle",bg:"#fbeede",c:"#c98a4e", go: () => onTab('gen') },
+    { t:"Шаблоны",        s:"Готовые стили",         ic:"sparkle",bg:"#fbeede",c:"#c98a4e", go: onTemplates },
   ];
   const ideas = [
     { bg:"#dde9e2", c:"#4f8174", ic:"chat",    l:"Идеи для поста" },
@@ -45,11 +45,25 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
         ))}
       </div>
 
-      <div className="sec-h rise" style={{ '--d':'.22s', marginTop:22, marginBottom:12 }}>
+      <div className="sec-h rise" style={{ '--d':'.22s', marginTop:22 }}>
+        <h2>Популярные шаблоны</h2>
+        <span className="all" onClick={onTemplates}>Все</span>
+      </div>
+      <div className="tpl-rail rise" style={{ '--d':'.26s' }}>
+        {TEMPLATES.slice(0, 6).map(function(t, i) {
+          return <div className="thumb tpl-card" key={i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
+            <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+            <div className="shade"></div>
+            <div className="lbl">{t.t}</div>
+          </div>;
+        })}
+      </div>
+
+      <div className="sec-h rise" style={{ '--d':'.3s', marginTop:22, marginBottom:12 }}>
         <h2>Быстрые идеи</h2>
         <div style={{ width:18, height:18, borderRadius:'50%', border:'2px solid var(--faint)' }}></div>
       </div>
-      <div className="idea-grid rise" style={{ '--d':'.26s' }}>
+      <div className="idea-grid rise" style={{ '--d':'.34s' }}>
         {ideas.map((t, i) => (
           <div key={i} className="idea-tile" style={{ background:t.bg }}
             onClick={() => onStartChat(t.l)}>
@@ -57,21 +71,6 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
             <div className="l" style={{ color:'#1c1c1a' }}>{t.l}</div>
           </div>
         ))}
-      </div>
-
-      <div className="sec-h rise" style={{ '--d':'.22s', marginTop:22 }}>
-        <h2>Популярные шаблоны</h2>
-        <span className="all" onClick={() => onTab('gen')}>Все</span>
-      </div>
-      <div className="home-tpl-grid rise" style={{ '--d':'.26s' }}>
-        {TEMPLATES.slice(0, 6).map(function(t, i) {
-          return <div className="thumb" key={i} style={{ aspectRatio:'0.82', cursor:'pointer' }}
-            onClick={() => onTemplate ? onTemplate(t) : onTab('gen')}>
-            <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
-            <div className="shade"></div>
-            <div className="lbl">{t.t}</div>
-          </div>;
-        })}
       </div>
     </div>
   </div>;

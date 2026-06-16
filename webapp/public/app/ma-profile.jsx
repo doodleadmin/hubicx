@@ -200,17 +200,6 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       </div>
 
       <div className="card" style={{ overflow:'hidden', marginTop:14 }}>
-        <div className="row-link" onClick={() => set('daily', !p.daily)}>
-          <IconChip bg="#fde0dc"><Ic n="bolt" s={17} c="#c0473e"/></IconChip>
-          <span style={{ fontWeight:700, fontSize:15.5 }}>Hubicx Daily</span>
-          <span className="muted" style={{ marginLeft:'auto', marginRight:10, fontSize:14 }}>
-            {p.daily ? 'Включен' : 'Выключен'}
-          </span>
-          <span className={'switch' + (p.daily ? ' on' : '')}><i></i></span>
-        </div>
-      </div>
-
-      <div className="card" style={{ overflow:'hidden', marginTop:14 }}>
         <div className="row-link" onClick={onToggleTheme}>
           <IconChip bg={theme === 'dark' ? '#323742' : '#fff6bf'}><Ic n={theme === 'dark' ? 'moon' : 'sun'} s={17} c={theme === 'dark' ? '#d8def0' : '#b79a18'}/></IconChip>
           <span style={{ fontWeight:700, fontSize:15.5 }}>Тёмная тема</span>
@@ -224,7 +213,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       <div style={{ marginTop:18, marginBottom:6 }}>
         <span className="label-sec">История генераций</span>
       </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+      <div className="hist-rail">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
           <div style={{ fontSize:30 }}>✨</div>
@@ -234,25 +223,23 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
         {histLoaded && history.slice(0, 10).map(function(item) {
           var isCompleted = item.status === 'completed';
           var isFailed = item.status === 'refunded';
-          return <div key={item.id} className="chat-plate" style={{ alignItems:'center' }}
+          return <div key={item.id} className="hist-card"
             onClick={() => isCompleted && item.output_file_url && setViewTask(item)}>
-            <div style={{ width:46, height:46, borderRadius:12, overflow:'hidden', flex:'0 0 auto',
-              background:'var(--faint)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div className="hist-thumb">
               {isCompleted && item.output_file_url
                 ? <img src={item.output_file_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                : <Ic n={isFailed ? 'close' : 'sparkle'} s={20} c={isFailed ? '#c0473e' : 'var(--muted)'}/>}
+                : <Ic n={isFailed ? 'close' : 'sparkle'} s={20} c={isFailed ? '#c0473e' : 'var(--muted)'}/>} 
             </div>
-            <div style={{ minWidth:0, flex:1 }}>
-              <div style={{ fontWeight:700, fontSize:14.5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            <div className="hist-meta">
+              <div className="hist-title">
                 {item.title || item.prompt || 'Генерация'}
               </div>
-              <div className="muted" style={{ fontSize:12.5 }}>
+              <div className="muted" style={{ fontSize:11.5 }}>
                 {isFailed ? '✗ Ошибка · возврат токенов'
                   : isCompleted ? '✓ Готово · ' + item.cost_credits + ' ★'
                   : '⏳ ' + (item.status === 'queued' ? 'В очереди' : 'Генерация…')}
               </div>
             </div>
-            {isCompleted && item.output_file_url && <span className="chev"><Ic n="chev" s={18}/></span>}
           </div>;
         })}
       </div>

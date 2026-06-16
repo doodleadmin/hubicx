@@ -176,13 +176,13 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
   </div>;
 }
 
-function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refreshBalance }) {
+function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, refreshBalance }) {
   const { Ic, Star, ASPECTS, CREATE_TPL } = window.MiraCore;
 
   // Models from API
   const [apiModels, setApiModels] = useState([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [selectedModelCode, setSelectedModelCode] = useState(function() { return preset ? templateModelCode(preset) : null; });
+  const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
   const [selectedQuality, setSelectedQuality] = useState(null);
   const [templateLocked, setTemplateLocked] = useState(!!preset);
 
@@ -232,7 +232,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
 
   // Picker-compatible model options
   const modelOptions = filteredModels.map(function(m) {
-    return { id: m.code, t: m.title, s: (m.description || m.category || '') + ' · ' + m.price_credits + ' ★' };
+    return { id: m.code, t: m.title, s: (m.price_credits || 0) + ' ★' };
   });
 
   // Resolve current model
@@ -570,27 +570,24 @@ window.CreateScreen = CreateScreen;
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }) {
   const { Ic } = window.MiraCore;
-  const [val, setVal] = useState(current ? current.id : null);
+  const val = current ? current.id : null;
   return <div className="sheet-ov" onClick={onClose}>
     <div className="sheet" onClick={function(e) { e.stopPropagation(); }}>
-      <div className="sheet-card">
+      <div className="sheet-card picker-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">{title}</div>
+        <div className="picker-grid">
         {options.map(function(o) {
-          return <div className="opt" key={o.id} onClick={() => setVal(o.id)}>
-            <div>
+          return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
+            <div className="pick-text">
               <div className="o-t">{o.t}</div>
               {o.s && <div className="o-s">{o.s}</div>}
             </div>
-            {val === o.id && <span className="o-check"><Ic n="check" s={22} sw={2.4}/></span>}
+            {String(val) === String(o.id) && <span className="o-check"><Ic n="check" s={18} sw={2.4}/></span>}
           </div>;
         })}
+        </div>
       </div>
-      <button className="sheet-cta" onClick={function() {
-        var found = options.find(function(o) { return o.id === val; });
-        if (found) onSelect(found);
-        onClose();
-      }}>Сохранить</button>
     </div>
   </div>;
 }
