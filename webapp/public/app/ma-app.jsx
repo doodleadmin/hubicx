@@ -397,7 +397,8 @@ function App() {
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
       onTopup={() => setTopup(true)} onTab={goTab}
       onStartChat={startChat} chats={chats}
-      onOpenChat={openChat} onDeleteChat={deleteChat}/>;
+      onOpenChat={openChat} onDeleteChat={deleteChat}
+      onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)}/>;
   } else if (tab === 'gen') {
     body = <GenerationScreen tokens={tokens} onTopup={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
