@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<base href="/app/"/>
+<title>Hubicx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+<link rel="stylesheet" href="/app/ma.css?v=20260616-fullscreen1"/>
+<link rel="stylesheet" href="/app/ma-desktop.css?v=20260616-tplleft2"/>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Desktop mode flag — must be set before any JSX loads -->
+<script>window.DESKTOP_MODE = true;</script>
+
+<!-- Telegram Mini App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<script>
+(function() {
+  var host = String((window.location && window.location.hostname) || '').toLowerCase();
+  window.HUBICX_APP_CONTEXT = host === 'webapp.hubicx.ru' ? 'telegram' : 'browser';
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    tg.ready();
+    if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
+  }
+})();
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="/app/ma-api.jsx?v=20260616-routes1"></script>
+<script type="text/babel" src="/app/ma-core.jsx?v=20260616-g7x1"></script>
+<script type="text/babel" src="/app/ma-chat.jsx"></script>
+<script type="text/babel" src="/app/ma-agent.jsx"></script>
+<script type="text/babel" src="/app/ma-generation.jsx?v=20260615-result1"></script>
+<script type="text/babel" src="/app/ma-create.jsx?v=20260615-genmoment1"></script>
+<script type="text/babel" src="/app/ma-profile.jsx"></script>
+<script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260616-g7x1"></script>
+<script type="text/babel" src="/app/ma-landing.jsx?v=20260616-stickyhold1"></script>
+<script type="text/babel" src="/app/ma-app.jsx?v=20260616-tgworkspace1"></script>
+</body>
+</html>
