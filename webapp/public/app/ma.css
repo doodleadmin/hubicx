@@ -90,6 +90,22 @@ body {
   position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 50%;
   background: #e0664a; border: 2px solid var(--card);
 }
+.m-notif {
+  position: absolute; top: 50px; right: 0; width: min(320px, calc(100vw - 36px));
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(0,0,0,.16); padding: 12px; z-index: 80;
+  color: var(--ink); cursor: default;
+}
+.m-notif-top { display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:15px; margin-bottom:8px; }
+.m-notif-top button { width:28px; height:28px; border:0; border-radius:10px; background:var(--nav-bg); color:var(--muted); font-size:20px; line-height:1; cursor:pointer; }
+.m-notif-empty { padding:18px 10px; text-align:center; color:var(--muted); font-size:13px; font-weight:600; }
+.m-notif-item { display:flex; align-items:center; gap:10px; padding:10px 4px; border-top:1px solid var(--line); }
+.m-notif-item:first-of-type { border-top:0; }
+.m-notif-ic { width:30px; height:30px; border-radius:10px; flex:0 0 auto; display:flex; align-items:center; justify-content:center; }
+.m-notif-tx { min-width:0; flex:1; }
+.m-notif-t { font-size:13.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.m-notif-s { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.m-notif-time { font-size:11.5px; color:var(--muted); font-weight:700; white-space:nowrap; }
 
 /* ── scrollable screen body ── */
 .screen {

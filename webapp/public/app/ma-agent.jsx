@@ -73,19 +73,6 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
           </div>;
         })}
       </div>
-
-      <div className="sec-h" style={{ marginTop:22 }}>
-        <h2>Фото и видео</h2>
-        <span className="all">Показать все</span>
-      </div>
-      <div className="rail">
-        {HERO.map((h, i) => (
-          <div className="thumb" key={i} style={{ width:152, height:152, scrollSnapAlign:'start' }}>
-            <img src={h.img} alt=""/>
-          </div>
-        ))}
-      </div>
-
     </div>
   </div>;
 }

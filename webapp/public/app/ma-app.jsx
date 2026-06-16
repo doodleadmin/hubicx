@@ -402,7 +402,7 @@ function App() {
   } else if (tab === 'gen') {
     body = <GenerationScreen tokens={tokens} onTopup={() => setTopup(true)}
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={() => openCreate('video')}
-      onTemplate={(t) => openCreate('photo', t)} onTab={goTab}/>;
+      onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
     body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme}/>;
   }

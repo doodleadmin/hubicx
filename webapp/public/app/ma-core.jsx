@@ -54,17 +54,66 @@ function TokenBadge({ n }) {
 }
 
 /* ---- top segmented nav ---- */
+function mobileTimeAgo(iso) {
+  if (!iso) return '';
+  var d = new Date(iso); if (isNaN(d.getTime())) return '';
+  var sec = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (sec < 60) return 'только что';
+  var min = Math.floor(sec / 60); if (min < 60) return min + ' мин';
+  var hr = Math.floor(min / 60); if (hr < 24) return hr + ' ч';
+  var day = Math.floor(hr / 24); return day + ' д';
+}
 function TopNav({ active, onTab }) {
   if (window.DESKTOP_MODE) return null;
-  const icon = active === 'gen' ? 'sliders' : active === 'profile' ? 'gear' : 'sparkle';
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const toggleNotifs = function() {
+    var next = !notifOpen;
+    setNotifOpen(next);
+    if (next && !loaded && window.HubicxApi && window.HubicxApi.hasAuth()) {
+      window.HubicxApi.history().then(function(items) {
+        var list = (Array.isArray(items) ? items : []).slice(0, 8).map(function(it) {
+          var failed = it.status === 'refunded';
+          var done = it.status === 'completed';
+          return {
+            title: failed ? 'Генерация не удалась' : done ? 'Результат готов' : 'Генерация в работе',
+            sub: failed ? 'Токены возвращены на баланс' : (it.title || it.prompt || 'Фото или видео'),
+            time: mobileTimeAgo(it.created_at),
+            ic: failed ? 'close' : done ? 'check' : 'sparkle',
+            c: failed ? '#c0473e' : '#5f9184',
+            bg: failed ? '#fde0dc' : '#e6efe9'
+          };
+        });
+        setNotifs(list); setLoaded(true);
+      }).catch(function() { setLoaded(true); });
+    }
+  };
   return <div className="topnav">
     <div className="tn-seg">
       {[['agent','Главная'],['gen','Генерация'],['profile','Профиль']].map(([id,l]) => (
         <div key={id} className={'tn-item' + (active === id ? ' on' : '')} onClick={() => onTab(id)}>{l}</div>
       ))}
     </div>
-    <div className="tn-icon">
-      <Ic n={icon} s={20}/>
+    <div className="tn-icon" onClick={toggleNotifs}>
+      <Ic n="bell" s={20}/>
+      {notifs.length > 0 && <span className="tn-dot"></span>}
+      {notifOpen && <div className="m-notif" onClick={function(e) { e.stopPropagation(); }}>
+        <div className="m-notif-top">
+          <span>Уведомления</span>
+          <button onClick={function(e) { e.stopPropagation(); setNotifOpen(false); }}>×</button>
+        </div>
+        {!loaded && <div className="m-notif-empty">Загружаем…</div>}
+        {loaded && notifs.length === 0 && <div className="m-notif-empty">Пока нет уведомлений</div>}
+        {loaded && notifs.map(function(n, i) {
+          return <div key={i} className="m-notif-item">
+            <span className="m-notif-ic" style={{ background:n.bg }}><Ic n={n.ic} s={15} c={n.c}/></span>
+            <div className="m-notif-tx"><div className="m-notif-t">{n.title}</div><div className="m-notif-s">{n.sub}</div></div>
+            <div className="m-notif-time">{n.time}</div>
+          </div>;
+        })}
+      </div>}
     </div>
   </div>;
 }
