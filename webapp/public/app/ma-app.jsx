@@ -150,6 +150,14 @@ function App() {
       });
   }, []);
 
+  // Apply saved server language before the profile screen is opened.
+  uE(() => {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth() || !window.HubicxApi.profile) return;
+    window.HubicxApi.profile().then(function(p) {
+      if (p && p.language_code && window.HubicxI18n) window.HubicxI18n.setLang(p.language_code);
+    }).catch(function() {});
+  }, []);
+
   // Telegram BackButton: show only on real inner screens, not on main tab switches
   var bbHandlerRef = uR(null);
   uE(() => {

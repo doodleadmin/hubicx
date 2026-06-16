@@ -14,17 +14,17 @@ const PROF_DEFAULTS = {
 };
 const OPTS = {
   llm:['MiniMax M2.5','GPT-4o','Claude 3.5 Sonnet','Gemini 2.0 Pro','DeepSeek V3','Llama 3.3'],
-  lang:['Русский','English','Español','Deutsch','Français','中文'],
+  lang:['Русский','English','Español','Português'],
   style:['Дружелюбный','Формальный','Краткий и по делу','Подробный','С юмором','Вдохновляющий'],
-  hubicxLang:['Русский','English','Español','Deutsch','Français','中文'],
+  hubicxLang:['Русский','English','Español','Português'],
   gender:['Мужской','Женский','Другое','Не указывать'],
   age:['До 18','18–24','25–34','35–44','45–54','55+'],
   timezone:['Москва (UTC+3)','Калининград (UTC+2)','Самара (UTC+4)','Дубай (UTC+4)','Лондон (UTC+0)','Нью-Йорк (UTC−5)','Токио (UTC+9)'],
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
 
-const LANG_MAP = {'ru':'Русский','en':'English','es':'Español','de':'Deutsch','fr':'Français','zh':'中文'};
-const LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Deutsch':'de','Français':'fr','中文':'zh'};
+const LANG_MAP = {'ru':'Русский','en':'English','es':'Español','pt':'Português'};
+const LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Português':'pt'};
 
 function serverToUI(data) {
   var about = {};
@@ -125,6 +125,11 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
   }, [hasPending]);
 
   const set = (k, v) => setP(s => ({ ...s, [k]:v }));
+
+  useEffect(function() {
+    var code = LANG_MAP_REV[p.lang] || 'ru';
+    if (window.HubicxI18n && window.HubicxI18n.setLang) window.HubicxI18n.setLang(code);
+  }, [p.lang]);
 
   const openOpts = (field, title) => setEditor({ kind:'opts', field, title, options:OPTS[field] });
   const openText = (field, title, ph) => setEditor({ kind:'text', field, title, ph });
