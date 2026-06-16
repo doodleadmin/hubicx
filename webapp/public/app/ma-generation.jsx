@@ -46,7 +46,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         {TEMPLATES.map(function(t, i) {
           return <div className="thumb" key={i} style={{ aspectRatio:'0.82', cursor:'pointer' }}
             onClick={() => onTemplate(t)}>
-            <img src={t.img} alt=""/>
+            <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
             <div className="shade"></div>
             <div className="lbl">{t.t}</div>
           </div>;

@@ -439,7 +439,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
               return <div className="thumb" key={i} onClick={() => setSelTpl(t.t)}
                 style={{ width:120, height:148, scrollSnapAlign:'start', cursor:'pointer',
                   outline: selTpl === t.t ? '2.5px solid var(--ink)' : 'none', outlineOffset:-1 }}>
-                <img src={t.img} alt=""/>
+                <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
                 <div className="shade"></div>
                 <div className="lbl" style={{ fontSize:13 }}>{t.t}</div>
               </div>;

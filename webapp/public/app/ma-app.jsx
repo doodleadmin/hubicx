@@ -628,5 +628,52 @@ function Topup({ tokens, onClose }) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
-// Hide loading screen
-try { if (typeof window.wjHideLoader === 'function') window.wjHideLoader(); } catch(e) {}
+// Hide loading screen after first UI paint + first visible covers are either loaded or timed out.
+// This keeps the animated loader visible on mobile/desktop while heavy template covers start loading,
+// but never blocks the app for too long on a slow connection.
+(function() {
+  var started = Date.now();
+  var minMs = 750;
+  var maxMs = 2800;
+
+  function finish() {
+    var left = Math.max(0, minMs - (Date.now() - started));
+    setTimeout(function() {
+      try { if (typeof window.wjHideLoader === 'function') window.wjHideLoader(); } catch(e) {}
+    }, left);
+  }
+
+  function criticalImages() {
+    try {
+      var vh = window.innerHeight || 800;
+      return Array.prototype.slice.call(document.querySelectorAll('#root img'))
+        .filter(function(img) {
+          var r = img.getBoundingClientRect();
+          return r.width > 20 && r.height > 20 && r.top < vh * 1.8;
+        })
+        .slice(0, 8);
+    } catch (e) { return []; }
+  }
+
+  function waitImages() {
+    var imgs = criticalImages();
+    var pending = imgs.filter(function(img) { return !img.complete || img.naturalWidth === 0; });
+    if (!pending.length) return finish();
+    var done = false;
+    var remaining = pending.length;
+    var timer = setTimeout(end, maxMs);
+    function end() {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      finish();
+    }
+    pending.forEach(function(img) {
+      var one = function() { remaining -= 1; if (remaining <= 0) end(); };
+      img.addEventListener('load', one, { once:true });
+      img.addEventListener('error', one, { once:true });
+    });
+  }
+
+  requestAnimationFrame(function() { requestAnimationFrame(waitImages); });
+})();
