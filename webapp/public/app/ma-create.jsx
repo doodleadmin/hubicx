@@ -80,6 +80,7 @@ function estimateModelPrice(model, inputs) {
   }
   return Math.max(1, Math.ceil(total || Number(model.price_credits || 0)));
 }
+function templateModelCode(t) { return (t && t.modelCode) || 'nano_banana_pro'; }
 
 function GenStageCanvas({ running, done, isVideo, aspectId, task }) {
   const { Ic } = window.MiraCore;
@@ -181,8 +182,9 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
   // Models from API
   const [apiModels, setApiModels] = useState([]);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [selectedModelCode, setSelectedModelCode] = useState(null);
+  const [selectedModelCode, setSelectedModelCode] = useState(function() { return preset ? templateModelCode(preset) : null; });
   const [selectedQuality, setSelectedQuality] = useState(null);
+  const [templateLocked, setTemplateLocked] = useState(!!preset);
 
   // Aspect ratio
   const [selectedAspect, setSelectedAspect] = useState(ASPECTS[1]);
@@ -245,6 +247,36 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
   var currentPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
   var tplList = CREATE_TPL.filter(function(t) { return mode === 'video' ? t.type === 'video' : t.type !== 'video'; });
   var selectedTpl = tplList.find(function(t) { return t.t === selTpl; }) || null;
+
+  var pickTemplate = function(t) {
+    if (!t) return;
+    setTab('tpl');
+    setSelTpl(t.t);
+    setMode(t.type === 'video' ? 'video' : 'photo');
+    setSelectedModelCode(templateModelCode(t));
+    setSelectedQuality(null);
+    setTemplateLocked(true);
+    setPicker(null);
+  };
+
+  var clearTemplate = function() {
+    setSelTpl(null);
+    setTemplateLocked(false);
+    setTab('prompt');
+    setPrompt('');
+    setSelectedModelCode(null);
+    setSelectedQuality(null);
+    setPicker(null);
+  };
+
+  var goPromptTab = function() {
+    setTab('prompt');
+    setSelTpl(null);
+    setTemplateLocked(false);
+    setSelectedModelCode(null);
+    setSelectedQuality(null);
+    setPicker(null);
+  };
 
   // File upload handler
   var handleFile = function(file) {
@@ -391,10 +423,10 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
       {/* Mode switcher */}
       <div className="seg">
-        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setSelectedModelCode(null); setSelectedQuality(null); }}>
+        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
           <Ic n="image" s={18}/> Фото
         </button>
-        <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setSelectedQuality(null); }}>
+        <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
           <Ic n="video" s={18}/> Видео
         </button>
       </div>
@@ -430,13 +462,13 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
       {/* Content tabs */}
       <div className="seg" style={{ marginTop:14 }}>
         <button className={tab === 'tpl' ? 'on' : ''} onClick={() => setTab('tpl')}>Шаблон</button>
-        <button className={tab === 'prompt' ? 'on' : ''} onClick={() => setTab('prompt')}>Свой промпт</button>
+        <button className={tab === 'prompt' ? 'on' : ''} onClick={goPromptTab}>Свой промпт</button>
       </div>
 
       {tab === 'tpl'
         ? <div className="rail" style={{ marginTop:14 }}>
             {tplList.map(function(t, i) {
-              return <div className="thumb" key={i} onClick={() => setSelTpl(t.t)}
+              return <div className="thumb" key={i} onClick={() => pickTemplate(t)}
                 style={{ width:120, height:148, scrollSnapAlign:'start', cursor:'pointer',
                   outline: selTpl === t.t ? '2.5px solid var(--ink)' : 'none', outlineOffset:-1 }}>
                 <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
@@ -454,7 +486,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
       {/* Details: model + aspect */}
       <div className="label-sec" style={{ marginTop:20, marginBottom:8 }}>Детали</div>
       <div className="card" style={{ overflow:'hidden' }}>
-        <div className="row-link" onClick={() => modelOptions.length > 1 && setPicker('model')}>
+        <div className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
             display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="model" s={21} c="var(--ink)"/>
@@ -466,8 +498,14 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
                 : currentModelOpt ? currentModelOpt.t + ' · ' + currentPrice + ' ★'
                 : 'Нет доступных моделей'}
             </div>
+            {selectedTpl && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Модель закреплена за шаблоном</div>}
           </div>
-          {modelOptions.length > 1 && <span className="chev"><Ic n="chev" s={20}/></span>}
+          {selectedTpl && <button className={'m-lock-btn' + (!templateLocked ? ' off' : '')}
+            title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'}
+            onClick={function(e) { e.stopPropagation(); setTemplateLocked(!templateLocked); setPicker(templateLocked ? 'model' : null); }}>
+            <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
+          </button>}
+          {!templateLocked && modelOptions.length > 1 && <span className="chev"><Ic n="chev" s={20}/></span>}
         </div>
         <div className="divider"></div>
         {qField && <React.Fragment>
@@ -506,7 +544,7 @@ function CreateScreen({ tokens, mode, setMode, preset, onBack, onMinimize, refre
     </div>
 
     {/* Model picker */}
-    {picker === 'model' && modelOptions.length > 0 && <PickerSheet
+    {picker === 'model' && !templateLocked && modelOptions.length > 0 && <PickerSheet
       title="Модель" options={modelOptions}
       current={currentModelOpt || modelOptions[0]}
       onSelect={function(opt) { setSelectedModelCode(opt.id); setSelectedQuality(null); }}

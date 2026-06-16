@@ -125,7 +125,15 @@ body {
 }
 .row-link:active { background: #f8f7f2; }
 html.theme-dark .row-link:active { background: #20242c; }
+.row-link.locked { cursor: default; }
 .row-link .chev { margin-left: auto; }
+.m-lock-btn {
+  margin-left: auto; width: 36px; height: 36px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; cursor: pointer;
+}
+.m-lock-btn.off { background: var(--card); color: var(--muted); }
+.m-lock-btn:active { transform: scale(.96); }
 .divider { height: 1px; background: var(--line); margin-left: 54px; }
 
 /* ── section header ── */

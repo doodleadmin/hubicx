@@ -633,8 +633,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 // but never blocks the app for too long on a slow connection.
 (function() {
   var started = Date.now();
-  var minMs = 750;
-  var maxMs = 2800;
+  var minMs = 1750;
+  var maxMs = 3800;
 
   function finish() {
     var left = Math.max(0, minMs - (Date.now() - started));

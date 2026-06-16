@@ -1,6 +1,6 @@
 /* ===== Loading overlay (dark theme, particle-assemble) ===== */
 .wj-loader { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: clamp(30px, 5.5vmin, 56px);
+  align-items: center; justify-content: center; gap: 0;
   font-family: 'Manrope', system-ui, sans-serif; overflow: hidden;
   background: radial-gradient(120% 90% at 50% 36%, #161d31 0%, #0a0d17 58%, #07080e 100%); }
 .wj-loader * { box-sizing: border-box; }
@@ -20,7 +20,7 @@
   animation: wj-glow 4.6s ease-in-out infinite; }
 .wj-canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 260%; height: 260%; pointer-events: none; }
-.wj-texts { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; z-index: 2; }
+.wj-texts { display: none !important; }
 .wj-phrases { position: relative; height: 22px; width: 280px; max-width: 80vw; }
 .wj-phrase { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 500; letter-spacing: .01em; color: rgba(210,220,245,.72);
