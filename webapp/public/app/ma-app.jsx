@@ -406,7 +406,7 @@ function App() {
 
   const mainContent = <React.Fragment>
     {body}
-    {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat}/>}
+    {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat} onSetAgent={setChatAgent}/>}
   </React.Fragment>;
 
   if (DESKTOP) {
@@ -610,15 +610,15 @@ function Topup({ tokens, onClose }) {
 
         {payError && <div style={{ fontSize:12.5, marginTop:10, color:'#c0473e', fontWeight:600 }}>{payError}</div>}
         {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>}
+        <button className="sheet-cta" onClick={handlePay}
+          disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
+          style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
+                   cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>
+          {paying ? 'Создаём платёж…'
+            : paymentsEnabled ? `Оплатить · ${ctaPrice} ₽`
+            : `Скоро будет доступно · ${ctaPrice} ₽`}
+        </button>
       </div>
-      <button className="sheet-cta" onClick={handlePay}
-        disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
-        style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
-                 cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>
-        {paying ? 'Создаём платёж…'
-          : paymentsEnabled ? `Оплатить · ${ctaPrice} ₽`
-          : `Скоро будет доступно · ${ctaPrice} ₽`}
-      </button>
     </div>
   </div>;
 }
