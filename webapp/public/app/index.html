@@ -51,7 +51,7 @@
     window.HUBICX_TG_SHELL = isWebappHost;
     if (isWebappHost) {
       var platform = String(tg.platform || '').toLowerCase();
-      var tgDesktop = ['tdesktop', 'macos', 'linux', 'weba', 'web', 'webk'].indexOf(platform) !== -1;
+      var tgDesktop = ['tdesktop', 'macos'].indexOf(platform) !== -1;
       if (tgDesktop) window.DESKTOP_MODE = true;
     }
     function px(v) { return (Number(v) || 0) + 'px'; }
