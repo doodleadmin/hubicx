@@ -198,7 +198,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   const [prompt, setPrompt] = useState('');
 
   // File upload
-  const [uploadedFile, setUploadedFile] = useState(null); // {url, file_id, preview}
+  const [uploadedFiles, setUploadedFiles] = useState([]); // [{url, file_id, preview, type, name}]
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -279,17 +279,30 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   };
 
   // File upload handler
-  var handleFile = function(file) {
-    if (!file || uploading) return;
+  var fileKind = function(file) {
+    var t = String((file && file.type) || '').toLowerCase();
+    return t.indexOf('video/') === 0 ? 'video' : 'image';
+  };
+  var handleFiles = function(files) {
+    var list = Array.prototype.slice.call(files || []);
+    if (!list.length || uploading) return;
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
+    var allowed = list.filter(function(f) { return mode === 'video' ? /^(image|video)\//.test(f.type || '') : /^image\//.test(f.type || ''); });
+    if (allowed.length !== list.length) alert(mode === 'photo' ? 'В генерации фото можно прикреплять только изображения' : 'Можно прикреплять только фото или видео');
+    var room = Math.max(0, 8 - uploadedFiles.length);
+    allowed = allowed.slice(0, room);
+    if (!allowed.length) { if (uploadedFiles.length >= 8) alert('Можно загрузить максимум 8 файлов'); return; }
     setUploading(true);
-    var previewUrl = URL.createObjectURL(file);
-    window.HubicxApi.uploadFile(file).then(function(data) {
-      setUploadedFile({ url: data.url, file_id: data.file_id, preview: previewUrl });
+    Promise.all(allowed.map(function(file) {
+      var previewUrl = URL.createObjectURL(file);
+      return window.HubicxApi.uploadFile(file).then(function(data) {
+        return { url: data.url, file_id: data.file_id, preview: previewUrl, type: fileKind(file), name: file.name || 'file' };
+      });
+    })).then(function(items) {
+      setUploadedFiles(function(prev) { return prev.concat(items).slice(0, 8); });
       setUploading(false);
     }).catch(function(err) {
       setUploading(false);
-      setUploadedFile(null);
       alert((err && err.message) || 'Ошибка загрузки файла');
     });
   };
@@ -302,13 +315,22 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     var inputs = {};
     if (selectedAspect) inputs.aspect_ratio = selectedAspect.id;
     if (qField && qValue != null) inputs[qField.name] = qValue;
-    if (uploadedFile) inputs.image_url = uploadedFile.url;
+    var mediaUrls = uploadedFiles.map(function(f) { return f.url; });
+    var imageUrls = uploadedFiles.filter(function(f) { return f.type !== 'video'; }).map(function(f) { return f.url; });
+    var videoUrls = uploadedFiles.filter(function(f) { return f.type === 'video'; }).map(function(f) { return f.url; });
+    if (imageUrls.length) { inputs.image_url = imageUrls[0]; inputs.image_urls = imageUrls; }
+    if (videoUrls.length) { inputs.video_url = videoUrls[0]; inputs.video_urls = videoUrls; }
+    if (mediaUrls.length) inputs.media_urls = mediaUrls;
 
     var finalPrompt = (tab === 'prompt' ? prompt.trim() : ((selectedTpl && selectedTpl.prompt) || selTpl)) || null;
+    if (mediaUrls.length) {
+      var refs = uploadedFiles.map(function(f, i) { return '[file' + (i + 1) + '] ' + f.url; }).join('\n');
+      finalPrompt = (finalPrompt ? finalPrompt + '\n\n' : '') + 'Прикрепленные медиафайлы для промпта:\n' + refs;
+    }
     var payload = {
       model_code: currentModelFull.code,
       prompt: finalPrompt,
-      input_file_url: uploadedFile ? uploadedFile.url : null,
+      input_file_url: mediaUrls.length ? mediaUrls[0] : null,
       inputs: inputs,
     };
 
@@ -343,7 +365,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   // Video "оживить фото": an uploaded image alone is enough — prompt is optional.
   var hasTextInput = (tab === 'tpl' && selTpl) || (tab === 'prompt' && prompt.trim().length > 0);
   var needsTplImage = tab === 'tpl' && selectedTpl && selectedTpl.requiresImage;
-  var ready = (hasTextInput && (!needsTplImage || !!uploadedFile)) || (mode === 'video' && !!uploadedFile);
+  var ready = (hasTextInput && (!needsTplImage || uploadedFiles.length > 0)) || (mode === 'video' && uploadedFiles.length > 0);
 
   // ── Generating view ──
   if (genState === 'generating') {
@@ -423,7 +445,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
       {/* Mode switcher */}
       <div className="seg">
-        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
+        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setUploadedFiles(function(prev) { return prev.filter(function(f) { return f.type !== 'video'; }); }); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
           <Ic n="image" s={18}/> Фото
         </button>
         <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
@@ -432,31 +454,34 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       </div>
 
       {/* Hidden file input */}
-      <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display:'none' }}
-        onChange={function(e) { handleFile(e.target.files && e.target.files[0]); e.target.value = ''; }}/>
+      <input ref={fileInputRef} type="file" multiple accept={mode === 'photo' ? 'image/*' : 'image/*,video/*'} style={{ display:'none' }}
+        onChange={function(e) { handleFiles(e.target.files); e.target.value = ''; }}/>
 
       {/* Drop-zone / upload preview */}
-      {uploadedFile
-        ? <div className="drop-zone" style={{ position:'relative', overflow:'hidden' }}
+      {uploadedFiles.length > 0
+        ? <div className="drop-zone media-drop" style={{ position:'relative', overflow:'hidden' }}
             onClick={() => fileInputRef.current && fileInputRef.current.click()}>
-            <img src={uploadedFile.preview} alt="" style={{
-              position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover', opacity:.5 }}/>
-            <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-              <div className="di"><Ic n="check" s={24} c="#5f9184"/></div>
-              <div className="dt">Файл загружен</div>
-              <div className="ds">Нажмите, чтобы заменить</div>
+            <div className="media-grid">
+              {uploadedFiles.map(function(f, i) { return <div className="media-chip" key={i}>
+                {f.type === 'video' ? <video src={f.preview} muted playsInline/> : <img src={f.preview} alt=""/>}
+                <b>file{i + 1}</b>
+                <button onClick={function(e) { e.stopPropagation(); setUploadedFiles(function(prev) { return prev.filter(function(_, idx) { return idx !== i; }); }); }}>×</button>
+              </div>; })}
+              {uploadedFiles.length < 8 && <div className="media-add"><Ic n="plus" s={20}/><span>{uploadedFiles.length}/8</span></div>}
             </div>
-            <button style={{ position:'absolute', top:8, right:10, background:'rgba(0,0,0,.45)',
-              border:'none', borderRadius:20, color:'#fff', fontSize:11, fontWeight:700, padding:'3px 9px', cursor:'pointer', zIndex:2 }}
-              onClick={function(e) { e.stopPropagation(); setUploadedFile(null); }}>✕</button>
+            <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, marginTop:8 }}>
+              <div className="di"><Ic n="check" s={24} c="#5f9184"/></div>
+              <div className="dt">Загружено файлов: {uploadedFiles.length}/8</div>
+              <div className="ds">В промпте можно ссылаться: file1, file2…</div>
+            </div>
           </div>
         : <div className="drop-zone" onClick={() => !uploading && fileInputRef.current && fileInputRef.current.click()}>
             {uploading
               ? <><div className="di"><div className="gen-spinner" style={{ width:28, height:28 }}></div></div>
                   <div className="dt">Загружаю…</div></>
               : <><div className="di"><Ic n="addimg" s={24} c="var(--ink)"/></div>
-                  <div className="dt">{needsTplImage && selectedTpl ? selectedTpl.inputLabel : (mode === 'photo' ? 'Загрузить селфи или фото' : 'Загрузить фото для видео')}</div>
-                  <div className="ds">Нажмите или перетащите файл</div></>}
+                   <div className="dt">{needsTplImage && selectedTpl ? selectedTpl.inputLabel : (mode === 'photo' ? 'Загрузить фото' : 'Загрузить фото или видео')}</div>
+                   <div className="ds">До 8 файлов · в промпте: file1, file2…</div></>}
           </div>}
 
       {/* Content tabs */}
