@@ -291,7 +291,7 @@ function App() {
       var serverMsgs = serverMsgsToLocal(c.messages);
       setChats(cs => [{ id: c.id, title: c.title || 'Новый чат', agent_mode: c.agent_mode || mode, msgs: serverMsgs, loaded: true }, ...cs]);
       setActiveChat(c.id);
-      doStream(c.id, text);
+      if (text) doStream(c.id, text);
     }).catch(function(err) {
       alert((err && err.message) || 'Не удалось создать чат');
     });
