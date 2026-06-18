@@ -7,9 +7,16 @@ from backend.app.config import settings
 from backend.app.utils.errors import AppError
 
 app = FastAPI(title="Telegram AI Aggregator", version="0.1.0")
+cors_origins = list(dict.fromkeys([
+    settings.webapp_url.rstrip("/"),
+    "https://app.hubicx.ru",
+    "https://webapp.hubicx.ru",
+    "https://admin.hubicx.ru",
+    "http://localhost:3000",
+]))
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.webapp_url, "http://localhost:3000"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

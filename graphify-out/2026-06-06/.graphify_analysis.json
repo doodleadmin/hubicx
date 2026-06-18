@@ -1,0 +1,1497 @@
+{
+  "communities": {
+    "0": [
+      "bot_config",
+      "bot_custom_emoji",
+      "bot_custom_emoji_emoji_icon",
+      "bot_custom_emoji_emoji_id",
+      "bot_handlers_admin_py_message",
+      "bot_handlers_balance_py_inlinekeyboardmarkup",
+      "bot_handlers_balance_py_message",
+      "bot_handlers_history_py_inlinekeyboardmarkup",
+      "bot_handlers_history_py_message",
+      "bot_handlers_language_py_callbackquery",
+      "bot_handlers_language_py_message",
+      "bot_handlers_menu_py_callbackquery",
+      "bot_handlers_menu_py_message",
+      "bot_handlers_photo_py_inlinekeyboardmarkup",
+      "bot_handlers_photo_py_message",
+      "bot_handlers_start_py_message",
+      "bot_handlers_templates_py_inlinekeyboardmarkup",
+      "bot_handlers_text_py_inlinekeyboardmarkup",
+      "bot_handlers_text_py_message",
+      "bot_handlers_video_py_inlinekeyboardmarkup",
+      "bot_handlers_video_py_message",
+      "bot_i18n",
+      "bot_i18n_normalize_lang",
+      "bot_i18n_t",
+      "bot_keyboards_categories_py_inlinekeyboardmarkup",
+      "bot_keyboards_language_py_inlinekeyboardmarkup",
+      "bot_keyboards_main_menu_py_inlinekeyboardmarkup",
+      "bot_keyboards_models_py_inlinekeyboardmarkup",
+      "bot_main",
+      "bot_main_incomingtextloggingmiddleware",
+      "bot_main_incomingtextloggingmiddleware_call",
+      "bot_main_main",
+      "bot_main_py_any",
+      "bot_main_py_telegramobject",
+      "bot_services_menu_messages_py_asyncsession",
+      "bot_services_menu_messages_py_callbackquery",
+      "bot_services_menu_messages_py_inlinekeyboardmarkup",
+      "bot_services_menu_messages_py_message",
+      "bot_services_menu_messages_py_user",
+      "bot_services_start_message_py_asyncsession",
+      "bot_services_start_message_py_message",
+      "bot_services_start_message_py_user",
+      "handlers_admin",
+      "handlers_admin_add_balance",
+      "handlers_admin_admin",
+      "handlers_admin_errors",
+      "handlers_admin_is_admin",
+      "handlers_admin_tasks",
+      "handlers_admin_user_info",
+      "handlers_balance",
+      "handlers_balance_balance",
+      "handlers_balance_build_balance_menu",
+      "handlers_balance_show_balance_menu",
+      "handlers_history",
+      "handlers_history_build_history_menu",
+      "handlers_history_history",
+      "handlers_history_show_history_menu",
+      "handlers_language",
+      "handlers_language_choose_language",
+      "handlers_language_set_language",
+      "handlers_language_show_language_selection",
+      "handlers_menu",
+      "handlers_menu_debug_unhandled",
+      "handlers_menu_home_message",
+      "handlers_menu_main_menu_callback",
+      "handlers_menu_render_callback_menu",
+      "handlers_menu_show_main_menu",
+      "handlers_menu_webapp_unavailable",
+      "handlers_photo",
+      "handlers_photo_build_photo_menu",
+      "handlers_photo_photo_models",
+      "handlers_photo_show_photo_menu",
+      "handlers_start",
+      "handlers_start_start",
+      "handlers_templates",
+      "handlers_templates_build_templates_menu",
+      "handlers_templates_show_templates_menu",
+      "handlers_text",
+      "handlers_text_build_text_menu",
+      "handlers_text_show_text_menu",
+      "handlers_text_text_menu",
+      "handlers_video",
+      "handlers_video_build_video_menu",
+      "handlers_video_show_video_menu",
+      "handlers_video_video_models",
+      "inlinekeyboardbutton",
+      "keyboards_categories",
+      "keyboards_categories_home_keyboard",
+      "keyboards_language",
+      "keyboards_language_language_keyboard",
+      "keyboards_main_menu",
+      "keyboards_main_menu_main_menu_keyboard",
+      "keyboards_models",
+      "keyboards_models_app_button",
+      "keyboards_models_balance_keyboard",
+      "keyboards_models_versioned_webapp_url",
+      "keyboards_models_webapp_models_keyboard",
+      "services_language",
+      "services_language_get_user_language",
+      "services_menu_messages",
+      "services_menu_messages_delete_active_menu",
+      "services_menu_messages_edit_current_menu",
+      "services_menu_messages_save_active_menu",
+      "services_menu_messages_send_or_replace_menu",
+      "services_start_message",
+      "services_start_message_get_start_image_path",
+      "services_start_message_remove_reply_keyboard",
+      "services_start_message_send_start_menu"
+    ],
+    "1": [
+      "alembic_env",
+      "alembic_env_do_run_migrations",
+      "alembic_env_run_async_migrations",
+      "alembic_env_run_migrations_offline",
+      "alembic_env_run_migrations_online",
+      "backend_app_services_pricing_py_aimodel",
+      "backend_app_services_pricing_py_any",
+      "backend_scripts_test_pricing_py_aimodel",
+      "backend_scripts_test_pricing_py_any",
+      "backend_scripts_validate_model_schemas_py_aimodel",
+      "backend_scripts_validate_model_schemas_py_any",
+      "backend_seed",
+      "backend_seed_is_placeholder_model_id",
+      "backend_seed_main",
+      "backend_seed_models",
+      "backend_seed_models_fal_schema_source",
+      "backend_seed_models_field",
+      "backend_seed_models_schema",
+      "backend_seed_models_set_model",
+      "backend_seed_models_source",
+      "backend_seed_seed_force_enabled",
+      "backend_seed_upsert_model",
+      "backend_seed_upsert_template",
+      "connection",
+      "db_models",
+      "db_models_aimodel",
+      "db_models_base",
+      "db_models_referralreward",
+      "db_models_template",
+      "db_models_timestampmixin",
+      "declarativebase",
+      "scripts_test_pricing",
+      "scripts_test_pricing_check",
+      "scripts_test_pricing_load_catalog_model",
+      "scripts_test_pricing_load_model",
+      "scripts_test_pricing_main",
+      "scripts_test_pricing_rationale_1",
+      "scripts_validate_model_schemas",
+      "scripts_validate_model_schemas_fail",
+      "scripts_validate_model_schemas_is_number",
+      "scripts_validate_model_schemas_main",
+      "scripts_validate_model_schemas_rationale_1",
+      "scripts_validate_model_schemas_validate_field",
+      "scripts_validate_model_schemas_validate_model",
+      "scripts_validate_model_schemas_validate_price_rules",
+      "services_pricing",
+      "services_pricing_as_number",
+      "services_pricing_calculate_generation_cost",
+      "services_pricing_calculate_generation_cost_breakdown",
+      "services_pricing_mapped_number"
+    ],
+    "2": [
+      "backend_app_providers_base_py_any",
+      "backend_app_providers_fal_py_any",
+      "backend_app_providers_fal_py_asyncclient",
+      "backend_app_providers_fal_py_providerresult",
+      "backend_app_providers_openrouter_py_any",
+      "backend_app_providers_openrouter_py_providerresult",
+      "openrouter_provider",
+      "path",
+      "providers_base",
+      "providers_base_baseprovider",
+      "providers_base_baseprovider_generate_text",
+      "providers_base_baseprovider_get_status",
+      "providers_base_provider_model_configured",
+      "providers_base_providerresult",
+      "providers_base_providerresult_as_dict",
+      "providers_fal",
+      "providers_fal_falprovider",
+      "providers_fal_falprovider_extract_output_url",
+      "providers_fal_falprovider_generate_image",
+      "providers_fal_falprovider_generate_image_v2",
+      "providers_fal_falprovider_generate_video",
+      "providers_fal_falprovider_generate_video_v2",
+      "providers_fal_falprovider_get_status",
+      "providers_fal_falprovider_submit",
+      "providers_fal_falprovider_wait_for_result",
+      "providers_openrouter",
+      "providers_openrouter_openrouterprovider_generate_image",
+      "providers_openrouter_openrouterprovider_generate_text",
+      "providers_openrouter_openrouterprovider_generate_video",
+      "worker_celery_app",
+      "worker_generation_worker",
+      "worker_generation_worker_extension_from_content_type",
+      "worker_generation_worker_get_provider",
+      "worker_generation_worker_log_task",
+      "worker_generation_worker_normalize_generated_content_type",
+      "worker_generation_worker_notify_user",
+      "worker_generation_worker_persist_generated_file",
+      "worker_generation_worker_process_generation_task",
+      "worker_generation_worker_py_asyncsession",
+      "worker_generation_worker_py_generationtask",
+      "worker_generation_worker_run_process_generation_task",
+      "worker_polling_worker",
+      "worker_polling_worker_poll_provider_tasks",
+      "worker_refund_worker",
+      "worker_refund_worker_refund_failed_tasks"
+    ],
+    "3": [
+      "app_jsx",
+      "assets_image_slot_getslot",
+      "assets_image_slot_imageslot_applyview",
+      "assets_image_slot_imageslot_attributechangedcallback",
+      "assets_image_slot_imageslot_clampview",
+      "assets_image_slot_imageslot_commitview",
+      "assets_image_slot_imageslot_connectedcallback",
+      "assets_image_slot_imageslot_constructor",
+      "assets_image_slot_imageslot_disconnectedcallback",
+      "assets_image_slot_imageslot_enterreframe",
+      "assets_image_slot_imageslot_exitreframe",
+      "assets_image_slot_imageslot_geom",
+      "assets_image_slot_imageslot_handleevent",
+      "assets_image_slot_imageslot_ingest",
+      "assets_image_slot_imageslot_observedattributes",
+      "assets_image_slot_imageslot_reframes",
+      "assets_image_slot_imageslot_render",
+      "assets_image_slot_imageslot_seterror",
+      "assets_image_slot_load",
+      "assets_image_slot_save",
+      "assets_image_slot_setslot",
+      "assets_image_slot_todataurl",
+      "babel_lib",
+      "core_jsx",
+      "hubicx_html",
+      "image_slot_js",
+      "react_dom_lib",
+      "react_lib",
+      "screens_a_jsx",
+      "screens_b_jsx",
+      "screens_forms_jsx",
+      "theme_onyx_png",
+      "theme_signal_png"
+    ],
+    "4": [
+      "new_ui_appshell",
+      "new_ui_generationform_resultactions",
+      "new_ui_prototypeapp",
+      "new_ui_prototypeapp_actorssection",
+      "new_ui_prototypeapp_agentchat",
+      "new_ui_prototypeapp_agentsscreen",
+      "new_ui_prototypeapp_balancescreen",
+      "new_ui_prototypeapp_costpreview",
+      "new_ui_prototypeapp_createscreen",
+      "new_ui_prototypeapp_generating",
+      "new_ui_prototypeapp_historyscreen",
+      "new_ui_prototypeapp_homescreen",
+      "new_ui_prototypeapp_imageform",
+      "new_ui_prototypeapp_motionbanner",
+      "new_ui_prototypeapp_phforratio",
+      "new_ui_prototypeapp_resultactions",
+      "new_ui_prototypeapp_resultblock",
+      "new_ui_prototypeapp_shell",
+      "new_ui_prototypeapp_sub",
+      "new_ui_prototypeapp_tab",
+      "new_ui_prototypeapp_taskhref",
+      "new_ui_prototypeapp_templaterun",
+      "new_ui_prototypeapp_templatesscreen",
+      "new_ui_prototypeapp_videoform",
+      "new_ui_prototypedata_ph",
+      "new_ui_prototypedata_totext",
+      "new_ui_prototypedata_tt"
+    ],
+    "5": [
+      "components_balancecard",
+      "components_generationstatus",
+      "components_generationstatus_getstatuslabel",
+      "components_generationstatus_isimage",
+      "components_generationstatus_isvideo",
+      "components_generationstatus_statuslabels",
+      "components_generationstatus_statusstyles",
+      "components_historylist",
+      "components_historylist_preview",
+      "components_historylist_statusclass",
+      "components_prompttextarea",
+      "components_templateform",
+      "components_templateform_telegramdebugblock",
+      "components_uploadblock",
+      "components_uploadblock_uploadblock",
+      "lib_i18n",
+      "lib_i18n_dictionaries",
+      "lib_i18n_locale",
+      "lib_i18n_modeltranslations",
+      "lib_i18n_optionlabels",
+      "lib_i18n_supported",
+      "lib_i18n_t",
+      "lib_i18n_translateerror",
+      "lib_telegram_telegramdebugstate",
+      "lib_types_formfielddef",
+      "lib_types_template"
+    ],
+    "6": [
+      "new_webapp_core",
+      "new_webapp_core_actors",
+      "new_webapp_core_agents",
+      "new_webapp_core_applytheme",
+      "new_webapp_core_cost",
+      "new_webapp_core_docs",
+      "new_webapp_core_featured",
+      "new_webapp_core_glosstile",
+      "new_webapp_core_history",
+      "new_webapp_core_ic",
+      "new_webapp_core_langctx",
+      "new_webapp_core_models",
+      "new_webapp_core_motion",
+      "new_webapp_core_navicon",
+      "new_webapp_core_packages",
+      "new_webapp_core_quick",
+      "new_webapp_core_recent",
+      "new_webapp_core_screenhead",
+      "new_webapp_core_tasks",
+      "new_webapp_core_templates",
+      "new_webapp_core_themes",
+      "new_webapp_core_themesheet",
+      "new_webapp_core_token",
+      "new_webapp_core_topbar",
+      "new_webapp_core_trending",
+      "new_webapp_core_tx"
+    ],
+    "7": [
+      "admin_admintabs",
+      "admin_admintabs_admintabs",
+      "admin_admintabs_tabkey",
+      "admin_admintabs_tabs",
+      "admin_filespanel",
+      "admin_filespanel_formatsize",
+      "admin_generationspanel",
+      "admin_generationspanel_row",
+      "admin_generationspanel_status_colors",
+      "admin_modelspanel",
+      "admin_page",
+      "admin_page_adminpage",
+      "admin_page_card",
+      "admin_page_dashboardpanel",
+      "admin_transactionspanel",
+      "admin_transactionspanel_type_colors",
+      "admin_userspanel",
+      "lib_api_api",
+      "lib_types",
+      "lib_types_adminfile",
+      "lib_types_adminmodelitem",
+      "lib_types_admintask",
+      "lib_types_admintransaction",
+      "lib_types_adminuser",
+      "lib_types_paginatedresponse"
+    ],
+    "8": [
+      "backend_app_api_routes_files_py_asyncsession",
+      "backend_app_api_routes_files_py_user",
+      "backend_app_services_input_validation_py_any",
+      "backend_app_services_input_validation_py_asyncsession",
+      "db_models_file",
+      "exception",
+      "file",
+      "fileuploadout",
+      "routes_files",
+      "routes_files_extension_from_content_type",
+      "routes_files_upload_file",
+      "services_input_validation",
+      "services_input_validation_build_provider_input_from_resolved",
+      "services_input_validation_check_file_size",
+      "services_input_validation_mime_matches_accept",
+      "services_input_validation_parse_switch",
+      "services_input_validation_rationale_131",
+      "services_input_validation_rationale_187",
+      "services_input_validation_rationale_58",
+      "services_input_validation_resolve_input_files",
+      "services_input_validation_validate_inputs_against_schema",
+      "uploadfile",
+      "utils_errors",
+      "utils_errors_apperror",
+      "utils_errors_apperror_init"
+    ],
+    "9": [
+      "ai_aggregator_backend",
+      "ai_aggregator_bot",
+      "ai_aggregator_webapp",
+      "ai_aggregator_worker",
+      "api_hubicx",
+      "app_hubicx",
+      "beget_s3",
+      "deployment_context_md",
+      "docker_compose_yml",
+      "fal_provider",
+      "hubicx_bot",
+      "kling_21_i2v",
+      "postgres_db",
+      "readme_md",
+      "redis_cache",
+      "seedance_2_i2v",
+      "seedance_2_t2v",
+      "start_en_png",
+      "start_esp_png",
+      "start_png",
+      "user_1113930428",
+      "veo_31_i2v",
+      "veo_31_t2v",
+      "video_generation_feature"
+    ],
+    "10": [
+      "ai_chat_model",
+      "backup_concept",
+      "bytedance_provider",
+      "current_model_schemas_before_cleanup_md",
+      "fal_ai_provider",
+      "flux_schnell_model",
+      "kling_21_i2v_model",
+      "model_ui_cleanup_audit_md",
+      "nano_banana_2_model",
+      "nano_banana_edit_model",
+      "nano_banana_pro_model",
+      "openai_provider",
+      "price_rules_concept",
+      "prompt_helper_model",
+      "provider_input_concept",
+      "seedance_2_i2v_fast_model",
+      "seedance_2_i2v_model",
+      "seedance_2_t2v_model",
+      "seedream_model",
+      "ui_cleanup_concept",
+      "z_image_model"
+    ],
+    "11": [
+      "agent_page",
+      "agent_page_agentpage",
+      "agents_page",
+      "agents_page_agentspage",
+      "app_page",
+      "app_page_homepage",
+      "create_page",
+      "create_page_createpage",
+      "image_page",
+      "image_page_createimagepage",
+      "new_ui_prototypeapp_prototyperoute",
+      "prompts_page",
+      "prompts_page_createpromptspage",
+      "template_page",
+      "templates_page",
+      "templates_page_templatespage",
+      "text_page",
+      "text_page_createtextpage",
+      "video_page",
+      "video_page_createvideopage"
+    ],
+    "12": [
+      "components_modelform",
+      "components_modelform_dynamicfield",
+      "components_modelform_getdefaults",
+      "components_modelform_modelform",
+      "components_modelform_telegramdebugblock",
+      "components_modelform_uploadedfile",
+      "docs_page",
+      "docs_page_docspage",
+      "docs_page_gettelegramlanguagecode",
+      "lib_i18n_getlocale",
+      "lib_i18n_localizefield",
+      "lib_i18n_localizemodel",
+      "lib_telegram_gettelegramdebugstate",
+      "lib_types_aimodel",
+      "lib_types_formschema",
+      "lib_types_pricepreview",
+      "lib_types_user",
+      "lib_usegenerationflow",
+      "lib_usegenerationflow_getdefaults",
+      "lib_usegenerationflow_uploadedfile"
+    ],
+    "13": [
+      "webapp_tsconfig",
+      "webapp_tsconfig_compileroptions",
+      "webapp_tsconfig_compileroptions_allowjs",
+      "webapp_tsconfig_compileroptions_esmoduleinterop",
+      "webapp_tsconfig_compileroptions_incremental",
+      "webapp_tsconfig_compileroptions_isolatedmodules",
+      "webapp_tsconfig_compileroptions_jsx",
+      "webapp_tsconfig_compileroptions_lib",
+      "webapp_tsconfig_compileroptions_module",
+      "webapp_tsconfig_compileroptions_moduleresolution",
+      "webapp_tsconfig_compileroptions_noemit",
+      "webapp_tsconfig_compileroptions_paths",
+      "webapp_tsconfig_compileroptions_plugins",
+      "webapp_tsconfig_compileroptions_resolvejsonmodule",
+      "webapp_tsconfig_compileroptions_skiplibcheck",
+      "webapp_tsconfig_compileroptions_strict",
+      "webapp_tsconfig_compileroptions_target",
+      "webapp_tsconfig_exclude",
+      "webapp_tsconfig_include",
+      "webapp_tsconfig_paths"
+    ],
+    "14": [
+      "backend_app_api_routes_generations_py_asyncsession",
+      "backend_app_api_routes_generations_py_generationtask",
+      "backend_app_api_routes_generations_py_user",
+      "backend_app_services_generations_py_any",
+      "db_models_generationtask",
+      "generate_page",
+      "generate_page_generatepage",
+      "generationcreate",
+      "generationout",
+      "generationqueued",
+      "new_ui_generationform_dynamicfield",
+      "new_ui_generationform_optionvalue",
+      "routes_generations_create_generation",
+      "routes_generations_generation_history",
+      "routes_generations_send_generation_to_chat",
+      "routes_generations_serialize_task",
+      "schemas_generations_generationout",
+      "services_generations_provider_prompt_preview",
+      "services_telegram_sender_send_generation_result_to_chat"
+    ],
+    "15": [
+      "backend_app_services_telegram_sender_py_asyncclient",
+      "backend_app_services_telegram_sender_py_generationtask",
+      "response",
+      "services_storage",
+      "services_storage_generate_presigned_url",
+      "services_storage_storage_configured",
+      "services_storage_storageservice",
+      "services_storage_storedfile",
+      "services_storage_upload_bytes",
+      "services_telegram_sender",
+      "services_telegram_sender_filename_from_url",
+      "services_telegram_sender_model_title",
+      "services_telegram_sender_raise_telegram_error",
+      "services_telegram_sender_rationale_81",
+      "services_telegram_sender_s3_key_from_url",
+      "services_telegram_sender_send_document",
+      "services_telegram_sender_send_document_multipart",
+      "services_telegram_sender_send_message",
+      "services_telegram_sender_should_force_document_upload"
+    ],
+    "16": [
+      "webapp_package",
+      "webapp_package_dependencies",
+      "webapp_package_dependencies_next",
+      "webapp_package_dependencies_react",
+      "webapp_package_dependencies_react_dom",
+      "webapp_package_dependencies_types_node",
+      "webapp_package_dependencies_types_react",
+      "webapp_package_dependencies_typescript",
+      "webapp_package_devdependencies",
+      "webapp_package_devdependencies_autoprefixer",
+      "webapp_package_devdependencies_postcss",
+      "webapp_package_devdependencies_tailwindcss",
+      "webapp_package_name",
+      "webapp_package_private",
+      "webapp_package_scripts",
+      "webapp_package_scripts_build",
+      "webapp_package_scripts_dev",
+      "webapp_package_scripts_start",
+      "webapp_package_version"
+    ],
+    "17": [
+      "balance_page",
+      "balance_page_balancepage",
+      "new_ui_prototypedata",
+      "new_ui_prototypedata_actors",
+      "new_ui_prototypedata_agents",
+      "new_ui_prototypedata_docs",
+      "new_ui_prototypedata_history",
+      "new_ui_prototypedata_localized",
+      "new_ui_prototypedata_models",
+      "new_ui_prototypedata_motion",
+      "new_ui_prototypedata_packages",
+      "new_ui_prototypedata_quick",
+      "new_ui_prototypedata_recent",
+      "new_ui_prototypedata_templates",
+      "new_ui_prototypedata_trending",
+      "new_ui_prototypedata_tx",
+      "new_ui_realbalance",
+      "new_ui_realbalance_realbalance"
+    ],
+    "18": [
+      "components_createtaskgrid",
+      "components_createtaskgrid_props",
+      "components_layout",
+      "components_layout_isactive",
+      "components_layout_layout",
+      "components_layout_navitems",
+      "lib_hubicxcatalog",
+      "lib_hubicxcatalog_agents",
+      "lib_hubicxcatalog_coverpath",
+      "lib_hubicxcatalog_createtask",
+      "lib_hubicxcatalog_iconpath",
+      "lib_hubicxcatalog_localtext",
+      "lib_hubicxcatalog_phpath",
+      "lib_hubicxcatalog_template_list",
+      "lib_hubicxcatalog_template_meta",
+      "lib_hubicxcatalog_text",
+      "lib_telegram_gettelegramlanguagecode",
+      "link"
+    ],
+    "19": [
+      "api_deps",
+      "backend_app_services_telegram_auth_py_asyncsession",
+      "backend_app_services_telegram_auth_py_user",
+      "backend_app_services_users_py_asyncsession",
+      "backend_app_services_users_py_user",
+      "db_models_user",
+      "services_telegram_auth",
+      "services_telegram_auth_get_current_user",
+      "services_telegram_auth_get_telegram_user_from_init_data",
+      "services_telegram_auth_validate_init_data",
+      "services_users",
+      "services_users_get_or_create_user",
+      "services_users_referral_summary",
+      "services_users_user_stats",
+      "utils_security",
+      "utils_security_make_ref_code"
+    ],
+    "20": [
+      "app_database",
+      "backend_app_api_routes_debug_py_asyncsession",
+      "backend_app_api_routes_debug_py_user",
+      "backend_app_api_routes_models_py_aimodel",
+      "backend_app_api_routes_models_py_any",
+      "backend_app_api_routes_models_py_asyncsession",
+      "backend_app_db_session_py_asyncsession",
+      "db_session",
+      "db_session_get_session",
+      "routes_debug",
+      "routes_debug_debug_me",
+      "routes_debug_debug_models",
+      "routes_models",
+      "routes_models_get_model",
+      "routes_models_list_models",
+      "routes_models_preview_model_price"
+    ],
+    "21": [
+      "backend_app_api_routes_payments_py_asyncsession",
+      "backend_app_api_routes_payments_py_user",
+      "backend_app_services_payments_py_asyncsession",
+      "backend_app_services_payments_py_user",
+      "db_models_payment",
+      "payment",
+      "paymentcreate",
+      "paymentout",
+      "routes_payments",
+      "routes_payments_create_payment",
+      "routes_payments_payment_webhook",
+      "schemas_payments",
+      "schemas_payments_paymentcreate",
+      "schemas_payments_paymentout",
+      "services_payments",
+      "services_payments_create_mock_payment"
+    ],
+    "22": [
+      "backend_app_services_balance_py_asyncsession",
+      "backend_app_services_generations_py_asyncsession",
+      "backend_app_services_generations_py_generationtask",
+      "backend_app_services_generations_py_user",
+      "db_models_transaction",
+      "services_balance",
+      "services_balance_admin_add_balance",
+      "services_balance_charge_for_generation",
+      "services_balance_get_balance",
+      "services_balance_has_enough_balance",
+      "services_balance_referral_bonus",
+      "services_balance_refund_generation",
+      "services_generations",
+      "services_generations_get_user_task",
+      "services_generations_history",
+      "services_generations_mark_failed_and_refund"
+    ],
+    "23": [
+      "history_page",
+      "history_page_historypage",
+      "lib_hubicxadapters",
+      "lib_hubicxadapters_mapapibalancetobalanceview",
+      "lib_hubicxadapters_mapapimodeltouicard",
+      "lib_hubicxadapters_mapapitasktohistorycard",
+      "lib_hubicxadapters_mapformschematouifields",
+      "lib_hubicxadapters_uibalanceview",
+      "lib_hubicxadapters_uifield",
+      "lib_hubicxadapters_uihistorycard",
+      "lib_hubicxadapters_uimodelcard",
+      "new_ui_prototypedata_cov",
+      "new_ui_realhistory",
+      "new_ui_realhistory_realhistory",
+      "new_ui_shared_screenhead"
+    ],
+    "24": [
+      "backend_app_api_routes_admin_py_asyncsession",
+      "backend_app_api_routes_admin_py_user",
+      "routes_admin",
+      "routes_admin_add_balance",
+      "routes_admin_errors",
+      "routes_admin_get_model_schema",
+      "routes_admin_list_files",
+      "routes_admin_list_models_admin",
+      "routes_admin_list_tasks",
+      "routes_admin_list_transactions",
+      "routes_admin_list_users",
+      "routes_admin_require_admin",
+      "routes_admin_toggle_model",
+      "routes_admin_update_model_price"
+    ],
+    "25": [
+      "new_ui_actioncard",
+      "new_ui_hero",
+      "new_ui_hero_hero",
+      "new_ui_prototypedata_featured",
+      "new_ui_prototypedata_ic",
+      "new_ui_prototypedata_tasks",
+      "new_ui_shared",
+      "new_ui_shared_badge",
+      "new_ui_shared_cost",
+      "new_ui_shared_fieldlabel",
+      "new_ui_shared_glosstile",
+      "new_ui_shared_pillgroup",
+      "new_ui_shared_placeholderslot",
+      "new_ui_shared_token"
+    ],
+    "26": [
+      "new_webapp_core_uselang",
+      "new_webapp_screens_a",
+      "new_webapp_screens_a_actorssection",
+      "new_webapp_screens_a_badge",
+      "new_webapp_screens_a_createscreen",
+      "new_webapp_screens_a_generating",
+      "new_webapp_screens_a_herocarousel",
+      "new_webapp_screens_a_homescreen",
+      "new_webapp_screens_a_modelcard",
+      "new_webapp_screens_a_motionbanner",
+      "new_webapp_screens_a_phforratio",
+      "new_webapp_screens_a_resultactions",
+      "new_webapp_screens_a_resultblock",
+      "new_webapp_screens_a_trendcard"
+    ],
+    "27": [
+      "app_main",
+      "app_main_app_error_handler",
+      "app_main_health",
+      "apperror",
+      "backend_app_api_routes_templates_py_asyncsession",
+      "bot_handlers_templates_py_message",
+      "jsonresponse",
+      "request",
+      "routes_templates_get_template",
+      "routes_templates_list_templates",
+      "routes_webhooks",
+      "routes_webhooks_fal_webhook",
+      "template"
+    ],
+    "28": [
+      "api_deps_current_user",
+      "backend_app_api_deps_py_asyncsession",
+      "backend_app_api_deps_py_user",
+      "backend_app_api_routes_auth_py_user",
+      "backend_app_api_routes_users_py_user",
+      "routes_auth",
+      "routes_auth_me",
+      "routes_users",
+      "routes_users_get_me",
+      "routes_users_referral",
+      "schemas_users",
+      "schemas_users_userout"
+    ],
+    "29": [
+      "basemodel",
+      "schemas_generations",
+      "schemas_generations_fileuploadout",
+      "schemas_generations_generationcreate",
+      "schemas_generations_generationcreate_validate_target",
+      "schemas_generations_generationqueued",
+      "schemas_models",
+      "schemas_models_aimodelout",
+      "schemas_models_formfield",
+      "schemas_models_formschema",
+      "schemas_models_templateout",
+      "schemas_templates"
+    ],
+    "30": [
+      "app_layout",
+      "app_layout_metadata",
+      "app_layout_rootlayout",
+      "lib_hubicxtheme",
+      "lib_hubicxtheme_applyhubicxtheme",
+      "lib_hubicxtheme_getstoredhubicxtheme",
+      "lib_hubicxtheme_togglehubicxtheme",
+      "new_ui_shellbehavior",
+      "new_ui_topbar",
+      "new_ui_topbar_languages",
+      "new_ui_topbar_topbar"
+    ],
+    "31": [
+      "lib_telegram",
+      "lib_telegram_currenttelegramcolors",
+      "lib_telegram_gettelegraminitdata",
+      "lib_telegram_initializetelegramui",
+      "lib_telegram_inittelegram",
+      "lib_telegram_telegramauthstate",
+      "lib_telegram_waitfortelegramwebapp",
+      "lib_telegram_window",
+      "new_ui_prototypeapp_useprototypestate"
+    ],
+    "32": [
+      "new_webapp_screens_forms",
+      "new_webapp_screens_forms_costpreview",
+      "new_webapp_screens_forms_fieldlabel",
+      "new_webapp_screens_forms_formheader",
+      "new_webapp_screens_forms_imageform",
+      "new_webapp_screens_forms_pillgroup",
+      "new_webapp_screens_forms_uploadslot",
+      "new_webapp_screens_forms_videoform",
+      "new_webapp_screens_forms_videoresult"
+    ],
+    "33": [
+      "concept_edit",
+      "concept_image",
+      "concept_livestream",
+      "hubicx_icons",
+      "hubicx_project",
+      "livestream_icon",
+      "nano_edit_icon",
+      "nano_image_icon"
+    ],
+    "34": [
+      "lib_api",
+      "lib_api_apierror",
+      "lib_api_apierror_constructor",
+      "lib_api_fetchwithtimeout",
+      "lib_api_request",
+      "lib_api_uploadfile",
+      "lib_telegram_getinitdata"
+    ],
+    "35": [
+      "new_webapp_screens_b",
+      "new_webapp_screens_b_agentchat",
+      "new_webapp_screens_b_agentsscreen",
+      "new_webapp_screens_b_balancescreen",
+      "new_webapp_screens_b_historyscreen",
+      "new_webapp_screens_b_templaterun",
+      "new_webapp_screens_b_templatesscreen"
+    ],
+    "36": [
+      "lib_i18n_formatoptionlabel",
+      "ui_hubicxselect",
+      "ui_hubicxselect_hubicxselect",
+      "ui_hubicxselect_hubicxselectoption",
+      "ui_hubicxselect_normalizedoption",
+      "ui_hubicxselect_normalizeoption"
+    ],
+    "37": [
+      "3_ui_screenshot",
+      "brandbook_brand_guidelines",
+      "brandbook_brand_logo",
+      "logo_logo_image",
+      "webapp_new_webapp"
+    ],
+    "38": [
+      "app_config",
+      "app_config_get_settings",
+      "app_config_settings",
+      "app_config_settings_admin_id_set",
+      "basesettings"
+    ],
+    "39": [
+      "basemiddleware",
+      "bot_middlewares_user_py_telegramobject",
+      "middlewares_user",
+      "middlewares_user_usermiddleware",
+      "middlewares_user_usermiddleware_call"
+    ],
+    "40": [
+      "new_ui_bottomnav",
+      "new_ui_bottomnav_activefrompath",
+      "new_ui_bottomnav_bottomnav",
+      "new_ui_bottomnav_navicon",
+      "new_ui_bottomnav_routes"
+    ],
+    "41": [
+      "new_webapp_app",
+      "new_webapp_app_app",
+      "new_webapp_app_go_screens",
+      "new_webapp_app_tab_screens",
+      "new_webapp_core_maket"
+    ],
+    "42": [
+      "start",
+      "start_en",
+      "start_es",
+      "start_portuges"
+    ],
+    "43": [
+      "clapper_image",
+      "coins",
+      "document"
+    ],
+    "44": [
+      "doll_icon",
+      "f1_icon",
+      "folder_icon"
+    ],
+    "45": [
+      "hero3_file",
+      "m1_file",
+      "m2_file"
+    ],
+    "46": [
+      "icons_nano_star",
+      "icons_prompt_photo",
+      "icons_puzzle"
+    ],
+    "47": [
+      "image_eco_eco",
+      "image_flash_flash",
+      "image_planet_planet"
+    ],
+    "48": [
+      "image_video_flow_icon",
+      "img2video_icon",
+      "link_icon"
+    ],
+    "49": [
+      "m3_image",
+      "m4_image",
+      "m5_image"
+    ],
+    "50": [
+      "new_webapp_assets_icons_avatar_png",
+      "new_webapp_assets_icons_beer_png",
+      "new_webapp_assets_icons_brain_image_png"
+    ],
+    "51": [
+      "new_webapp_assets_icons_videocam",
+      "new_webapp_assets_icons_wallet",
+      "new_webapp_assets_icons_warning"
+    ],
+    "52": [
+      "sq1_image",
+      "sq2_image",
+      "sq3_image"
+    ],
+    "53": [
+      "versions_0001_initial",
+      "versions_0001_initial_downgrade",
+      "versions_0001_initial_upgrade"
+    ],
+    "54": [
+      "versions_0002_ai_model_default_params",
+      "versions_0002_ai_model_default_params_downgrade",
+      "versions_0002_ai_model_default_params_upgrade"
+    ],
+    "55": [
+      "versions_0003_user_language_selected",
+      "versions_0003_user_language_selected_downgrade",
+      "versions_0003_user_language_selected_upgrade"
+    ],
+    "56": [
+      "versions_0004_user_active_menu",
+      "versions_0004_user_active_menu_downgrade",
+      "versions_0004_user_active_menu_upgrade"
+    ],
+    "57": [
+      "versions_0005_form_schema_and_input_payload",
+      "versions_0005_form_schema_and_input_payload_downgrade",
+      "versions_0005_form_schema_and_input_payload_upgrade"
+    ],
+    "58": [
+      "video_star_video_star",
+      "video_text_video_text",
+      "video_video"
+    ],
+    "59": [
+      "w1_png",
+      "w2_png",
+      "w3_png"
+    ],
+    "60": [
+      "m7_image",
+      "m8_image"
+    ],
+    "61": [
+      "new_ui_card",
+      "new_ui_card_card"
+    ],
+    "62": [
+      "prototype_page",
+      "prototype_page_prototypepage"
+    ],
+    "63": [
+      "webapp_tailwind_config",
+      "webapp_tailwind_config_config"
+    ],
+    "64": [
+      "api_init"
+    ],
+    "65": [
+      "app_init"
+    ],
+    "66": [
+      "avatar_image"
+    ],
+    "67": [
+      "backend_init"
+    ],
+    "68": [
+      "beer_image"
+    ],
+    "69": [
+      "bot_custom_emoji_found"
+    ],
+    "70": [
+      "bot_init"
+    ],
+    "71": [
+      "brain_image"
+    ],
+    "72": [
+      "camera_icon"
+    ],
+    "73": [
+      "chat_pencil_icon"
+    ],
+    "74": [
+      "check_icon"
+    ],
+    "75": [
+      "g7x_icon"
+    ],
+    "76": [
+      "globe_icon"
+    ],
+    "77": [
+      "graduation_icon"
+    ],
+    "78": [
+      "halo_halo"
+    ],
+    "79": [
+      "handlers_init"
+    ],
+    "80": [
+      "hero1_file"
+    ],
+    "81": [
+      "hero1_hero1"
+    ],
+    "82": [
+      "hero2_hero2"
+    ],
+    "83": [
+      "hero3_image"
+    ],
+    "84": [
+      "history_history"
+    ],
+    "85": [
+      "home_home"
+    ],
+    "86": [
+      "hubicx_cov_w1"
+    ],
+    "87": [
+      "image_eco_icon"
+    ],
+    "88": [
+      "image_flash_icon"
+    ],
+    "89": [
+      "image_planet_icon"
+    ],
+    "90": [
+      "image_video_flow"
+    ],
+    "91": [
+      "img2video"
+    ],
+    "92": [
+      "keyboards_init"
+    ],
+    "93": [
+      "land1_image"
+    ],
+    "94": [
+      "land1_land1_png"
+    ],
+    "95": [
+      "land2_image"
+    ],
+    "96": [
+      "land2_land2_png"
+    ],
+    "97": [
+      "land3_image"
+    ],
+    "98": [
+      "land3_land3_png"
+    ],
+    "99": [
+      "logo_logo"
+    ],
+    "100": [
+      "m1_image"
+    ],
+    "101": [
+      "m2_image"
+    ],
+    "102": [
+      "m6_image"
+    ],
+    "103": [
+      "middlewares_init"
+    ],
+    "104": [
+      "nano_star_nano_star"
+    ],
+    "105": [
+      "new_webapp_assets_ph_sq4"
+    ],
+    "106": [
+      "new_webapp_uploads_1"
+    ],
+    "107": [
+      "new_webapp_uploads_2"
+    ],
+    "108": [
+      "new_webapp_uploads_pasted-1780733411088-0_png"
+    ],
+    "109": [
+      "pasted_1780701014747_0_png"
+    ],
+    "110": [
+      "pasted_1780701071503_0_png"
+    ],
+    "111": [
+      "pasted_1780701092220_0_png"
+    ],
+    "112": [
+      "pasted_1780701180698_0_image"
+    ],
+    "113": [
+      "pasted_1780733387680_0_image"
+    ],
+    "114": [
+      "port1_image"
+    ],
+    "115": [
+      "prompt_photo_prompt_photo"
+    ],
+    "116": [
+      "puzzle_puzzle"
+    ],
+    "117": [
+      "requirements_txt"
+    ],
+    "118": [
+      "routes_history"
+    ],
+    "119": [
+      "routes_init"
+    ],
+    "120": [
+      "scripts_init"
+    ],
+    "121": [
+      "send_icon"
+    ],
+    "122": [
+      "send_send"
+    ],
+    "123": [
+      "services_init"
+    ],
+    "124": [
+      "shield_icon"
+    ],
+    "125": [
+      "shield_shield"
+    ],
+    "126": [
+      "song_icon"
+    ],
+    "127": [
+      "song_song"
+    ],
+    "128": [
+      "start_pt_png"
+    ],
+    "129": [
+      "swirl_icon"
+    ],
+    "130": [
+      "swirl_image"
+    ],
+    "131": [
+      "telegram_bot_service"
+    ],
+    "132": [
+      "upscale_icon"
+    ],
+    "133": [
+      "users_icon"
+    ],
+    "134": [
+      "video_png"
+    ],
+    "135": [
+      "video_star_png"
+    ],
+    "136": [
+      "video_text_png"
+    ],
+    "137": [
+      "videocam_icon"
+    ],
+    "138": [
+      "wallet_icon"
+    ],
+    "139": [
+      "warning_icon"
+    ],
+    "140": [
+      "webapp_next_config"
+    ],
+    "141": [
+      "webapp_next_env_d"
+    ],
+    "142": [
+      "webapp_postcss_config"
+    ],
+    "143": [
+      "worker_init"
+    ]
+  },
+  "cohesion": {
+    "0": 0.05192107995846314,
+    "1": 0.07428571428571429,
+    "2": 0.11515151515151516,
+    "3": 0.09848484848484848,
+    "4": 0.13675213675213677,
+    "5": 0.16,
+    "6": 0.08615384615384615,
+    "7": 0.14666666666666667,
+    "8": 0.14666666666666667,
+    "9": 0.18478260869565216,
+    "10": 0.2571428571428571,
+    "11": 0.1,
+    "12": 0.14736842105263157,
+    "13": 0.1,
+    "14": 0.23391812865497075,
+    "15": 0.21637426900584794,
+    "16": 0.10526315789473684,
+    "17": 0.13071895424836602,
+    "18": 0.1503267973856209,
+    "19": 0.20833333333333334,
+    "20": 0.19166666666666668,
+    "21": 0.19166666666666668,
+    "22": 0.275,
+    "23": 0.1523809523809524,
+    "24": 0.46153846153846156,
+    "25": 0.1978021978021978,
+    "26": 0.25274725274725274,
+    "27": 0.16666666666666666,
+    "28": 0.19696969696969696,
+    "29": 0.24242424242424243,
+    "30": 0.2727272727272727,
+    "31": 0.3888888888888889,
+    "32": 0.2222222222222222,
+    "33": 0.25,
+    "34": 0.47619047619047616,
+    "35": 0.2857142857142857,
+    "36": 0.4,
+    "37": 0.5,
+    "38": 0.5,
+    "39": 0.4,
+    "40": 0.5,
+    "41": 0.4,
+    "42": 0.5,
+    "43": 1.0,
+    "44": 1.0,
+    "45": 1.0,
+    "46": 1.0,
+    "47": 1.0,
+    "48": 1.0,
+    "49": 1.0,
+    "50": 1.0,
+    "51": 1.0,
+    "52": 1.0,
+    "53": 0.6666666666666666,
+    "54": 0.6666666666666666,
+    "55": 0.6666666666666666,
+    "56": 0.6666666666666666,
+    "57": 0.6666666666666666,
+    "58": 1.0,
+    "59": 1.0,
+    "60": 1.0,
+    "61": 1.0,
+    "62": 1.0,
+    "63": 1.0,
+    "64": 1.0,
+    "65": 1.0,
+    "66": 1.0,
+    "67": 1.0,
+    "68": 1.0,
+    "69": 1.0,
+    "70": 1.0,
+    "71": 1.0,
+    "72": 1.0,
+    "73": 1.0,
+    "74": 1.0,
+    "75": 1.0,
+    "76": 1.0,
+    "77": 1.0,
+    "78": 1.0,
+    "79": 1.0,
+    "80": 1.0,
+    "81": 1.0,
+    "82": 1.0,
+    "83": 1.0,
+    "84": 1.0,
+    "85": 1.0,
+    "86": 1.0,
+    "87": 1.0,
+    "88": 1.0,
+    "89": 1.0,
+    "90": 1.0,
+    "91": 1.0,
+    "92": 1.0,
+    "93": 1.0,
+    "94": 1.0,
+    "95": 1.0,
+    "96": 1.0,
+    "97": 1.0,
+    "98": 1.0,
+    "99": 1.0,
+    "100": 1.0,
+    "101": 1.0,
+    "102": 1.0,
+    "103": 1.0,
+    "104": 1.0,
+    "105": 1.0,
+    "106": 1.0,
+    "107": 1.0,
+    "108": 1.0,
+    "109": 1.0,
+    "110": 1.0,
+    "111": 1.0,
+    "112": 1.0,
+    "113": 1.0,
+    "114": 1.0,
+    "115": 1.0,
+    "116": 1.0,
+    "117": 1.0,
+    "118": 1.0,
+    "119": 1.0,
+    "120": 1.0,
+    "121": 1.0,
+    "122": 1.0,
+    "123": 1.0,
+    "124": 1.0,
+    "125": 1.0,
+    "126": 1.0,
+    "127": 1.0,
+    "128": 1.0,
+    "129": 1.0,
+    "130": 1.0,
+    "131": 1.0,
+    "132": 1.0,
+    "133": 1.0,
+    "134": 1.0,
+    "135": 1.0,
+    "136": 1.0,
+    "137": 1.0,
+    "138": 1.0,
+    "139": 1.0,
+    "140": 1.0,
+    "141": 1.0,
+    "142": 1.0,
+    "143": 1.0
+  },
+  "gods": [
+    {
+      "id": "utils_errors_apperror",
+      "label": "AppError",
+      "degree": 64
+    },
+    {
+      "id": "generationout",
+      "label": "GenerationOut",
+      "degree": 47
+    },
+    {
+      "id": "bot_i18n_t",
+      "label": "t()",
+      "degree": 35
+    },
+    {
+      "id": "new_ui_prototypedata_tt",
+      "label": "tt()",
+      "degree": 34
+    },
+    {
+      "id": "new_webapp_core_uselang",
+      "label": "useLang()",
+      "degree": 28
+    },
+    {
+      "id": "db_models_user",
+      "label": "User",
+      "degree": 25
+    },
+    {
+      "id": "backend_app_api_routes_models_py_aimodel",
+      "label": "AIModel",
+      "degree": 23
+    },
+    {
+      "id": "routes_generations_create_generation",
+      "label": "create_generation()",
+      "degree": 19
+    },
+    {
+      "id": "services_language_get_user_language",
+      "label": "get_user_language()",
+      "degree": 19
+    },
+    {
+      "id": "lib_api_api",
+      "label": "api",
+      "degree": 17
+    }
+  ],
+  "surprises": [
+    {
+      "source": "InlineKeyboardMarkup",
+      "target": "AIModel",
+      "source_files": [
+        "bot/handlers/photo.py",
+        "backend/app/api/routes/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `InlineKeyboardMarkup` unexpectedly reaches hub `AIModel`"
+    },
+    {
+      "source": "InlineKeyboardMarkup",
+      "target": "AIModel",
+      "source_files": [
+        "bot/handlers/video.py",
+        "backend/app/api/routes/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `InlineKeyboardMarkup` unexpectedly reaches hub `AIModel`"
+    },
+    {
+      "source": "Message",
+      "target": "AIModel",
+      "source_files": [
+        "bot/handlers/photo.py",
+        "backend/app/api/routes/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "Message",
+      "target": "AIModel",
+      "source_files": [
+        "bot/handlers/video.py",
+        "backend/app/api/routes/models.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    },
+    {
+      "source": "_filename_from_url()",
+      "target": "Path",
+      "source_files": [
+        "backend/app/services/telegram_sender.py",
+        "bot/services/start_message.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "calls",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities"
+    }
+  ],
+  "tokens": {
+    "input": 2552149,
+    "output": 84960
+  }
+}

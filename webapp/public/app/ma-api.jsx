@@ -1,6 +1,5 @@
 /* ============ API adapter — connects to api.hubicx.ru ============ */
 (function() {
-  function apiBase() { var h = host(); if (h === 'webapp.hubicx.ru' || h === 'app.hubicx.ru' || h === 'admin.hubicx.ru') return ''; return 'https://api.hubicx.ru'; }
   var TIMEOUT_MS = 12000;
   var UPLOAD_TIMEOUT_MS = 120000;
   var TELEGRAM_ERROR = 'Откройте приложение через Telegram-бота';
@@ -11,6 +10,7 @@
     try { return String(window.location && window.location.hostname || '').toLowerCase(); } catch (e) { return ''; }
   }
 
+  function apiBase() { var h = host(); if (h === 'webapp.hubicx.ru' || h === 'app.hubicx.ru' || h === 'admin.hubicx.ru') return ''; return 'https://api.hubicx.ru'; }
   function isMiniAppHost() {
     if (window.HUBICX_APP_CONTEXT === 'telegram' || host() === 'webapp.hubicx.ru') return true;
     if (window.HUBICX_APP_CONTEXT === 'auto') {

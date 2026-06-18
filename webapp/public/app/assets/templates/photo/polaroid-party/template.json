@@ -1,0 +1,22 @@
+{
+  "code": "polaroid-party",
+  "title": "Полароид с вечеринки",
+  "type": "photo",
+  "category": "Женское",
+  "inputLabel": "Фото лица девушки",
+  "requiredInputs": [
+    {
+      "name": "image_url",
+      "label": "Фото лица девушки",
+      "type": "image",
+      "required": true,
+      "max_files": 1
+    }
+  ],
+  "cover": "cover.jpg",
+  "examples": [
+    "example-1.jpg",
+    "example-2.jpg"
+  ],
+  "prompt": "Use the uploaded woman as a strict identity reference. Preserve her exact face, facial features, bone structure, skin tone, body shape, figure, proportions, and overall appearance as accurately as the reference photo allows. Keep her fully recognizable as the same person. Do not change her identity, do not replace her with a different face or different body type. If the reference photo shows only part of the body, preserve the visible proportions and infer the rest as consistently as possible.\n\nA physical Polaroid photograph lying on a messy party table. In the photo: a close-up of the woman's face, she is sticking out her tongue playfully, and a friend's hand is drawing the number \"30\" on her cheek with bright blue glitter gel. She wears butterfly hair clips and small silver hoop earrings. The photo itself has the classic white border, slightly off-center. Around the Polaroid: spilled glitter, a lipstick mark, a disposable camera, and a rhinestone-studded Motorola Razr phone. Style: authentic, candid, nostalgic party snapshot. Preserve her genuine, playful expression."
+}

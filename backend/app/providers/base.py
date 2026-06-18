@@ -33,6 +33,9 @@ class BaseProvider:
     async def generate_video(self, model_id: str, prompt: str | None, input_file_url: str | None, params: dict[str, Any] | None = None) -> ProviderResult:
         return ProviderResult(False, error="Video generation is not supported by this provider")
 
+    async def generate_video_v2(self, model_id: str, provider_input: dict[str, Any]) -> ProviderResult:
+        return ProviderResult(False, error="Video generation v2 is not supported by this provider")
+
     async def get_status(self, provider_task_id: str) -> ProviderResult:
         return ProviderResult(False, error="Status polling is not supported by this provider")
 

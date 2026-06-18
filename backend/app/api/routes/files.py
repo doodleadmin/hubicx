@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 MAX_FILE_SIZE = 20 * 1024 * 1024
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/tiff",
+    "image/heic", "image/heif",
     "video/mp4", "video/webm", "video/quicktime",
     "audio/mpeg", "audio/wav", "audio/ogg",
 }
@@ -68,6 +69,8 @@ def _extension_from_content_type(content_type: str) -> str:
         "image/gif": ".gif",
         "image/bmp": ".bmp",
         "image/tiff": ".tiff",
+        "image/heic": ".heic",
+        "image/heif": ".heif",
         "video/mp4": ".mp4",
         "video/webm": ".webm",
         "video/quicktime": ".mov",

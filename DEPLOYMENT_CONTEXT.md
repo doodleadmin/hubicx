@@ -1,260 +1,667 @@
 # Deployment Context
 
-This file is a handoff note for continuing work in another chat.
+Нужно реализовать video generation в production ai_aggregator. Оплаты пока не трогаем, платежи будут в самом конце.
 
-## Current Project
+Контекст проекта:
+- Production host: root@62.113.109.73
+- Path: /opt/ai_aggregator
+- API: https://api.hubicx.ru
+- WebApp: https://app.hubicx.ru
+- Bot: @Hubicx_bot
 
-- Project: `ai_aggregator`
-- Local path: `F:\dev\generative_bot\ai_aggregator`
-- Current active task: backend-trusted dynamic pricing for schema-driven generation forms
-- Important: production server/path for `ai_aggregator` is not confirmed yet.
+Уже работает:
+- Telegram WebApp initData auth
+- schema-driven forms через ai_models.form_schema
+- backend validation и whitelist provider_input
+- dynamic pricing
+- Fal image generation
+- OpenRouter text generation
+- file upload в Beget S3
+- output files сохраняются в Beget S3
+- history
+- send-to-chat через Telegram sendDocument
+- video empty state сейчас показывает “Видео-модели скоро появятся”
 
-## Unrelated Bot Server
+Цель:
+Добавить полноценные video-модели:
+1. Text-to-video
+2. Image-to-video
+3. Позже reference-to-video / pro video
 
-The server below is for the separate Telegram casino bot/WebApp, not confirmed as the `ai_aggregator` production host.
+Оплату не трогать.
+Пополнение баланса пока только вручную/админом.
 
-- Server: `155.212.140.236`
-- Domain: `insidemode.store`
-- Bot backend path: `/opt/bot/`
-- SQLite DB: `/opt/bot/data.sql`
-- Frontend path: `/var/www/insidemode.store/`
-- Service: `bot`
-- Nginx proxies:
-  - `/api/` -> `127.0.0.1:8080`
-  - `/webhook` -> `127.0.0.1:8080`
-  - `/postback` -> `127.0.0.1:8080`
-- SSL: Let's Encrypt is installed and working for `insidemode.store`
-- Webhook: `https://insidemode.store/webhook`
+ВАЖНО:
+- Не трогать платежи.
+- Не ломать image/text flows.
+- Не трогать Telegram auth/menu flow.
+- Не запускать seed --force.
+- Все модели добавлять через safe seed/upsert.
+- Секреты не выводить.
+- Все video provider payloads должны идти через form_schema validation.
+- Нельзя прокидывать произвольный frontend payload напрямую в Fal.
+- Video output нужно сохранять в Beget S3 так же, как image output.
+- Send-to-chat должен отправлять видео как document/file, не как compressed video.
 
-## Bot Server Deploy Pattern
+==================================================
+1. ИЗУЧИТЬ И ПОДТВЕРДИТЬ VIDEO ENDPOINTS
+==================================================
 
-Use this only for the separate `/opt/bot` project:
+Нужно проверить реальные Fal docs/API schemas перед финальным seed.
 
-```powershell
-scp "F:\dev\bot_1w\bot\main.py" root@155.212.140.236:/opt/bot/main.py
-scp "F:\dev\bot_1w\bot\db_sql.py" root@155.212.140.236:/opt/bot/db_sql.py
-ssh root@155.212.140.236 "systemctl restart bot && sleep 16 && systemctl is-active bot"
-```
+Минимально добавить и проверить:
 
-Frontend deploy for that bot:
+A. Seedance 2.0 Text to Video
+provider_model_id:
+bytedance/seedance-2.0/text-to-video
 
-```powershell
-npm run build
-ssh root@155.212.140.236 "rm -rf /var/www/insidemode.store/static /var/www/insidemode.store/index.html /var/www/insidemode.store/asset-manifest.json"
-scp -r "F:\dev\bot_1w\build\*" root@155.212.140.236:/var/www/insidemode.store/
-```
+B. Seedance 2.0 Image to Video Fast
+provider_model_id:
+bytedance/seedance-2.0/fast/image-to-video
 
-## ai_aggregator Dynamic Pricing Requirements
+C. Seedance 2.0 Image to Video
+provider_model_id:
+bytedance/seedance-2.0/image-to-video
 
-Goal: final generation cost must be calculated only on the backend from validated form inputs and `AIModel.form_schema.price_rules`.
+D. Kling 2.1 Standard Image to Video
+provider_model_id:
+fal-ai/kling-video/v2.1/standard/image-to-video
 
-Rules:
+E. Veo 3.1 Text to Video — добавить как inactive/pro, пока не тестировать без осознанного баланса
+provider_model_id:
+fal-ai/veo3.1
 
-- Do not trust frontend price.
-- Frontend can show preview only.
-- `AIModel.price_credits` remains the base/default fixed price.
-- If no `price_rules`, keep old behavior: use `AIModel.price_credits`.
-- `GenerationTask.cost_credits` must store the final calculated cost.
-- Balance checks, balance deductions, transactions, and refunds must use the final calculated cost.
-- Refunds should use exact `task.cost_credits`.
-- Do not touch Telegram auth/menu flow.
-- Do not run `seed --force` unless explicitly needed.
-- Do not expose secrets.
+F. Veo 3.1 Image to Video — добавить как inactive/pro, пока не тестировать без осознанного баланса
+provider_model_id:
+fal-ai/veo3.1/image-to-video
 
-Accepted `price_rules` format:
+Если какой-то endpoint отличается в реальной документации Fal — использовать фактический provider_model_id из документации, а не этот список.
 
-```json
+В отчёте указать подтверждённые endpoint IDs и какие модели активированы.
+
+==================================================
+2. ДОБАВИТЬ VIDEO MODELS В REGISTRY
+==================================================
+
+Обновить backend/seed_models.py.
+
+Добавить активные модели:
+
+1. seedance_2_t2v
+title: Seedance 2 Text to Video
+category: video
+provider: fal
+provider_model_id: bytedance/seedance-2.0/text-to-video
+task_type: video
+input_type: text
+price_credits: например 250
+is_active: true
+
+2. seedance_2_i2v_fast
+title: Seedance 2 Fast Image to Video
+category: video
+provider: fal
+provider_model_id: bytedance/seedance-2.0/fast/image-to-video
+task_type: video
+input_type: image
+price_credits: например 180
+is_active: true
+
+3. seedance_2_i2v
+title: Seedance 2 Image to Video
+category: video
+provider: fal
+provider_model_id: bytedance/seedance-2.0/image-to-video
+task_type: video
+input_type: image
+price_credits: например 250
+is_active: true
+
+4. kling_21_i2v
+title: Kling 2.1 Image to Video
+category: video
+provider: fal
+provider_model_id: fal-ai/kling-video/v2.1/standard/image-to-video
+task_type: video
+input_type: image
+price_credits: например 220
+is_active: true
+
+Добавить inactive/pro модели:
+
+5. veo_31_t2v
+title: Veo 3.1 Text to Video
+category: video
+provider: fal
+provider_model_id: fal-ai/veo3.1
+task_type: video
+input_type: text
+price_credits: например 800+
+is_active: false или hidden_until_ready
+
+6. veo_31_i2v
+title: Veo 3.1 Image to Video
+category: video
+provider: fal
+provider_model_id: fal-ai/veo3.1/image-to-video
+task_type: video
+input_type: image
+price_credits: например 800+
+is_active: false или hidden_until_ready
+
+Важное:
+- Если balance у пользователя маленький, active video models всё равно могут открываться, но generation должна показывать insufficient balance.
+- Не активировать непроверенные placeholder модели.
+
+==================================================
+3. FORM_SCHEMA ДЛЯ VIDEO
+==================================================
+
+Для всех video моделей form_schema должен содержать:
+- version
+- result_type: video
+- submit_label
+- schema_source
+- fields
+- price_rules
+
+Пример schema_source:
 {
-  "base": 80,
-  "multipliers": [
-    {
-      "field": "resolution",
-      "values": {
-        "1K": 1,
-        "2K": 2,
-        "4K": 4
-      }
-    },
-    {
-      "field": "num_images",
-      "mode": "multiply_by_value"
-    }
-  ],
-  "additions": [
-    {
-      "field": "enable_web_search",
-      "values": {
-        "true": 20
-      }
-    }
-  ],
-  "min": 1,
-  "round": "ceil"
+  "provider": "fal",
+  "provider_model_id": "...",
+  "verified_at": "2026-06-03",
+  "verified_by": "manual_docs_api",
+  "notes": "Video endpoint schema verified before activation"
 }
-```
 
-Pricing rules:
+==================================================
+4. SEEDANCE 2 TEXT TO VIDEO FORM_SCHEMA
+==================================================
 
-- `base` comes from `price_rules.base`, otherwise from `model.price_credits`.
-- `multipliers` multiply the running cost.
-- `mode: "multiply_by_value"` multiplies by the numeric input value.
-- `additions` add to the running cost.
-- `round: "ceil"` is the default.
-- Final cost is an integer.
-- Minimum final cost is at least `1`.
+code: seedance_2_t2v
 
-## ai_aggregator Files Already Changed
+Базовые поля:
+- prompt
+  type: textarea
+  provider_key: prompt
+  required: true
+  label: Промт
+  placeholder: Опишите сцену, движение камеры, стиль и атмосферу
 
-These changes were started locally in `F:\dev\generative_bot\ai_aggregator`:
+- aspect_ratio
+  type: select
+  provider_key: aspect_ratio
+  required: false
+  default: 16:9
+  options:
+    16:9
+    9:16
+    1:1
+  Если docs дают другие значения — заменить на реальные.
 
-- `backend/app/services/pricing.py`
-  - Added backend pricing calculator.
-  - Functions:
-    - `calculate_generation_cost_breakdown(model, validated_inputs)`
-    - `calculate_generation_cost(model, validated_inputs)`
-- `backend/app/services/generations.py`
-  - Model generation path now calculates final price after input validation.
-  - Template pricing remains unchanged.
-- `backend/app/api/routes/models.py`
-  - Added authenticated endpoint:
-    - `POST /api/models/{model_code}/price-preview`
-  - Validates inputs and returns backend-calculated preview.
-- `webapp/lib/types.ts`
-  - Added `PricePreview` type.
-- `webapp/lib/api.ts`
-  - Added `api.modelPricePreview(code, inputs)`.
-- `webapp/components/ModelForm.tsx`
-  - Added 500ms debounced price preview.
-  - Shows final backend preview cost when available.
-  - Shows `Стоимость: от {base} 🪙` when preview is incomplete/unavailable.
-  - Does not block submit on preview failure.
-  - Disables submit only when a known preview/fixed cost exceeds balance.
-- `backend/seed_models.py`
-  - Updated `price_rules` for dynamic models.
+- duration
+  type: select или number
+  provider_key: duration
+  default: 5
+  options:
+    5
+    10
+  Если docs дают другие значения — заменить на реальные.
 
-## ai_aggregator Model Pricing Plan
+- resolution
+  type: select
+  provider_key: resolution
+  default: 720p
+  options:
+    720p
+    1080p
+  Если docs дают другие значения — заменить на реальные.
 
-Dynamic pricing models:
+Advanced:
+- seed number optional
+- negative_prompt textarea optional, только если endpoint поддерживает
+- enable_audio switch default true/false, только если endpoint поддерживает
 
-- `nano_banana_2`
-  - base `40`
-  - `num_images` multiply by value
-- `nano_banana_pro`
-  - base `80`
-  - `resolution`: `1K=1`, `2K=2`, `4K=4`
-  - `num_images` multiply by value
-  - `enable_web_search=true` adds `20`
-- `nano_banana_edit`
-  - base `60`
-  - `num_images` multiply by value
-- `flux_schnell`
-  - base `30`
-  - `num_images` multiply by value
-- `seedream`
-  - base `50`
-  - `image_size`: `auto_2K=2`, `auto_4K=4`
-  - `num_images` multiply by value
-- `z_image`
-  - base current price / `25`
-  - `num_images` multiply by value
+price_rules:
+base: 250
+multipliers:
+- duration:
+  5: 1
+  10: 2
+- resolution:
+  720p: 1
+  1080p: 1.5 или 2
+round: ceil
+min: 1
 
-Fixed-price models:
+==================================================
+5. SEEDANCE 2 IMAGE TO VIDEO FAST FORM_SCHEMA
+==================================================
 
-- `ai_chat`
-- `prompt_helper`
+code: seedance_2_i2v_fast
 
-## ai_aggregator Still To Do
+Поля:
+- image_url
+  name: image_url или image_urls
+  type: file
+  provider_key: image_url
+  required: true
+  accept: image/*
+  max_size_mb: 20
+  label: Стартовый кадр
 
-Continue from here:
+Если endpoint реально требует image_urls array — использовать provider_key image_urls и type files max_files 1.
 
-1. Patch `backend/scripts/validate_model_schemas.py`.
-   - Validate `price_rules.base` is number > 0 if present.
-   - Validate `multipliers` is a list.
-   - Validate every multiplier has `field` and field exists in schema.
-   - Validate multiplier `values` are numeric.
-   - Validate `mode: "multiply_by_value"` only applies to `number` fields.
-   - Validate `additions` is a list.
-   - Validate addition `values` are numeric.
-   - Validate `min` is positive if present.
-   - Validate `round` is one of `ceil`, `floor`, `round`.
-2. Add `backend/scripts/test_pricing.py`.
-   - Test examples:
-     - `nano_banana_pro`, `1K x 1 = 80`
-     - `nano_banana_pro`, `2K x 1 = 160`
-     - `nano_banana_pro`, `4K x 1 = 320`
-     - `nano_banana_pro`, `2K x 2 = 320`
-     - `flux_schnell`, `num_images=2 -> 60`
-     - fixed `ai_chat -> 2`
-3. Run local checks.
-4. Fix any issues.
-5. Ask user for actual `ai_aggregator` production host/path before deploying.
+- prompt
+  type: textarea
+  provider_key: prompt
+  required: true
+  label: Описание движения
+  placeholder: Например: камера медленно приближается, персонаж поворачивает голову, мягкий кинематографичный свет
 
-## Local Checks For ai_aggregator
+- duration
+  default 5
+  options 5/10, если поддерживается
 
-Run from:
+- aspect_ratio
+  default auto или 16:9, если поддерживается
 
-```powershell
-cd F:\dev\generative_bot\ai_aggregator
-```
+Advanced:
+- seed optional
+- negative_prompt optional, если поддерживается
+- motion_strength / camera_motion, только если docs подтверждают
 
-Checks:
+price_rules:
+base: 180
+duration multiplier
+resolution multiplier, если есть
 
-```powershell
-py -3 -m compileall backend bot worker
-py -3 -c "import backend.app.main; print('backend import ok')"
-npm run build
-docker compose config --quiet
-```
+==================================================
+6. SEEDANCE 2 IMAGE TO VIDEO FORM_SCHEMA
+==================================================
 
-After adding pricing test:
+code: seedance_2_i2v
 
-```powershell
-py -3 -m backend.scripts.test_pricing
-```
+Похоже на fast, но цена выше:
+base: 250
 
-## Intended Production Deploy For ai_aggregator
+Если endpoint поддерживает start_image_url + end_image_url:
+- start_image_url file required
+- end_image_url file optional
+Или:
+- image_url file required
+- end_image_url file optional
 
-Do not run this until the real production host/path is confirmed.
+Точные provider_key брать из docs.
 
-Expected production path from original requirement:
+==================================================
+7. KLING 2.1 IMAGE TO VIDEO FORM_SCHEMA
+==================================================
 
-```bash
+code: kling_21_i2v
+
+Поля:
+- image_url
+  type: file
+  provider_key: image_url
+  required: true
+  accept: image/*
+  label: Изображение
+
+- prompt
+  type: textarea
+  provider_key: prompt
+  required: false или true по docs
+  label: Описание движения
+
+- duration
+  select
+  options по docs, например 5/10, но проверить
+
+- aspect_ratio
+  select, если endpoint поддерживает
+
+Advanced:
+- negative_prompt, если поддерживает
+- cfg_scale/guidance_scale, если поддерживает
+- seed, если поддерживает
+
+price_rules:
+base: 220
+duration multiplier
+
+==================================================
+8. VEO 3.1 PRO MODELS
+==================================================
+
+Пока добавить как inactive, если docs подтверждены:
+
+veo_31_t2v
+veo_31_i2v
+
+Причина:
+- дорогая модель
+- перед включением нужно осознанно настроить price_rules и баланс
+- можно показать в видео-разделе как Coming Soon / Pro Soon
+
+Если добавляешь inactive:
+- не должно открываться как active generation model
+- можно показывать в боте как disabled “скоро” или не показывать
+
+==================================================
+9. ОБНОВИТЬ BOT VIDEO MENU
+==================================================
+
+Сейчас Видео показывает empty state.
+
+Нужно сделать:
+- если active video models есть, показать список кнопок WebAppInfo
+- если active video models нет, оставить empty state
+
+Кнопки:
+🎬 Seedance 2 Text to Video
+🖼 Seedance 2 Fast I2V
+🎞 Seedance 2 I2V
+🎥 Kling 2.1 I2V
+⭐ Veo 3.1 — скоро, если inactive/coming soon
+
+Каждая active кнопка должна быть WebAppInfo:
+https://app.hubicx.ru/generate?model=<code>
+
+Не использовать обычный url=.
+
+Inactive кнопки:
+- либо callback “coming_soon:veo_31”
+- либо просто не показывать
+Лучше показать “скоро” отдельным callback, чтобы пользователь понимал, что раздел развивается.
+
+==================================================
+10. BACKEND VALIDATION ДЛЯ VIDEO INPUT FILES
+==================================================
+
+Уже есть /api/files/upload и ownership validation.
+
+Проверить:
+- file fields для video image-to-video принимают только image/*
+- если позже будет video-to-video, то video/*
+- max size: image 20MB
+- video input, если будет, 100MB или меньше
+- purpose=input
+- чужой file_id rejected
+- nonexistent file_id rejected
+- extra fields rejected
+
+Для type=file:
+- frontend может отправлять file_id
+- backend резолвит file_id в url
+- provider_input получает image_url или image_urls, в зависимости от schema provider_key
+
+Для type=files:
+- frontend отправляет массив file_ids
+- backend резолвит в массив URL
+- max_files соблюдается
+
+==================================================
+11. WORKER: VIDEO OUTPUT PARSING
+==================================================
+
+Проверить FalProvider / worker output parsing.
+
+Для video endpoints Fal может вернуть:
+- video.url
+- videos[0].url
+- output.video.url
+- result.url
+
+Нужно поддержать основные варианты:
+- если task_type=video, искать video URL в:
+  result["video"]["url"]
+  result["videos"][0]["url"]
+  result["output"]["video"]["url"]
+  result["url"]
+  result["data"]["video"]["url"]
+
+Если video URL найден:
+- скачать файл
+- определить content_type video/mp4, если возможно
+- загрузить в Beget S3:
+  generations/{user_id}/{task_id}/{uuid}.mp4
+- generation_tasks.output_file_url = S3 URL
+- files row purpose=output, mime_type=video/mp4
+- status completed
+
+Если не найден:
+- task refunded/failed с понятной error:
+  "Provider completed but no video URL found"
+
+Не ломать image parsing.
+
+==================================================
+12. WEBAPP: VIDEO UI
+==================================================
+
+Dynamic form уже есть, но нужно проверить UX для video:
+
+На /generate?model=seedance_2_i2v_fast:
+- upload image показывается первым
+- preview загруженного изображения
+- remove image
+- prompt
+- duration/resolution/aspect
+- advanced свернут
+
+На completed video:
+- показывать <video controls playsInline>
+- кнопка “Открыть оригинал”
+- кнопка “📩 Отправить файлом в чат”
+- не пытаться показывать video как image
+
+History:
+- video tasks должны показывать video preview или video icon
+- send-to-chat работает
+
+==================================================
+13. DYNAMIC PRICING ДЛЯ VIDEO
+==================================================
+
+Для video моделей price_rules обязательны.
+
+Базовая логика:
+- duration 5 sec = 1x
+- duration 10 sec = 2x
+- resolution 720p = 1x
+- resolution 1080p = 2x
+- Pro models ещё дороже
+
+Если точные провайдерские цены известны из docs, адаптировать credits так, чтобы не уйти в минус.
+
+Пока нет платежей, но цена должна быть высокой:
+- text-to-video не меньше 200 credits
+- image-to-video не меньше 180 credits
+- pro video не меньше 800 credits
+
+==================================================
+14. АДМИН-ПОПОЛНЕНИЕ ДЛЯ ТЕСТА
+==================================================
+
+Так как оплаты пока нет, для теста нужно пополнить баланс пользователя вручную.
+
+User Telegram ID:
+1113930428
+
+Проверить баланс:
+
+docker compose exec postgres psql -U postgres -d ai_aggregator -c "
+select telegram_id, username, balance_credits
+from users
+where telegram_id = 1113930428;
+"
+
+Если нужно, добавить тестовые кредиты:
+
+docker compose exec postgres psql -U postgres -d ai_aggregator -c "
+update users
+set balance_credits = balance_credits + 1000
+where telegram_id = 1113930428;
+"
+
+Если есть transaction table и известная структура, добавить transaction record. Если нет — просто update balance и указать это в отчёте.
+
+==================================================
+15. SAFE DEPLOY
+==================================================
+
+Перед production deploy сделать DB backup:
+
+mkdir -p /opt/backups/ai_aggregator
+
+docker compose exec -T postgres pg_dump -U postgres -d ai_aggregator > /opt/backups/ai_aggregator/backup_before_video_$(date +%F_%H-%M-%S).sql
+
+Deploy:
+
 cd /opt/ai_aggregator
-```
-
-Expected commands:
-
-```bash
 git pull
 docker compose config --quiet
-docker compose up -d --build backend webapp worker
+docker compose up -d --build backend bot webapp worker
 docker compose exec backend alembic -c backend/alembic.ini upgrade head
 docker compose exec backend python -m backend.seed
 docker compose exec backend python -m backend.scripts.validate_model_schemas
 docker compose exec backend python -m backend.scripts.test_pricing
-docker compose restart backend webapp worker
-```
+docker compose restart backend bot webapp worker
 
-## Production Manual Tests For ai_aggregator
+Проверить:
+curl -s https://api.hubicx.ru/health
+curl -I https://app.hubicx.ru
+docker compose ps
+docker compose logs --tail=200 backend
+docker compose logs --tail=200 worker
+docker compose logs --tail=150 bot
+docker compose logs --tail=150 webapp
 
-After deploy, test in Telegram WebApp:
+==================================================
+16. PRODUCTION TESTS
+==================================================
 
-- Nano Banana Pro `1K`, `1 image` should show and charge `80`.
-- Nano Banana Pro `2K`, `1 image` should show and charge `160`.
-- Nano Banana Pro `4K`, `1 image` should show and charge `320`.
-- Nano Banana Pro `2K`, `2 images` should show and charge `320`.
-- Insufficient balance should disable frontend button when preview is known.
-- Backend must still reject insufficient balance even if frontend is modified.
-- Generate a cheap `flux_schnell` task and verify completion.
-- History should show actual `cost_credits`.
-- Failed/refunded task should refund exact `task.cost_credits`.
+Через Telegram:
 
-## Security Notes
+A. Проверить video menu:
+/start → Видео
 
-- Frontend-sent price must be ignored.
-- Existing `validate_inputs_against_schema` rejects unknown input keys, so extra `price_credits` in `inputs` should fail validation if it is not a schema field.
-- Backend final cost must be calculated after schema input validation.
-- Balance check must use final calculated cost.
-- Transaction amount must use final calculated cost.
-- `GenerationTask.cost_credits` must use final calculated cost.
-- Refund must use `task.cost_credits`.
+Ожидаемо:
+- есть реальные active video модели
+- нет пустого списка
+- Veo, если inactive, показывается как “скоро” или не показывается
+
+B. Seedance Text to Video:
+- открыть модель
+- проверить price preview
+- prompt:
+  A cinematic shot of a futuristic city at sunset, slow camera push-in, realistic lighting
+- duration 5 sec
+- resolution 720p
+- generate
+Ожидаемо:
+- completed или refunded с понятной provider error
+- если completed: output_file_url Beget S3 .mp4
+- video preview работает
+- history работает
+- send-to-chat работает
+
+C. Seedance Fast Image to Video:
+- upload image
+- prompt:
+  slow cinematic camera push-in, subtle motion, realistic lighting
+- duration 5 sec
+- generate
+Ожидаемо:
+- provider_input содержит image_url или image_urls
+- completed
+- video output saved to S3
+- send-to-chat works
+
+D. Kling I2V:
+- upload image
+- prompt
+- generate
+Ожидаемо:
+- completed или refunded с provider error
+- если ошибка schema/payload — поправить provider_key/schema
+
+E. Security:
+- extra field rejected 400
+- invalid enum rejected 400
+- missing required image rejected 400
+- nonexistent/foreign file_id rejected
+- insufficient balance handled
+
+F. History:
+- video tasks show actual cost_credits
+- video preview or icon
+- send-to-chat from history works, if implemented there
+
+==================================================
+17. НЕ ЗАБЫТЬ
+==================================================
+
+Если provider returns "still in progress" как раньше было с Nano:
+- не считать это final error
+- polling должен продолжаться
+- если timeout — refunded с понятной ошибкой
+
+Для video генерации timeout должен быть больше, чем для image:
+- image polling timeout: можно оставить текущий
+- video polling timeout: увеличить, например 10-20 минут
+- poll interval: 5-10 секунд
+
+Не держать HTTP request открытым всё это время:
+- task создаётся быстро
+- worker делает polling
+- WebApp polling status через backend
+
+==================================================
+18. FINAL REPORT
+==================================================
+
+В отчёте указать:
+
+1. Какие video models добавлены:
+   - code
+   - title
+   - provider_model_id
+   - active/inactive
+   - price/base price
+
+2. Какие form_schema поля подтверждены по docs.
+
+3. Какие изменения в:
+   - seed_models.py
+   - bot video menu
+   - worker output parsing
+   - FalProvider
+   - WebApp video UI
+
+4. Backup path.
+
+5. Баланс пользователя до/после тестового top-up.
+
+6. Результаты тестов:
+   - Seedance T2V
+   - Seedance Fast I2V
+   - Seedance I2V
+   - Kling I2V
+   - Veo inactive/coming soon
+
+7. Для completed video:
+   - task_id
+   - cost_credits
+   - S3 output_file_url
+   - files row created
+   - send-to-chat success
+
+8. Для failed/refunded:
+   - exact provider error без секретов
+   - refund exact cost_credits
+
+9. Security tests result.
+
+10. Остались ли модели/поля, которые нужно доаудитить.

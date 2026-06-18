@@ -110,7 +110,10 @@ async def _process_generation_task(task_id: int) -> None:
             else:
                 result = await provider.generate_image(provider_model_id, prompt, task.input_file_url, provider_params)
         elif task.task_type == "video":
-            result = await provider.generate_video(provider_model_id, prompt, task.input_file_url, provider_params)
+            if task.provider_input:
+                result = await provider.generate_video_v2(provider_model_id, task.provider_input)
+            else:
+                result = await provider.generate_video(provider_model_id, prompt, task.input_file_url, provider_params)
         else:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
 
@@ -150,6 +153,17 @@ def _extension_from_content_type(content_type: str, url: str) -> str:
     return suffix or ".bin"
 
 
+def _normalize_generated_content_type(task_type: str, content_type: str, ext: str) -> str:
+    clean_content_type = content_type.split(";", 1)[0].strip().lower()
+    if task_type != "video" or clean_content_type not in {"", "application/octet-stream", "binary/octet-stream"}:
+        return content_type
+    if ext == ".webm":
+        return "video/webm"
+    if ext == ".mp4":
+        return "video/mp4"
+    return content_type
+
+
 async def persist_generated_file(session: AsyncSession, task: GenerationTask, provider_url: str | None) -> str | None:
     if not provider_url:
         return None
@@ -163,12 +177,14 @@ async def persist_generated_file(session: AsyncSession, task: GenerationTask, pr
             response.raise_for_status()
         content_type = response.headers.get("content-type", "application/octet-stream")
         ext = _extension_from_content_type(content_type, provider_url)
+        content_type = _normalize_generated_content_type(task.task_type, content_type, ext)
         key = f"generations/{task.user_id}/{task.id}/{uuid4().hex}{ext}"
         stored = await storage_service.upload_bytes(response.content, key, content_type)
         session.add(
             File(
                 user_id=task.user_id,
                 file_type=task.task_type,
+                purpose="output",
                 storage_url=stored.url,
                 mime_type=stored.mime_type,
                 size_bytes=stored.size_bytes,

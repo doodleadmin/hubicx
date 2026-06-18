@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -40,7 +41,21 @@ def serialize_task(task: GenerationTask) -> GenerationOut:
 
 @router.post("", response_model=GenerationQueued)
 async def create_generation(payload: GenerationCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> GenerationQueued:
-    task = await create_generation_task(session, user, payload.model_code, payload.template_code, payload.prompt, payload.input_file_url, payload.params, payload.inputs)
+    task = None
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            task = await create_generation_task(session, user, payload.model_code, payload.template_code, payload.prompt, payload.input_file_url, payload.params, payload.inputs)
+            break
+        except Exception as exc:
+            if "deadlock detected" not in str(exc).lower():
+                raise
+            last_exc = exc
+            logger.warning("GENERATION_CREATE_DEADLOCK_RETRY user_id=%s attempt=%s", user.id, attempt + 1)
+            await session.rollback()
+            await asyncio.sleep(0.2 * (attempt + 1))
+    if task is None:
+        raise last_exc  # type: ignore[misc]
     process_generation_task.delay(task.id)
     return GenerationQueued(task_id=task.id, status=task.status)
 

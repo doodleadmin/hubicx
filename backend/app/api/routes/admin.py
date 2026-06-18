@@ -1,15 +1,17 @@
 import logging
+import secrets
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Header, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.app.api.deps import current_user
+from backend.app.config import settings
 from backend.app.api.routes.pricing import serialize_model_price, serialize_package
 from backend.app.db.models import AIModel, BalanceLedger, File, GenerationTask, ModelPricing, TokenPackage, Transaction, User
 from backend.app.db.session import get_session
 from backend.app.services.balance import admin_add_balance
+from backend.app.services.telegram_auth import get_current_user as telegram_current_user
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -21,11 +23,67 @@ def require_admin(user: User) -> None:
         raise AppError("forbidden", "Доступ запрещён", 403)
 
 
+def _admin_browser_token() -> str:
+    return settings.admin_panel_token or settings.admin_panel_password
+
+
+async def _fallback_admin_user(session: AsyncSession) -> User:
+    admin_ids = sorted(settings.admin_id_set)
+    stmt = select(User).where(User.is_admin.is_(True)).order_by(User.id)
+    if admin_ids:
+        stmt = select(User).where(User.telegram_id.in_(admin_ids)).order_by(User.id)
+    user = await session.scalar(stmt)
+    if not user:
+        raise AppError("admin_user_not_found", "Администратор не найден", 403)
+    if not user.is_admin:
+        user.is_admin = True
+        await session.commit()
+        await session.refresh(user)
+    return user
+
+
+async def current_admin_user(
+    session: AsyncSession = Depends(get_session),
+    authorization: str | None = Header(default=None),
+    x_telegram_init_data: str | None = Header(default=None),
+) -> User:
+    """Admin dependency: Telegram Mini App auth or browser Bearer token auth."""
+    if authorization and authorization.lower().startswith("bearer "):
+        configured = _admin_browser_token()
+        token = authorization[7:].strip()
+        if configured and secrets.compare_digest(token, configured):
+            return await _fallback_admin_user(session)
+        raise AppError("invalid_admin_token", "Неверный admin token", 401)
+    user = await telegram_current_user(session, authorization, x_telegram_init_data)
+    require_admin(user)
+    return user
+
+
+@router.post("/auth/login")
+async def browser_admin_login(payload: dict = Body(...), session: AsyncSession = Depends(get_session)) -> dict:
+    password = str(payload.get("password") or "")
+    if not settings.admin_panel_password:
+        raise AppError("admin_password_not_configured", "ADMIN_PANEL_PASSWORD не настроен", 503)
+    if not secrets.compare_digest(password, settings.admin_panel_password):
+        raise AppError("invalid_credentials", "Неверный пароль", 401)
+    token = _admin_browser_token()
+    if not token:
+        raise AppError("admin_token_not_configured", "ADMIN_PANEL_TOKEN не настроен", 503)
+    user = await _fallback_admin_user(session)
+    logger.info("ADMIN_BROWSER_LOGIN user_id=%s telegram_id=%s", user.id, user.telegram_id)
+    return {"ok": True, "token": token, "user": serialize_user(user)}
+
+
+@router.get("/auth/me")
+async def browser_admin_me(user: User = Depends(current_admin_user)) -> dict:
+    return {"ok": True, "user": serialize_user(user)}
+
+
 @router.get("/users")
 async def list_users(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     require_admin(user)
@@ -105,7 +163,7 @@ def serialize_task_admin(t: GenerationTask) -> dict:
 
 
 @router.post("/balance/{telegram_id}")
-async def add_balance(telegram_id: int, amount: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def add_balance(telegram_id: int, amount: int, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     if amount <= 0:
         raise AppError("invalid_amount", "Сумма должна быть положительной")
@@ -124,7 +182,7 @@ async def list_tasks(
     limit: int = Query(default=50, ge=1, le=200),
     status: str | None = Query(default=None),
     user_id: int | None = Query(default=None),
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     require_admin(user)
@@ -149,7 +207,7 @@ async def list_tasks(
 async def errors(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     require_admin(user)
@@ -180,7 +238,7 @@ async def errors(
 
 @router.get("/models")
 async def list_models_admin(
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
     require_admin(user)
@@ -202,7 +260,7 @@ async def list_models_admin(
 
 
 @router.post("/models/{code}/toggle")
-async def toggle_model(code: str, is_active: bool, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def toggle_model(code: str, is_active: bool, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     model = await session.scalar(select(AIModel).where(AIModel.code == code))
     if not model:
@@ -213,7 +271,7 @@ async def toggle_model(code: str, is_active: bool, user: User = Depends(current_
 
 
 @router.post("/models/{code}/price")
-async def update_model_price(code: str, price_credits: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def update_model_price(code: str, price_credits: int, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     if price_credits < 0:
         raise AppError("invalid_price", "Цена не может быть отрицательной")
@@ -226,7 +284,7 @@ async def update_model_price(code: str, price_credits: int, user: User = Depends
 
 
 @router.get("/models/{code}/schema")
-async def get_model_schema(code: str, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def get_model_schema(code: str, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     model = await session.scalar(select(AIModel).where(AIModel.code == code))
     if not model:
@@ -239,7 +297,7 @@ async def list_transactions(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
     user_id: int | None = Query(default=None),
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     require_admin(user)
@@ -273,7 +331,7 @@ async def list_files(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=50, ge=1, le=200),
     user_id: int | None = Query(default=None),
-    user: User = Depends(current_user),
+    user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     require_admin(user)
@@ -302,14 +360,14 @@ async def list_files(
 
 
 @router.get("/token-packages")
-async def list_token_packages(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> list[dict]:
+async def list_token_packages(user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> list[dict]:
     require_admin(user)
     result = await session.execute(select(TokenPackage).order_by(TokenPackage.sort_order, TokenPackage.id))
     return [serialize_package(pkg) for pkg in result.scalars().all()]
 
 
 @router.post("/token-packages")
-async def create_token_package(payload: dict = Body(...), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def create_token_package(payload: dict = Body(...), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     code = str(payload.get("code") or "").strip()
     title = str(payload.get("title") or "").strip()
@@ -336,7 +394,7 @@ async def create_token_package(payload: dict = Body(...), user: User = Depends(c
 
 
 @router.patch("/token-packages/{package_id}")
-async def update_token_package(package_id: int, payload: dict = Body(...), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def update_token_package(package_id: int, payload: dict = Body(...), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     pkg = await session.get(TokenPackage, package_id)
     if not pkg:
@@ -356,7 +414,7 @@ async def update_token_package(package_id: int, payload: dict = Body(...), user:
 
 
 @router.delete("/token-packages/{package_id}")
-async def delete_token_package(package_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def delete_token_package(package_id: int, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     pkg = await session.get(TokenPackage, package_id)
     if not pkg:
@@ -368,14 +426,14 @@ async def delete_token_package(package_id: int, user: User = Depends(current_use
 
 
 @router.get("/model-pricing")
-async def list_model_pricing(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> list[dict]:
+async def list_model_pricing(user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> list[dict]:
     require_admin(user)
     result = await session.execute(select(ModelPricing).order_by(ModelPricing.category, ModelPricing.model_code))
     return [serialize_model_price(price) for price in result.scalars().all()]
 
 
 @router.patch("/model-pricing/{model_code}")
-async def update_model_pricing(model_code: str, payload: dict = Body(...), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def update_model_pricing(model_code: str, payload: dict = Body(...), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     price = await session.scalar(select(ModelPricing).where(ModelPricing.model_code == model_code))
     if not price:
@@ -422,7 +480,7 @@ async def update_model_pricing(model_code: str, payload: dict = Body(...), user:
 
 
 @router.get("/users/{user_id}")
-async def get_admin_user(user_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def get_admin_user(user_id: int, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     target = await session.get(User, user_id)
     if not target:
@@ -431,7 +489,7 @@ async def get_admin_user(user_id: int, user: User = Depends(current_user), sessi
 
 
 @router.post("/users/{user_id}/balance-adjust")
-async def balance_adjust(user_id: int, payload: dict = Body(...), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def balance_adjust(user_id: int, payload: dict = Body(...), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     amount = int(payload.get("amount") or 0)
     reason = str(payload.get("reason") or "Admin adjustment")[:1000]
@@ -445,7 +503,7 @@ async def balance_adjust(user_id: int, payload: dict = Body(...), user: User = D
 
 
 @router.get("/users/{user_id}/balance-ledger")
-async def user_balance_ledger(user_id: int, page: int = Query(default=1, ge=1), limit: int = Query(default=50, ge=1, le=200), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def user_balance_ledger(user_id: int, page: int = Query(default=1, ge=1), limit: int = Query(default=50, ge=1, le=200), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     offset = (page - 1) * limit
     stmt = select(BalanceLedger).where(BalanceLedger.user_id == user_id)
@@ -455,12 +513,12 @@ async def user_balance_ledger(user_id: int, page: int = Query(default=1, ge=1), 
 
 
 @router.get("/generation-tasks")
-async def list_generation_tasks(page: int = Query(default=1, ge=1), limit: int = Query(default=50, ge=1, le=200), status: str | None = Query(default=None), user_id: int | None = Query(default=None), user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def list_generation_tasks(page: int = Query(default=1, ge=1), limit: int = Query(default=50, ge=1, le=200), status: str | None = Query(default=None), user_id: int | None = Query(default=None), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     return await list_tasks(page=page, limit=limit, status=status, user_id=user_id, user=user, session=session)
 
 
 @router.get("/generation-tasks/{task_id}")
-async def get_generation_task_admin(task_id: int, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+async def get_generation_task_admin(task_id: int, user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
     require_admin(user)
     task = await session.scalar(
         select(GenerationTask)

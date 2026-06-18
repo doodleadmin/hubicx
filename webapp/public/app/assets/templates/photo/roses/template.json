@@ -1,0 +1,21 @@
+{
+  "code": "roses",
+  "title": "Розы",
+  "type": "photo",
+  "category": "Женское",
+  "inputLabel": "Фото лица девушки",
+  "requiredInputs": [
+    {
+      "name": "image_url",
+      "label": "Фото лица девушки",
+      "type": "image",
+      "required": true,
+      "max_files": 1
+    }
+  ],
+  "cover": "cover.jpg",
+  "examples": [
+    "example-1.jpg"
+  ],
+  "prompt": "Use the uploaded woman as a strict identity reference. Preserve her exact face, facial features, bone structure, skin tone, body shape, figure, proportions, and overall appearance as accurately as the reference photo allows. Keep her fully recognizable as the same person. Do not change her identity, do not replace her with a different face or different body type. If the reference photo shows only part of the body, preserve the visible proportions and infer the rest as consistently as possible.\n\nCreate a glamorous romantic editorial photo from a high overhead top-down angle. The woman is sitting on a dark wooden floor, centered in the frame, surrounded tightly by many large lush bouquets of red and white roses arranged all around her in a luxurious decorative composition. She is wearing a black satin slip dress with thin spaghetti straps, elegant and form-fitting. Her pose is calm and feminine: seated on the floor, body facing forward, hands placed near her sides on the floor, head tilted slightly upward toward the camera. She is looking directly into the camera with a soft, calm, slightly dreamy and serious expression. Lighting should look like direct camera flash photography: bright frontal flash, crisp details, soft shadows, glossy highlights on the dress, high contrast, clean skin, and a stylish luxury bouquet aesthetic. The composition should feel symmetrical, rich, romantic, and visually dense with roses filling the frame. Keep the mood elegant, luxurious, and romantic. Make it look like a real flash photo taken at a celebration or intimate luxury event."
+}
