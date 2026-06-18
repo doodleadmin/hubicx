@@ -33,7 +33,7 @@ class OpenRouterProvider(BaseProvider):
             "temperature": (params or {}).get("temperature", 0.7),
         }
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=60, proxy=settings.proxy_url or None) as client:
                 response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers=self._auth_headers(),
@@ -67,7 +67,7 @@ class OpenRouterProvider(BaseProvider):
             "temperature": (params or {}).get("temperature", 0.7),
             "stream": True,
         }
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=120, proxy=settings.proxy_url or None) as client:
             async with client.stream(
                 "POST",
                 f"{self.base_url}/chat/completions",

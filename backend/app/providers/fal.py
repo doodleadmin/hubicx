@@ -10,20 +10,21 @@ from backend.app.providers.base import BaseProvider, ProviderResult, provider_mo
 class FalProvider(BaseProvider):
     base_url = "https://queue.fal.run"
 
-    async def _submit(self, model_id: str, payload: dict[str, Any]) -> ProviderResult:
+    async def _submit(self, model_id: str, payload: dict[str, Any], poll_attempts: int = 30, output_kind: str | None = None) -> ProviderResult:
         if not settings.fal_key:
             return ProviderResult(False, error="API key is missing: FAL_KEY")
         if not provider_model_configured(model_id):
             return ProviderResult(False, error="Model provider ID is not configured")
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=120, proxy=settings.proxy_url or None) as client:
                 response = await client.post(f"{self.base_url}/{model_id}", headers={"Authorization": f"Key {settings.fal_key}"}, json=payload)
                 response.raise_for_status()
                 data = response.json()
-                data = await self._wait_for_result(client, data)
+                data = await self._wait_for_result(client, data, poll_attempts=poll_attempts)
             output_url = self._extract_output_url(data)
             if not output_url:
-                return ProviderResult(False, error="Provider response has no output URL")
+                error = "Provider completed but no video URL found" if output_kind == "video" else "Provider response has no output URL"
+                return ProviderResult(False, error=error)
             return ProviderResult(True, provider_task_id=data.get("request_id") or data.get("id"), output_url=output_url)
         except httpx.TimeoutException:
             return ProviderResult(False, error="Provider timeout")
@@ -32,12 +33,12 @@ class FalProvider(BaseProvider):
         except Exception as exc:
             return ProviderResult(False, error=f"Provider error: {exc}")
 
-    async def _wait_for_result(self, client: httpx.AsyncClient, data: dict[str, Any]) -> dict[str, Any]:
+    async def _wait_for_result(self, client: httpx.AsyncClient, data: dict[str, Any], poll_attempts: int = 30) -> dict[str, Any]:
         response_url = data.get("response_url")
         if not response_url or self._extract_output_url(data):
             return data
 
-        for _ in range(30):
+        for _ in range(poll_attempts):
             await asyncio.sleep(2)
             response = await client.get(response_url, headers={"Authorization": f"Key {settings.fal_key}"})
             if response.status_code in {200, 201}:
@@ -66,7 +67,10 @@ class FalProvider(BaseProvider):
         payload = {"prompt": prompt or "", **(params or {})}
         if input_file_url:
             payload["image_url"] = input_file_url
-        return await self._submit(model_id, payload)
+        return await self._submit(model_id, payload, poll_attempts=300, output_kind="video")
+
+    async def generate_video_v2(self, model_id: str, provider_input: dict[str, Any]) -> ProviderResult:
+        return await self._submit(model_id, provider_input, poll_attempts=300, output_kind="video")
 
     async def get_status(self, provider_task_id: str) -> ProviderResult:
         if not settings.fal_key:
@@ -93,4 +97,8 @@ class FalProvider(BaseProvider):
                 return first.get("url")
             if isinstance(first, str):
                 return first
+        for key in ("data", "result"):
+            value = data.get(key)
+            if isinstance(value, dict):
+                return self._extract_output_url(value)
         return data.get("url") or data.get("output_url")
