@@ -1,13 +1,38 @@
 /* ============ Generation screen ============ */
 function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTemplate, onTab }) {
-  const { Ic, Star, TopNav, TEMPLATES } = window.MiraCore;
-  var pickedK = Math.floor(Math.random() * 6) + 1;
-  var pickedS = Math.floor(Math.random() * 5) + 1;
-  var pickedH = Math.floor(Math.random() * 4) + 1;
-  var klingSrc = 'assets/video/kling/' + pickedK + '.mp4';
-  var seedanceSrc = 'assets/video/seedance/' + (pickedS === 4 ? '5.MP4' : pickedS === 5 ? '6.MP4' : pickedS + '.mp4');
-  var happyHorseExt = pickedH <= 2 ? '.mov' : '.mp4';
-  var happyHorseSrc = 'assets/video/happyhorse/' + pickedH + happyHorseExt;
+  const { Ic, Star, TopNav, TEMPLATES, TemplateMedia, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
+  const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var favSet = new Set(favTplKeys);
+  var toggleFavTpl = function(t) {
+    var key = tplKey(t);
+    if (!key) return;
+    var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
+    setFavTplKeys(next); writeFavTemplateKeys(next);
+  };
+  var videoTpls = TEMPLATES.filter(function(t) { return t.type === 'video'; });
+  var photoTpls = TEMPLATES.filter(function(t) { return t.type !== 'video'; });
+  function renderTplRail(list, emptyText) {
+    return <div className="tpl-rail">
+      {list.length === 0
+        ? <div className="card" style={{ padding:'16px', textAlign:'center', width:'100%' }}>
+            <div className="muted" style={{ fontSize:13 }}>{emptyText}</div>
+            <div className="muted" style={{ fontSize:11.5, marginTop:4 }}>Нажмите ★ на шаблоне, чтобы добавить в избранное</div>
+          </div>
+        : list.map(function(t, i) {
+          var isFav = favSet.has(tplKey(t));
+          return <div className="thumb tpl-card" key={tplKey(t) || i} onClick={() => onTemplate(t)} style={{ position:'relative' }}>
+            <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+            <button className={'mob-tpl-fav' + (isFav ? ' on' : '')} title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+              onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); }}
+              style={{ position:'absolute', top:6, right:6, background:'rgba(0,0,0,.5)', border:'none', borderRadius:8, padding:'4px 6px', display:'flex', cursor:'pointer', zIndex:2 }}>
+              <Ic n="star" s={18} c={isFav ? '#f5c542' : '#ffffff'}/>
+            </button>
+            <div className="shade"></div>
+            <div className="lbl">{t.t}</div>
+          </div>;
+        })}
+    </div>;
+  }
 
   return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
     <TopNav active="gen" onTab={onTab}/>
@@ -47,49 +72,14 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
       </div>
 
       <div className="sec-h rise" style={{ '--d':'.12s', marginTop:22 }}>
-        <h2>Выберите шаблон</h2>
+        <h2>Видео шаблоны</h2>
         <span className="all" onClick={() => onTab && onTab('templates')}>Показать все</span>
       </div>
-      <div className="tpl-rail">
-        {TEMPLATES.map(function(t, i) {
-          return <div className="thumb tpl-card" key={i} onClick={() => onTemplate(t)}>
-            <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
-            <div className="shade"></div>
-            <div className="lbl">{t.t}</div>
-          </div>;
-        })}
-      </div>
+      {renderTplRail(videoTpls, 'Нет видео-шаблонов')}
       <div className="sec-h rise" style={{ '--d':'.16s', marginTop:22 }}>
-        <h2>Видео-модели</h2>
+        <h2>Фото шаблоны</h2>
       </div>
-      <div className="model-promo-list">
-        {/* Kling */}
-        <div className="model-promo" style={{ background:'#171b2b', color:'#dfe7ff' }}
-          onClick={() => onCreateVideo && onCreateVideo('kling_21_i2v')}>
-          <video className="promo-video" src={klingSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
-          <div className="model-promo-t">Kling</div>
-          <div className="model-promo-s">Киношное движение из фото</div>
-        </div>
-
-        {/* Seedance */}
-        <div className="model-promo" style={{ background:'#1c302a', color:'#e5fff4' }}
-          onClick={() => onCreateVideo && onCreateVideo('seedance_2_i2v')}>
-          <video className="promo-video" src={seedanceSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
-          <div className="model-promo-t">Seedance 2.0</div>
-          <div className="model-promo-s">Быстрое AI-видео нового поколения</div>
-        </div>
-
-        {/* Happy Horse */}
-        <div className="model-promo" style={{ background:'#1a1b2e', color:'#e8e0ff' }}
-          onClick={() => onCreateVideo && onCreateVideo('happy_horse_i2v')}>
-          <video className="promo-video" src={happyHorseSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
-          <div className="model-promo-t">Happy Horse</div>
-          <div className="model-promo-s">1080p видео от Alibaba со звуком и lip-sync</div>
-        </div>
-      </div>
+      {renderTplRail(photoTpls, 'Нет фото-шаблонов')}
       <div style={{ height:8 }}/>
     </div>
   </div>;
@@ -97,8 +87,16 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
 window.GenerationScreen = GenerationScreen;
 
 function TemplatesScreen({ onBack, onTemplate }) {
-  const { Ic, TopNav, TEMPLATES } = window.MiraCore;
+  const { Ic, TopNav, TEMPLATES, TemplateMedia, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
   const [filter, setFilter] = useState('all');
+  const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var favSet = new Set(favTplKeys);
+  var toggleFavTpl = function(t) {
+    var key = tplKey(t);
+    if (!key) return;
+    var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
+    setFavTplKeys(next); writeFavTemplateKeys(next);
+  };
   var list = TEMPLATES.filter(function(t) {
     if (filter === 'all') return true;
     if (filter === 'video') return t.type === 'video';
@@ -121,9 +119,15 @@ function TemplatesScreen({ onBack, onTemplate }) {
       {list.length > 0
         ? <div className="tpl-page-grid">
             {list.map(function(t, i) {
+              var isFav = favSet.has(tplKey(t));
               return <div className="thumb" key={i} onClick={() => onTemplate(t)}
-                style={{ aspectRatio:'0.82', cursor:'pointer' }}>
-                <img src={t.img} alt="" loading="lazy" decoding="async"/>
+                style={{ aspectRatio:'0.82', cursor:'pointer', position:'relative' }}>
+                <TemplateMedia t={t} loading="lazy" decoding="async"/>
+                <button className="mob-tpl-fav" title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+                  onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); }}
+                  style={{ position:'absolute', top:6, right:6, background:isFav ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.35)', border:'none', borderRadius:8, padding:'4px 6px', display:'flex', cursor:'pointer', zIndex:2 }}>
+                  <Ic n="star" s={18} c={isFav ? '#f5c542' : '#fff'}/>
+                </button>
                 <div className="shade"></div>
                 <div className="lbl">{t.t}</div>
               </div>;

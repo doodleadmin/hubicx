@@ -576,6 +576,66 @@ set_model(
 )
 
 set_model(
+    "seedance_2_reference",
+    title="Seedance 2 Reference to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/reference-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=225,
+    is_active=True,
+    sort_order=24,
+    default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
+    description="Reference-to-video через топовый Seedance 2.0 для нескольких референсов.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=9, maps_to="image_urls", helper_text="Загрузите 1–9 изображений-референсов"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео и используйте @Image1, @Image2..."),
+            field("aspect_ratio", "Соотношение сторон", "select", default="9:16", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p", "1080p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать видео по референсам",
+        result_type="video",
+        helper_text="Reference-to-video. Top tier: 480p/720p/1080p, до 9 изображений.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/reference-to-video", "Fal Seedance 2.0 reference-to-video input schema."),
+        price_rules={"base": 225, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": {"auto": 1, "4": 0.8, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "seedance_2_reference_fast",
+    title="Seedance 2 Fast Reference to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/fast/reference-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=180,
+    is_active=True,
+    sort_order=25,
+    default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
+    description="Быстрый reference-to-video через Seedance 2.0 Fast для нескольких референсов.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=9, maps_to="image_urls", helper_text="Загрузите 1–9 изображений-референсов"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео и используйте @Image1, @Image2..."),
+            field("aspect_ratio", "Соотношение сторон", "select", default="9:16", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать видео по референсам",
+        result_type="video",
+        helper_text="Reference-to-video. Fast tier: 480p/720p, до 9 изображений.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/fast/reference-to-video", "Fal Seedance 2.0 Fast reference-to-video input schema."),
+        price_rules={"base": 180, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": {"auto": 1, "4": 0.8, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
     "seedance_2_i2v",
     title="Seedance 2 Image to Video",
     category="video",
@@ -630,6 +690,65 @@ set_model(
         helper_text="Kling image-to-video. Для первого теста используйте 5 секунд.",
         schema_source=fal_schema_source("fal-ai/kling-video/v2.1/standard/image-to-video", "Fal Kling 2.1 Standard image-to-video input schema."),
         price_rules={"base": 220, "multipliers": [{"field": "duration", "values": {"5": 1, "10": 2}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "kling_30_i2v",
+    title="Kling 3.0 Image to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="fal-ai/kling-video/v3/standard/image-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=260,
+    is_active=True,
+    sort_order=41,
+    default_params={"duration": "10", "generate_audio": False, "sync_mode": False},
+    description="Kling 3.0 Standard image-to-video через Fal.",
+    form_schema=schema(
+        [
+            field("image_url", "Стартовое изображение", "file", provider_key="start_image_url", required=True, accept="image/*", max_size_mb=30, helper_text="JPEG/PNG/WebP до 30MB"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите движение камеры и объекта"),
+            field("duration", "Длительность", "select", default="10", options=["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], advanced=False),
+            field("resolution", "Разрешение", "select", provider_key="__ui_resolution", default="720p", options=["720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=False, advanced=True),
+            field("template_pipeline", "Template pipeline", "hidden", required=False, advanced=True),
+        ],
+        submit_label="Оживить через Kling 3.0",
+        result_type="video",
+        helper_text="Kling 3.0 image-to-video. По документации Fal endpoint работает в 720p без отдельного параметра resolution.",
+        schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/image-to-video", "Fal Kling 3.0 Standard image-to-video input schema.", verified_at="2026-06-20"),
+        price_rules={"base": 260, "multipliers": [{"field": "duration", "values": {"3": 0.4, "4": 0.5, "5": 0.6, "6": 0.7, "7": 0.8, "8": 0.9, "9": 1, "10": 1, "11": 1.1, "12": 1.2, "13": 1.3, "14": 1.4, "15": 1.5}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "kling_30_motion_control",
+    title="Kling 3.0 Motion Control",
+    category="video",
+    provider="fal",
+    provider_model_id="fal-ai/kling-video/v3/standard/motion-control",
+    task_type="video",
+    input_type="image",
+    price_credits=260,
+    is_active=True,
+    sort_order=42,
+    default_params={"keep_original_sound": True, "character_orientation": "image", "sync_mode": False},
+    description="Kling 3.0 Motion Control через Fal: перенос движения из видео на персонажа.",
+    form_schema=schema(
+        [
+            field("image_url", "Фото персонажа", "file", required=True, accept="image/*", max_size_mb=30, helper_text="Фото персонажа"),
+            field("video_url", "Видео движения", "file", required=True, accept="video/*", max_size_mb=80, helper_text="Видео с движением"),
+            field("prompt", "Промт", "textarea", required=False, placeholder="Опишите желаемую сцену"),
+            field("character_orientation", "Ориентация персонажа", "select", default="image", options=["image", "video"], advanced=False),
+            field("keep_original_sound", "Сохранить звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать Motion Control",
+        result_type="video",
+        helper_text="Нужно фото персонажа и видео-референс движения.",
+        schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/motion-control", "Fal Kling 3.0 Standard Motion Control input schema.", verified_at="2026-06-20"),
+        price_rules={"base": 260, "min": 1, "round": "ceil"},
     ),
 )
 

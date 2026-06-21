@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import ModelPricing, TokenPackage
 from backend.app.db.session import get_session
+from backend.app.services.business import BONUS_TASKS_V2, BONUS_TOTAL_TOKENS, SUBSCRIPTION_PLANS_V2
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -51,6 +52,13 @@ async def public_pricing(session: AsyncSession = Depends(get_session)) -> dict:
     prices_result = await session.execute(select(ModelPricing).order_by(ModelPricing.category, ModelPricing.model_code))
     return {
         "token_packages": [serialize_package(pkg) for pkg in packages_result.scalars().all()],
+        "subscription_plans": SUBSCRIPTION_PLANS_V2,
+        "bonus_program": {
+            "title": f"Получите до {BONUS_TOTAL_TOKENS} бесплатных токенов",
+            "total_tokens": BONUS_TOTAL_TOKENS,
+            "note": "Бонусные токены доступны для базовых фото-моделей и простых сценариев.",
+            "tasks": BONUS_TASKS_V2,
+        },
         "custom_topup": {
             "enabled": True,
             "payments_enabled": False,

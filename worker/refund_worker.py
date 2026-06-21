@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 
 from backend.app.db.models import GenerationTask
-from backend.app.db.session import async_session
+from backend.app.db.session import async_session, engine
 from backend.app.services.generations import mark_failed_and_refund
 from worker.celery_app import celery_app
 
@@ -58,7 +58,14 @@ async def _refund_stuck_tasks() -> dict:
 
 @celery_app.task(name="worker.refund_worker.refund_failed_tasks")
 def refund_failed_tasks() -> dict:
-    result = asyncio.run(_refund_stuck_tasks())
+    result = asyncio.run(_run_refund_stuck_tasks())
     if result["refunded"]:
         logger.info("WATCHDOG_DONE refunded=%s", result["refunded"])
     return result
+
+
+async def _run_refund_stuck_tasks() -> dict:
+    try:
+        return await _refund_stuck_tasks()
+    finally:
+        await engine.dispose()

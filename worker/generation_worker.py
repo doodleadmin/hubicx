@@ -14,7 +14,7 @@ from sqlalchemy.orm import selectinload
 from backend.app.config import settings
 from backend.app.db.models import File, GenerationTask
 from backend.app.db.session import async_session, engine
-from backend.app.providers.base import provider_model_configured
+from backend.app.providers.base import ProviderResult, provider_model_configured
 from backend.app.providers.fal import FalProvider
 from backend.app.providers.openrouter import OpenRouterProvider
 from backend.app.services.generations import mark_failed_and_refund
@@ -22,6 +22,75 @@ from backend.app.services.storage import storage_configured, storage_service
 from worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+TV_BROADCAST_GPT_IMAGE_PROMPT = """Generate a high-quality (4k) photo with the face of the person in the uploaded image, placed onto a realistic scene of a KBO baseball fan captured on live broadcast.
+
+Key Requirements:
+
+*   Scene:
+    *   Captured during a live SPOTV KBO broadcast.
+    *   Authentic broadcast camera angle (from the stands).
+    *   The fan is sitting in the stands, relaxing, maybe legs crossed.
+    *   Expression: Natural, not aware of the camera, looking at the game.
+
+*   Details:
+    *   Surrounded by other fans.
+    *   Include realistic elements: beer cups, cheering gear, portable fans.
+    *   Realistic skin texture (not smoothed), stray hairs, hints of sweat.
+
+*   Technical Style:
+    *   Captured on an actual broadcast camera.
+    *   Slight blur from live transmission, compression noise, subtle motion blur (especially in the background).
+    *   CRITICAL:
+        *   NO excessive airbrushing/editing of the face.
+        *   NO eye enlargement.
+        *   NO jawline modification.
+        *   NO "beauty" filter or smoothing.
+        *   NO "photo shoot" look.
+        *   NO "influencer" aesthetic.
+
+Objective: Create a photo that looks like a real-world candid moment of the *person in the image*, caught on a live baseball broadcast, with all the natural flaws and atmosphere of the setting."""
+
+
+def _strip_internal_provider_keys(params: dict | None) -> dict:
+    clean = dict(params or {})
+    for key in ("template_pipeline", "__ui_resolution"):
+        clean.pop(key, None)
+    return clean
+
+
+async def _run_tv_broadcast_pipeline(provider: FalProvider, provider_params: dict) -> object:
+    source_image = provider_params.get("start_image_url") or provider_params.get("image_url")
+    if not source_image:
+        return ProviderResult(False, error="TV broadcast pipeline requires source image")
+
+    edit_result = await provider.generate_image_v2(
+        "openai/gpt-image-2/edit",
+        {
+            "image_urls": [source_image],
+            "prompt": TV_BROADCAST_GPT_IMAGE_PROMPT,
+            "image_size": "auto",
+            "quality": "medium",
+            "num_images": 1,
+            "output_format": "png",
+            "sync_mode": False,
+        },
+    )
+    if not edit_result.success:
+        return edit_result
+
+    duration = str(provider_params.get("duration") or "10")
+    if duration not in {"10", "15"}:
+        duration = "10"
+    kling_params = {
+        "start_image_url": edit_result.output_url,
+        "prompt": "Человек смотрит матч",
+        "duration": duration,
+        "generate_audio": False,
+        "sync_mode": False,
+    }
+    return await provider.generate_video_v2("fal-ai/kling-video/v3/standard/image-to-video", kling_params)
 
 
 def log_task(task: GenerationTask, status: str, error: str | None = None) -> None:
@@ -106,14 +175,16 @@ async def _process_generation_task(task_id: int) -> None:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
         elif task.task_type == "image":
             if task.provider_input:
-                result = await provider.generate_image_v2(provider_model_id, task.provider_input)
+                result = await provider.generate_image_v2(provider_model_id, _strip_internal_provider_keys(task.provider_input))
             else:
                 result = await provider.generate_image(provider_model_id, prompt, task.input_file_url, provider_params)
         elif task.task_type == "video":
-            if task.provider_input:
-                result = await provider.generate_video_v2(provider_model_id, task.provider_input)
+            if provider_params.get("template_pipeline") == "tv_broadcast_kling_30" and isinstance(provider, FalProvider):
+                result = await _run_tv_broadcast_pipeline(provider, provider_params)
+            elif task.provider_input:
+                result = await provider.generate_video_v2(provider_model_id, _strip_internal_provider_keys(task.provider_input))
             else:
-                result = await provider.generate_video(provider_model_id, prompt, task.input_file_url, provider_params)
+                result = await provider.generate_video(provider_model_id, prompt, task.input_file_url, _strip_internal_provider_keys(provider_params))
         else:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
 

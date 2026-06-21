@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.db.models import AIModel, GenerationTask, Template, User
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
+from backend.app.services.business import is_bonus_eligible_model
 from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
 from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
@@ -80,8 +81,13 @@ async def create_generation_task(
         provider_input = {}
         task_params = {**((model.default_params if model else {}) or {}), **(template.default_params or {}), **(params or {})}
 
-    if not await has_enough_balance(session, user.id, price):
-        raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
+    allow_bonus = is_bonus_eligible_model(model.code if model else None, task_type)
+    if provider_input and provider_input.get("template_pipeline"):
+        allow_bonus = False
+    if not await has_enough_balance(session, user.id, price, allow_bonus=allow_bonus):
+        if allow_bonus:
+            raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
+        raise AppError("not_enough_paid_balance", "Для этой модели нужны платные токены")
 
     resolved_file_url = input_file_url
     if not resolved_file_url and provider_input:
@@ -111,7 +117,7 @@ async def create_generation_task(
     )
     session.add(task)
     await session.flush()
-    await charge_for_generation(session, user.id, task.id, price)
+    await charge_for_generation(session, user.id, task.id, price, allow_bonus=allow_bonus)
     task.status = "queued"
     await session.commit()
     await session.refresh(task)

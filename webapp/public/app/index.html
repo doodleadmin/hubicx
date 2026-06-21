@@ -3,15 +3,34 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
 <base href="/app/"/>
-<title>Hubicx</title>
+<title>Hubicx — AI-хаб для фото, видео и чата в Telegram</title>
+<meta name="description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели — без VPN, прямо в Telegram и в браузере. 20 токенов в подарок."/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://app.hubicx.ru/"/>
+<meta property="og:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta property="og:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram."/>
+<meta property="og:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
+<meta property="og:url" content="https://app.hubicx.ru/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Hubicx"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
+<meta name="twitter:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
+<script>window.__APP_BUILD__='20260620-pricing2';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 <link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/polaroid-party/cover.webp" fetchpriority="high"/>
 <link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/roses/cover.webp" fetchpriority="high"/>
-<link rel="stylesheet" href="/app/loader.css?v=20260617-horse1"/>
-<link rel="stylesheet" href="/app/ma.css?v=20260617-horse1"/>
-<link rel="stylesheet" href="/app/ma-desktop.css?v=20260617-horse1"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/tv-broadcast/cover.mp4" fetchpriority="high"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/catastrophic-love/cover.mp4" fetchpriority="high"/>
+<link rel="stylesheet" href="/app/loader.css?v=20260619-catlove1"/>
+  <link rel="stylesheet" href="/app/ma.css?v=20260620-pricing2"/>
+<link rel="stylesheet" href="/app/ma-desktop.css?v=20260620-pricing2"/>
 </head>
 <body>
 <div id="root"></div>
@@ -170,21 +189,34 @@
 })();
 </script>
 
-  <script src="/app/loader.js?v=20260617-horse1"></script>
+<!-- Referral tracking: save ?ref=CODE from URL -->
+<script>
+(function() {
+  var q = new URLSearchParams(window.location.search);
+  var ref = q.get('ref');
+  if (ref) {
+    try { localStorage.setItem('hbx_ref_code', ref); } catch(e) {}
+    try { localStorage.setItem('hbx_ref_ts', Date.now()); } catch(e) {}
+  }
+})();
+</script>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-  <script src="/app/ma-api.jsx?v=20260617-horse1"></script>
-  <script src="/app/hbx-i18n.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-core.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-chat.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-agent.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-generation.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-create.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-profile.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-landing.jsx?v=20260617-horse1"></script>
-  <script type="text/babel" src="/app/ma-app.jsx?v=20260617-horse1"></script>
+  <script src="/app/loader.js?v=20260619-catlove1"></script>
+
+<script src="/app/assets/vendor/react.production.min.js"></script>
+<script src="/app/assets/vendor/react-dom.production.min.js"></script>
+<script>window.babel = { cache: false };</script>
+<script src="/app/assets/vendor/babel.min.js"></script>
+  <script src="/app/ma-api.jsx?v=20260620-pricing2"></script>
+  <script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
+  <script type="text/babel" src="/app/ma-core.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-chat.jsx?v=20260619-catlove1"></script>
+  <script type="text/babel" src="/app/ma-agent.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-generation.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-create.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-profile.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260620-pricing2"></script>
+  <script type="text/babel" src="/app/ma-landing.jsx?v=20260619-catlove1"></script>
+  <script type="text/babel" src="/app/ma-app.jsx?v=20260620-pricing2"></script>
 </body>
 </html>

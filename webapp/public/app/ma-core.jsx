@@ -27,6 +27,7 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9 }) {
     gear: <g><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/></g>,
     sliders: <g><path d="M4 7h11M19 7h1M4 17h6M14 17h6"/><circle cx="17" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></g>,
     heart: <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z"/>,
+    star: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>,
     grid: <g><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></g>,
     clock: <g><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></g>,
     search: <g><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></g>,
@@ -130,8 +131,32 @@ const FALLBACK_MODELS = [
   { code:'z_image',            title:'Z-Image',                   category:'photo', task_type:'image', price_credits:25,  description:'Доступный' },
   { code:'seedance_2_t2v',     title:'Seedance 2 Text to Video',  category:'video', task_type:'video', price_credits:250, description:'Текст → видео' },
   { code:'seedance_2_i2v_fast',title:'Seedance 2 Fast Image→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрый Image → видео', input_type:'image' },
+  { code:'seedance_2_reference',title:'Seedance 2 Reference→Video',category:'video',task_type:'video', price_credits:225, description:'Топовое видео по нескольким референсам', input_type:'image', form_schema:{ fields:[
+    { name:'image_urls', type:'files' },
+    { name:'prompt', type:'textarea' },
+    { name:'aspect_ratio', type:'select', default:'9:16', options:['21:9','16:9','4:3','1:1','3:4','9:16','auto'] },
+    { name:'duration', type:'select', default:'5', options:['auto','4','5','6','7','8','9','10','11','12','13','14','15'] },
+    { name:'resolution', type:'select', default:'480p', options:['480p','720p','1080p'] },
+    { name:'generate_audio', type:'switch', default:true }
+  ], price_rules:{ base:225, multipliers:[{ field:'resolution', values:{ '480p':0.45, '720p':1, '1080p':2.25 } }, { field:'duration', values:{ auto:1, '4':0.8, '5':1, '6':1.2, '7':1.4, '8':1.6, '9':1.8, '10':2, '11':2.2, '12':2.4, '13':2.6, '14':2.8, '15':3 } }], min:1, round:'ceil' } } },
+  { code:'seedance_2_reference_fast',title:'Seedance 2 Fast Reference→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрое видео по нескольким референсам', input_type:'image' },
   { code:'seedance_2_i2v',     title:'Seedance 2 Image to Video', category:'video', task_type:'video', price_credits:250, description:'Качественный Image → видео', input_type:'image' },
   { code:'kling_21_i2v',       title:'Kling 2.1 Image to Video',  category:'video', task_type:'video', price_credits:220, description:'Kling 2.1 Image → видео', input_type:'image' },
+  { code:'kling_30_i2v',       title:'Kling 3.0 Image to Video',  category:'video', task_type:'video', price_credits:260, description:'Kling 3.0 · image → video', input_type:'image', form_schema:{ fields:[
+    { name:'image_url', type:'file' },
+    { name:'prompt', type:'textarea' },
+    { name:'duration', type:'select', default:'10', options:['3','4','5','6','7','8','9','10','11','12','13','14','15'] },
+    { name:'resolution', type:'select', default:'720p', options:['720p'] },
+    { name:'generate_audio', type:'switch', default:false },
+    { name:'template_pipeline', type:'hidden' }
+  ], price_rules:{ base:260, multipliers:[{ field:'duration', values:{ '3':0.4, '4':0.5, '5':0.6, '6':0.7, '7':0.8, '8':0.9, '9':1, '10':1, '11':1.1, '12':1.2, '13':1.3, '14':1.4, '15':1.5 } }], min:1, round:'ceil' } } },
+  { code:'kling_30_motion_control',title:'Kling 3.0 Motion Control',category:'video',task_type:'video', price_credits:260, description:'Kling · перенос движения', input_type:'image', form_schema:{ fields:[
+    { name:'image_url', type:'file' },
+    { name:'video_url', type:'file' },
+    { name:'prompt', type:'textarea' },
+    { name:'character_orientation', type:'select', default:'image', options:['image','video'] },
+    { name:'keep_original_sound', type:'switch', default:true }
+  ] } },
   { code:'grok_video_t2v',     title:'Grok Imagine Video',        category:'video', task_type:'video', price_credits:320, description:'Grok · текст → видео' },
   { code:'grok_video_i2v',     title:'Grok Image to Video',       category:'video', task_type:'video', price_credits:340, description:'Grok · image → видео', input_type:'image' },
   { code:'veo_31_t2v',         title:'Veo 3.1 Text to Video',     category:'video', task_type:'video', price_credits:900, description:'Google Veo · текст → видео' },
@@ -139,12 +164,43 @@ const FALLBACK_MODELS = [
 ];
 
 /* ---- data ---- */
-const HERO = [
-  { img:'assets/cov/hero1.png' },
-  { img:'assets/cov/hero2.png' },
-  { img:'assets/cov/hero3.png' },
-];
+
+function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority = 'auto', onError }) {
+  if (t && t.coverVideo) {
+    return <video src={t.coverVideo} muted autoPlay playsInline loop preload="metadata" onError={onError}></video>;
+  }
+  return <img src={t && t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority} onError={onError}/>;
+}
+
 const TEMPLATES = [
+  { code:'tv-broadcast', t:'ТВ трансляция', img:'assets/cov/hero1.png', coverVideo:'assets/templates/video/tv-broadcast/cover.mp4', type:'video', category:'Эффекты', requiresImage:true, inputLabel:'Селфи или фото человека', modelCode:'kling_30_i2v', qualityValue:'720p', aspectId:'16:9', duration:'10', durationOptions:['7','10','15'], durationLocked:true, templatePipeline:'tv_broadcast_kling_30', referenceSlots:[
+    { label:'Селфи человека', hint:'Загрузите одно фото лица' }
+  ], prompt:'Человек смотрит матч' },
+  { code:'catastrophic-love', t:'Катастрофичная любовь', img:'assets/cov/hero3.png', coverVideo:'assets/templates/video/catastrophic-love/cover.mp4', type:'video', category:'Пары', requiresImage:true, inputLabel:'Фото мужчины и девушки', modelCode:'seedance_2_reference', qualityValue:'480p', aspectId:'9:16', duration:'15', durationOptions:['15'], durationLocked:true, durationUnlockable:false, referenceSlots:[
+    { label:'Фото девушки', hint:'Селфи или фото по пояс' },
+    { label:'Фото мужчины', hint:'Селфи или фото по пояс' }
+  ], prompt:`Use the attached reference images as character identity references throughout the entire video.
+
+@image_1: the woman
+@image_2: the man
+
+Both characters must remain realistic, visually consistent, and recognizable in every shot. Keep natural skin texture, realistic anatomy, natural facial micro-expressions, and believable motion. Avoid identity drift, face distortion, or changes in appearance between shots.
+
+0:00–0:02s: Cinematic handheld medium waist-up shot of a young couple standing face to face on the rocky coastline of Istanbul Bosphorus during an approaching storm. The Bosphorus Bridge looms in the background through heavy fog. Strong wind bends wet grass and sprays seawater into the air. The ocean below crashes violently against jagged rocks. The woman screams emotionally: “You never listen to me!” The man shouts back over the wind. Natural overlapping dialogue, realistic breathing, cinematic tension. Ultra-realistic skin textures, shallow depth of field, film grain, dramatic storm lighting, 4K.
+
+0:02–0:04s: Camera slowly pushes closer while circling slightly around them. The man gestures aggressively and yells: “Because you never try to understand me!” Their voices overlap naturally. Wind intensifies. Dark storm clouds accelerate across the sky. Ambient city sounds disappear beneath the growing storm. The emotional tension becomes unbearable. Cinematic realism, handheld instability, volumetric fog, natural facial micro-expressions.
+
+0:04–0:06s: A deep metallic rumble emerges from above. Without cutting away, an enormous flaming meteor suddenly appears behind them in the sky over the Bosphorus. Orange fire trails illuminate the entire environment from behind, casting dramatic backlight on their faces and hair. The couple slowly stops arguing and turns in shock. Camera shakes subtly from atmospheric vibration. Hyper-realistic fire simulation and dynamic lighting.
+
+0:06–0:08s: The meteor slams directly into the ocean beside the bridge. A deafening explosion erupts. Massive shockwave. Blinding white-orange flash consumes the frame for a moment. Water explodes upward into the sky. Sound briefly muffles from the impact pressure. Their hair and clothing violently whip forward from the blast force. Handheld camera nearly loses balance. Cinematic destruction physics, realistic water simulation, ultra-detailed debris and mist.
+
+0:08–0:10s: The ocean suddenly pulls backward at terrifying speed, exposing black rocks beneath the waterline. Then an impossibly massive tsunami wave rises behind them, towering over the Bosphorus Bridge like a moving wall of death. The sky turns almost black-gray. A licensed cinematic melancholic piano ballad begins softly in the background, dramatic and intimate, without using any specific real song or exact copyrighted lyrics. The couple stands frozen, breathing heavily, staring at the incoming catastrophe.
+
+0:10–0:13s: Camera remains locked emotionally on the couple while the gigantic tsunami rapidly grows closer, dominating the entire background frame. Their anger dissolves into silence and realization. The man slowly turns toward the woman. Their eyes fill with fear, regret, and love. Wind screams around them. Sea spray fills the air. Soft original vocals begin in a cinematic pop-ballad style, conveying farewell, fear, and the need to escape, but not quoting any existing song. Epic cinematic melancholy atmosphere, emotional realism, shallow depth of field.
+
+0:13–0:15s: Close-up shot. The man pulls the woman toward him urgently and they kiss passionately as the monstrous wave crashes directly behind them. Water, mist, and storm debris engulf the frame. The kiss feels desperate, emotional, and final — accepting the end of the world together. The original chorus rises emotionally without using copyrighted lyrics. At the exact climax, the tsunami completely consumes them and the entire screen.
+
+0:15s: Hard cut to black. Only distant storm ambience and fading music reverb remain. Style: Cinematic, ultra-realistic, emotional disaster film aesthetic, handheld camera, shallow depth of field, natural skin tones, strong wind simulation, storm atmosphere, realistic tsunami physics, volumetric fog, dynamic lighting, film grain, epic emotional tension, photorealistic water and destruction, 4K HDR, dramatic cinematic color grading.` },
   { t:'Полароид с вечеринки', img:'assets/templates/photo/polaroid-party/cover.webp', type:'photo', category:'Женское', requiresImage:true, inputLabel:'Фото лица девушки', prompt:`Use the uploaded woman as a strict identity reference. Preserve her exact face, facial features, bone structure, skin tone, body shape, figure, proportions, and overall appearance as accurately as the reference photo allows. Keep her fully recognizable as the same person. Do not change her identity, do not replace her with a different face or different body type. If the reference photo shows only part of the body, preserve the visible proportions and infer the rest as consistently as possible.
 
 A physical Polaroid photograph lying on a messy party table. In the photo: a close-up of the woman's face, she is sticking out her tongue playfully, and a friend's hand is drawing the number "30" on her cheek with bright blue glitter gel. She wears butterfly hair clips and small silver hoop earrings. The photo itself has the classic white border, slightly off-center. Around the Polaroid: spilled glitter, a lipstick mark, a disposable camera, and a rhinestone-studded Motorola Razr phone. Style: authentic, candid, nostalgic party snapshot. Preserve her genuine, playful expression.` },
@@ -203,6 +259,24 @@ PROCESSING: cold blue tint overall, very high contrast, strongly underexposed ba
 Apply a photorealistic Canon PowerShot G7X Mark III signature look to the uploaded image. Create a 1-inch sensor creamy bokeh feel, f/1.8–2.8 24–100mm lens look, and a built-in flash pop directly on the skin for a flattering glow and specular highlights. Make the background slightly underexposed, dark, and softly blurred, around -1.3 to -2 EV. Give the skin soft warm tones with golden-hour peach undertones, translucent pores, and a subtle natural oil sheen. Use low-contrast natural SOOC-style grading, creamy colors with no harsh saturation, subtle low film grain, and a dreamy haze glow around the subject. Create shallow depth-of-field portrait perfection with a trendy 2025 vlog / Instagram aesthetic. Keep the result hyper-real but with organic imperfections and a professional human photo vibe.` },
 ];
 const CREATE_TPL = TEMPLATES.slice();
+
+/* ---- favorites (shared between mobile & desktop) ---- */
+function tplKey(t) { return (t && (t.code || t.t)) || ''; }
+const MOB_FAV_KEY = 'hbx_mob_favorite_templates_v1';
+function defaultFavTemplateKeys() {
+  return TEMPLATES.slice(0, 4).map(tplKey);
+}
+function readFavTemplateKeys() {
+  try {
+    var raw = localStorage.getItem(MOB_FAV_KEY);
+    if (!raw) return defaultFavTemplateKeys();
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : defaultFavTemplateKeys();
+  } catch (e) { return defaultFavTemplateKeys(); }
+}
+function writeFavTemplateKeys(keys) {
+  try { localStorage.setItem(MOB_FAV_KEY, JSON.stringify(keys || [])); } catch (e) {}
+}
 const MODELS = [
   { id:'gpt', t:'GPT Image 2', s:'Генерация текста' },
   { id:'nano', t:'Nano Banana', s:'Базовая' },
@@ -223,5 +297,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, HERO, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS };
-
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys };

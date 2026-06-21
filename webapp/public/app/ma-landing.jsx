@@ -91,9 +91,9 @@ function BeforeAfter({ before, after, label }){
 
   return <div className="lp-ba" ref={wrapRef}
       onPointerDown={(e)=>{ drag.current=true; move(e.clientX); }}>
-    <img className="lp-ba-img" src={after} alt="" draggable="false"/>
+    <img className="lp-ba-img" src={after} alt="Результат AI-генерации" draggable="false"/>
     <div className="lp-ba-before" style={{width:pos+'%'}}>
-      <img src={before} alt="" draggable="false" style={{width:(wrapRef.current?wrapRef.current.offsetWidth:600)+'px'}}/>
+      <img src={before} alt="Исходное фото" draggable="false" style={{width:(wrapRef.current?wrapRef.current.offsetWidth:600)+'px'}}/>
     </div>
     <span className="lp-ba-tag l">Фото</span>
     <span className="lp-ba-tag r">AI-результат</span>
@@ -189,7 +189,7 @@ function StickyHow(){
         <div className="lp-how-visual">
           <div className="lp-how-frame">
             {/* result image — fades in on step 3 */}
-            <img className={'lp-how-shot'+(step>=2?' in':'')} src={Gg(8)} alt=""/>
+            <img className={'lp-how-shot'+(step>=2?' in':'')} src={Gg(8)} alt="Результат генерации: неоновый портрет"/>
             {/* loader — step 2 */}
             {step===1 && <div className="lp-how-load"><span className="lp-load-ring"></span><span className="lp-load-t">Генерация…</span></div>}
             {/* prompt typing — step 1 */}
@@ -309,7 +309,7 @@ function DesktopMock(){
         <div className="dk-grid">
           {cards.map((c,i)=>(
             <div className="dk-card" key={i}>
-              <div className="dk-card-th"><img src={'assets/g/r'+c.n+'.png'} alt=""/>
+              <div className="dk-card-th"><img src={'assets/g/r'+c.n+'.png'} alt={c.t}/>
                 {c.v && <span className="dk-card-v"><Ic n="play" s={10} c="#fff"/> {c.v}</span>}
                 {c.tr && <span className="dk-card-tr"><Ic n="bolt" s={10} c="#1c1c1a"/> Тренд</span>}
               </div>
@@ -362,7 +362,7 @@ function Templates({ onPick }){
       {list.map((t,i)=>(
         <div className="lp-tpl" key={t.t} onClick={onPick} style={{'--d':(i%8*40)+'ms'}}>
           <div className="lp-tpl-thumb">
-            <img src={'assets/g/r'+t.n+'.png'} alt=""/>
+            <img src={'assets/g/r'+t.n+'.png'} alt={"Шаблон: "+t.t}/>
             {t.c==='Видео' && <span className="lp-tpl-v"><Ic n="play" s={11} c="#fff"/> {t.dur}</span>}
             {t.tr && <span className="lp-tpl-tr"><Ic n="bolt" s={11} c="#1c1c1a"/> В тренде</span>}
             <span className="lp-tpl-use"><Ic n="wand" s={15} c="#fff"/> Использовать</span>
@@ -415,7 +415,7 @@ function PhoneMock(){
         <span className="pm-tok"><Ic n="sparkle" s={13} c="#7faa9d"/> 248</span>
       </div>
       <div className="pm-canvas">
-        <img className={'pm-shot'+(step>=2?' in':'')} src={Gg(cur.n)} alt=""/>
+        <img className={'pm-shot'+(step>=2?' in':'')} src={Gg(cur.n)} alt={"Пример AI-генерации: "+cur.p}/>
         {step===0 && <div className="pm-type">
           <span className="ic"><Ic n="wand" s={18} c="#7faa9d"/></span>
           <div className="tx">{typed}<span className="lp-cur"></span></div>
@@ -725,8 +725,8 @@ function LandingPage({ onAuthed, initialAuth=null }){
 
     {/* nav */}
     <nav className={'lp-nav'+(scrolled?' scrolled':'')}>
-      <a href="#top" className="lp-brand"><span className="lp-logo"><img src="assets/logo.jpg" alt=""/></span> Hubicx</a>
-      <div className="lp-nav-links">{navLinks.map(l=><a key={l[0]} href={l[0]}>{l[1]}</a>)}</div>
+      <a href="#top" className="lp-brand" onClick={e=>{e.preventDefault(); document.getElementById('top')?.scrollIntoView({behavior:'smooth'});}}><span className="lp-logo"><img src="assets/logo.jpg" alt=""/></span> Hubicx</a>
+      <div className="lp-nav-links">{navLinks.map(l=><a key={l[0]} href={l[0]} onClick={e=>{e.preventDefault(); const el=document.querySelector(l[0]); if(el) el.scrollIntoView({behavior:'smooth'});}}>{l[1]}</a>)}</div>
       <div className="lp-nav-cta">
         <button className="lp-btn lp-btn-ghost" onClick={()=>setAuth('login')}>Войти</button>
         <button className="lp-btn lp-btn-white" onClick={()=>setAuth('register')} data-mag>Начать бесплатно</button>
@@ -736,12 +736,26 @@ function LandingPage({ onAuthed, initialAuth=null }){
 
     {menu && <div className="lp-mobnav">
       <button className="lp-auth-x" style={{position:'absolute',top:20,right:20}} onClick={()=>setMenu(false)}><Ic n="close" s={18}/></button>
-      {navLinks.map(l=><a key={l[0]} href={l[0]} onClick={()=>setMenu(false)}>{l[1]}</a>)}
+      {navLinks.map(l=><a key={l[0]} href={l[0]} onClick={e=>{e.preventDefault(); setMenu(false); const el=document.querySelector(l[0]); if(el) el.scrollIntoView({behavior:'smooth'});}}>{l[1]}</a>)}
       <button className="lp-btn lp-btn-ghost lp-btn-lg" onClick={()=>{setMenu(false);setAuth('login');}}>Войти</button>
       <button className="lp-btn lp-btn-white lp-btn-lg" onClick={()=>{setMenu(false);setAuth('register');}}>Начать бесплатно</button>
     </div>}
 
     <main className="lp-main" id="top">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{__html:JSON.stringify({
+        '@context':'https://schema.org',
+        '@type':'SoftwareApplication',
+        name:'Hubicx',
+        description:'AI-хаб для генерации фото, видео и текстов. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram и в браузере.',
+        applicationCategory:'Multimedia',
+        operatingSystem:'Web, Telegram',
+        offers:{
+          '@type':'Offer',
+          price:'0',
+          priceCurrency:'RUB',
+          description:'Бесплатный старт с 20 токенами в подарок'
+        }
+      })}}></script>
       {/* hero — asymmetric split (text + product mockup) */}
       <section className="lp-hero lp-hero-split">
         <div className="lp-hero-clip" aria-hidden="true"><div className="lp-hero-spot"></div></div>
@@ -791,7 +805,7 @@ function LandingPage({ onAuthed, initialAuth=null }){
               <div className="lp-feat-ic"><Ic n={f.ic} s={24} c="#7faa9d"/></div>
               <div className="lp-feat-t">{f.t}</div>
               <div className="lp-feat-s">{f.s}</div>
-              <div className="lp-feat-thumb"><img src={G(f.img)} alt=""/></div>
+              <div className="lp-feat-thumb"><img src={G(f.img)} alt={f.t}/></div>
             </div>
           ))}
         </div>
@@ -816,7 +830,7 @@ function LandingPage({ onAuthed, initialAuth=null }){
         <div className="lp-models reveal">
           {MODELS.map(m=>(
             <div className="lp-model" key={m.name} onClick={()=>setAuth('register')} data-tilt>
-              <div className="lp-model-img"><img src={G(m.n)} alt=""/><span className="lp-model-tag">{m.tag}</span></div>
+              <div className="lp-model-img"><img src={G(m.n)} alt={m.name}/><span className="lp-model-tag">{m.tag}</span></div>
               <div className="lp-model-b"><div className="lp-model-n">{m.name}</div><div className="lp-model-d">{m.d}</div></div>
             </div>
           ))}
@@ -840,12 +854,12 @@ function LandingPage({ onAuthed, initialAuth=null }){
         <div className="lp-sec-head">
           <span className="lp-kicker reveal">Тарифы</span>
           <h2 className="lp-h2 reveal" style={{'--d':'60ms'}}>Платите за токены — <span className="lp-grad-tx">без подписок</span></h2>
-          <p className="lp-sub reveal" style={{'--d':'120ms'}}>1 ₽ = 1 токен. Чем больше пакет — тем выгоднее. Токены не сгорают.</p>
+          <p className="lp-sub reveal" style={{'--d':'120ms'}}>Чем больше пакет — тем выгоднее. Токены не сгорают и тратятся только на генерации.</p>
         </div>
         <div className="lp-price">
-          {[{n:'Старт',p:'149',t:'160 токенов',best:false,f:['~80 фото','Все базовые модели','AI-чат','Без VPN']},
-            {n:'Про',p:'849',t:'1000 токенов',best:true,f:['~500 фото или 70 видео','Все модели, включая Pro','Приоритетная очередь','Поддержка 24/7']},
-            {n:'Макс',p:'1690',t:'2200 токенов',best:false,f:['Максимальная выгода','+510 бонусных токенов','Ранний доступ к новинкам','Коммерческая лицензия']}].map((pl,i)=>(
+          {[{n:'300 токенов',p:'249',t:'~150 фото',best:false,f:['Все базовые модели','AI-чат','Без VPN','Бонусы за активность']},
+            {n:'1 000 токенов',p:'790',t:'~500 фото или 70 видео',best:true,f:['Все модели, включая Pro','Приоритетная очередь','Поддержка 24/7','Бонусы за активность']},
+            {n:'3 000 токенов',p:'1 990',t:'~1 500 фото',best:false,f:['Максимальная выгода','Все Pro-модели','Ранний доступ к новинкам','Коммерческая лицензия']}].map((pl,i)=>(
             <div className={'lp-plan reveal'+(pl.best?' best':'')} key={pl.n} style={{'--d':(i*80)+'ms'}}>
               {pl.best && <span className="lp-plan-badge">Популярный</span>}
               <div className="lp-plan-n">{pl.n}</div>

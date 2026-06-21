@@ -1,4 +1,6 @@
 /* ============ Create photo/video screen ============ */
+/* BUILD: 20260620-pricing2 */
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260620-pricing2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -49,12 +51,30 @@ function getModelField(model, names) {
   return null;
 }
 function getQualityField(model) { return getModelField(model, ['quality', 'resolution']); }
+function getDurationField(model) { return getModelField(model, ['duration']); }
+function getFilesField(model) { return getModelField(model, ['image_urls', 'media_urls']); }
+function getSingleImageField(model) { return getModelField(model, ['image_url']); }
+function getSingleVideoField(model) { return getModelField(model, ['video_url']); }
 function fieldDefault(field) {
   if (!field) return null;
   if (field.default != null) return field.default;
   return field.options && field.options.length ? field.options[0] : null;
 }
 function fieldOptions(field) { return field && Array.isArray(field.options) ? field.options : []; }
+function optionValue(o) {
+  if (o && typeof o === 'object') return o.value != null ? o.value : (o.id != null ? o.id : o.name);
+  return o;
+}
+function optionTitle(o) {
+  if (o && typeof o === 'object') return o.t || o.title || o.label || prettyOption(optionValue(o));
+  return prettyOption(o);
+}
+function normalizeFieldValue(field, value) {
+  var opts = fieldOptions(field);
+  if (value == null) return fieldDefault(field);
+  var found = opts.find(function(o) { return String(optionValue(o)) === String(value); });
+  return found != null ? optionValue(found) : value;
+}
 function prettyOption(v) {
   var s = String(v == null ? '' : v);
   var map = { auto:'Auto', square_hd:'HD', square:'Square', portrait_4_3:'4:3', portrait_16_9:'9:16', landscape_4_3:'4:3', landscape_16_9:'16:9', auto_2K:'2K', auto_4K:'4K' };
@@ -81,6 +101,51 @@ function estimateModelPrice(model, inputs) {
   return Math.max(1, Math.ceil(total || Number(model.price_credits || 0)));
 }
 function templateModelCode(t) { return (t && t.modelCode) || 'nano_banana_pro'; }
+function templateQualityValue(t) { return t && (t.qualityValue || t.quality || t.resolution); }
+function templateDurationValue(t) { return t && (t.durationValue || t.duration); }
+function templateAspectKey(t) { return t && (t.code || t.t) ? 'tplAspect:' + (t.code || t.t) : null; }
+function readTemplateAspect(t) {
+  var key = templateAspectKey(t);
+  if (!key) return null;
+  try { return window.localStorage && window.localStorage.getItem(key); } catch (_) { return null; }
+}
+function saveTemplateAspect(t, aspectId) {
+  var key = templateAspectKey(t);
+  if (!key || !aspectId) return;
+  try { if (window.localStorage) window.localStorage.setItem(key, String(aspectId)); } catch (_) {}
+}
+function isSeedanceModelCode(code) { return /^seedance_2_/.test(String(code || '')) || String(code || '').indexOf('seedance') === 0; }
+function resolveSeedanceAutoCode(code, files) {
+  var selected = String(code || '');
+  var list = Array.isArray(files) ? files.filter(Boolean) : [];
+  var images = list.filter(function(f) { return !f || f.type !== 'video'; }).length;
+  var videos = list.filter(function(f) { return f && f.type === 'video'; }).length;
+  var isFast = selected === 'seedance_2_fast_auto' || selected.indexOf('_fast') !== -1;
+  if (selected !== 'seedance_2_auto' && selected !== 'seedance_2_fast_auto') return selected;
+  if (images >= 2 || videos > 0) return isFast ? 'seedance_2_reference_fast' : 'seedance_2_reference';
+  if (images === 1) return isFast ? 'seedance_2_i2v_fast' : 'seedance_2_i2v';
+  return 'seedance_2_t2v';
+}
+function shortModelDescription(m) {
+  var code = String((m && m.code) || '');
+  if (code === 'nano_banana_2') return 'Быстрая генерация';
+  if (code === 'nano_banana_pro') return 'Pro · высокое разрешение';
+  if (code === 'nano_banana_edit') return 'Редактирование фото';
+  if (code === 'gpt_image_2') return 'Качественная генерация';
+  if (code === 'gpt_image_2_edit') return 'Редактирование фото';
+  if (code === 'seedream') return 'Фотореализм';
+  if (code === 'flux_schnell') return 'Быстро и дёшево';
+  if (code === 'z_image') return 'Доступная генерация';
+  if (code === 'kling_21_i2v') return 'Image → video';
+  if (code === 'kling_30_i2v') return 'Image → video · 720p';
+  if (code === 'kling_30_motion_control') return 'Motion control';
+  if (code === 'grok_video_t2v') return 'Текст → видео';
+  if (code === 'grok_video_i2v') return 'Фото → видео';
+  if (code === 'veo_31_t2v') return 'Текст → видео';
+  if (code === 'veo_31_i2v') return 'Фото → видео';
+  if (code.indexOf('happy_horse') !== -1) return 'Липсинк-видео';
+  return (m && m.description) ? String(m.description).replace(/\s+через\s+Fal\.?/ig, '').replace(/\s+высокая\s+стоимость\.?/ig, '') : '';
+}
 
 function GenStageCanvas({ running, done, isVideo, aspectId, task }) {
   const { Ic } = window.MiraCore;
@@ -177,30 +242,55 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
 }
 
 function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, refreshBalance }) {
-  const { Ic, Star, ASPECTS, CREATE_TPL } = window.MiraCore;
+  const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
 
   // Models from API
-  const [apiModels, setApiModels] = useState([]);
-  const [modelsLoaded, setModelsLoaded] = useState(false);
+  const [apiModels, setApiModels] = useState(FALLBACK_MODELS || []);
+  const [modelsLoaded, setModelsLoaded] = useState(true);
   const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
-  const [selectedQuality, setSelectedQuality] = useState(null);
+  const [selectedQuality, setSelectedQuality] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
+  const [selectedDuration, setSelectedDuration] = useState(function() { return preset ? (templateDurationValue(preset) || null) : null; });
+  const [uiModelId, setUiModelId] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
+  const [uiQualityValue, setUiQualityValue] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
+  const [uiDurationValue, setUiDurationValue] = useState(function() { return preset ? (templateDurationValue(preset) || null) : null; });
+  const [uiModelLabel, setUiModelLabel] = useState(null);
+  const [uiQualityLabel, setUiQualityLabel] = useState(null);
+  const [uiDurationLabel, setUiDurationLabel] = useState(null);
+  const [uiAspectLabel, setUiAspectLabel] = useState(null);
   const [templateLocked, setTemplateLocked] = useState(!!preset);
+  const [qualityLocked, setQualityLocked] = useState(!!(preset && templateQualityValue(preset)));
+  const [durationLocked, setDurationLocked] = useState(!!(preset && preset.durationLocked));
+  const [aspectLocked, setAspectLocked] = useState(!!(preset && preset.aspectId));
 
   // Aspect ratio
-  const [selectedAspect, setSelectedAspect] = useState(ASPECTS[1]);
+  const [selectedAspectId, setSelectedAspectId] = useState(function() {
+    return readTemplateAspect(preset) || (preset && preset.aspectId) || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
+  });
+  const [uiAspectId, setUiAspectId] = useState(function() {
+    return readTemplateAspect(preset) || (preset && preset.aspectId) || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
+  });
 
   // Pickers
-  const [picker, setPicker] = useState(null); // 'model' | 'quality' | 'aspect'
+  const [picker, setPicker] = useState(null); // 'model' | 'quality' | 'duration' | 'aspect'
 
   // Content
   const [tab, setTab] = useState('tpl');
   const [selTpl, setSelTpl] = useState(preset ? preset.t : null);
+  const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var favSet = new Set(favTplKeys);
+  var toggleFavTpl = function(t) {
+    var key = tplKey(t);
+    if (!key) return;
+    var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
+    setFavTplKeys(next); writeFavTemplateKeys(next);
+  };
   const [prompt, setPrompt] = useState('');
 
   // File upload
   const [uploadedFiles, setUploadedFiles] = useState([]); // [{url, file_id, preview, type, name}]
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const uploadSlotRef = useRef(null);
 
   // Generation state
   const [genState, setGenState] = useState('idle'); // idle | generating | done | error
@@ -211,12 +301,19 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Load models on mount
   useEffect(function() {
-    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
+    function mergeModels(remote) {
+      var byCode = {};
+      (FALLBACK_MODELS || []).forEach(function(m) { if (m && m.code) byCode[m.code] = m; });
+      (Array.isArray(remote) ? remote : []).forEach(function(m) { if (m && m.code) byCode[m.code] = Object.assign({}, byCode[m.code] || {}, m); });
+      return Object.keys(byCode).map(function(k) { return byCode[k]; });
+    }
+    if (!window.HubicxApi) { setApiModels(mergeModels([])); setModelsLoaded(true); return; }
+    setApiModels(mergeModels([]));
+    setModelsLoaded(true);
     window.HubicxApi.models().then(function(models) {
-      if (Array.isArray(models) && models.length > 0) setApiModels(models);
-      else setApiModels(window.MiraCore.FALLBACK_MODELS);
+      setApiModels(mergeModels(models));
       setModelsLoaded(true);
-    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); });
+    }).catch(function() { setApiModels(mergeModels([])); setModelsLoaded(true); });
   }, []);
 
   // Cancel polling on unmount
@@ -230,23 +327,53 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
 
-  // Picker-compatible model options
-  const modelOptions = filteredModels.map(function(m) {
-    return { id: m.code, t: m.title, s: (m.price_credits || 0) + ' ★' };
+  // Picker-compatible model options. Seedance endpoints are grouped into two user-facing choices;
+  // the concrete endpoint is selected right before generation from attached files.
+  var hasSeedance = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1; });
+  var hasSeedanceFast = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') !== -1; });
+  const modelOptions = [];
+  if (hasSeedance) modelOptions.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Автовыбор: текст / фото / референсы', price:'от 250 ★' });
+  if (hasSeedanceFast) modelOptions.push({ id:'seedance_2_fast_auto', t:'Seedance 2.0 Fast', s:'Дешевле и быстрее, автовыбор режима', price:'от 180 ★' });
+  filteredModels.forEach(function(m) {
+    if (isSeedanceModelCode(m.code)) return;
+    modelOptions.push({ id: m.code, t: m.title, s: shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
   });
 
   // Resolve current model
-  var currentModelCode = selectedModelCode || (filteredModels[0] && filteredModels[0].code);
+  var defaultModelId = (modelOptions[0] && modelOptions[0].id) || (filteredModels[0] && filteredModels[0].code) || null;
+  var displayModelId = uiModelId || selectedModelCode || defaultModelId;
+  var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedFiles);
   var currentModelFull = filteredModels.find(function(m) { return m.code === currentModelCode; }) || filteredModels[0];
-  var currentModelOpt = modelOptions.find(function(m) { return m.id === currentModelCode; }) || modelOptions[0];
+  var currentModelOpt = modelOptions.find(function(m) { return String(m.id) === String(displayModelId); }) || modelOptions.find(function(m) { return String(m.id) === String(currentModelCode); }) || modelOptions[0];
   var qField = getQualityField(currentModelFull);
+  var durationField = getDurationField(currentModelFull);
+  var filesField = getFilesField(currentModelFull);
+  var singleImageField = getSingleImageField(currentModelFull);
+  var singleVideoField = getSingleVideoField(currentModelFull);
+  var allTplList = CREATE_TPL.filter(function(t) { return mode === 'video' ? t.type === 'video' : t.type !== 'video'; });
+  var selectedTpl = allTplList.find(function(t) { return t.t === selTpl; }) || null;
+  var tplList = allTplList.filter(function(t) { return favSet.has(tplKey(t)); });
+  if (selectedTpl && !tplList.some(function(t) { return t.t === selectedTpl.t; })) tplList = [selectedTpl].concat(tplList);
+  // Single source of truth for the visible and sent aspect is React state.
+  // localStorage is used only to prefill templates, never to override live picker changes.
+  var effectiveAspectId = uiAspectId || selectedAspectId;
+  var selectedAspect = ASPECTS.find(function(a) { return String(a.id) === String(effectiveAspectId); }) || ASPECTS[1] || ASPECTS[0];
   var qOptions = fieldOptions(qField);
-  var qValue = qField ? (qOptions.some(function(o) { return String(o) === String(selectedQuality); }) ? selectedQuality : fieldDefault(qField)) : null;
+  var qValue = qField ? normalizeFieldValue(qField, uiQualityValue != null ? uiQualityValue : (selectedQuality != null ? selectedQuality : fieldDefault(qField))) : null;
+  var durationOptions = fieldOptions(durationField);
+  var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : (selectedTpl && templateDurationValue(selectedTpl) ? templateDurationValue(selectedTpl) : fieldDefault(durationField)));
+  var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
+  if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
+  var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
+  var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
+  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? (String(durationValue) + ' сек') : null);
+  var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
+  if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
   var currentPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
-  var tplList = CREATE_TPL.filter(function(t) { return mode === 'video' ? t.type === 'video' : t.type !== 'video'; });
-  var selectedTpl = tplList.find(function(t) { return t.t === selTpl; }) || null;
+  var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
+  var showModelPicker = !selectedTpl;
 
   var pickTemplate = function(t) {
     if (!t) return;
@@ -254,8 +381,26 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setSelTpl(t.t);
     setMode(t.type === 'video' ? 'video' : 'photo');
     setSelectedModelCode(templateModelCode(t));
-    setSelectedQuality(null);
+    setUiModelId(templateModelCode(t));
+    setSelectedQuality(templateQualityValue(t) || null);
+    setSelectedDuration(templateDurationValue(t) || null);
+    setUiQualityValue(templateQualityValue(t) || null);
+    setUiDurationValue(templateDurationValue(t) || null);
+    setUiModelLabel(null);
+    setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null);
+    setUiDurationLabel(templateDurationValue(t) ? (String(templateDurationValue(t)) + ' сек') : null);
     setTemplateLocked(true);
+    setQualityLocked(!!templateQualityValue(t));
+    setDurationLocked(!!t.durationLocked);
+    setAspectLocked(!!t.aspectId);
+    if (t.aspectId) {
+      var nextAspect = readTemplateAspect(t) || t.aspectId;
+      setSelectedAspectId(nextAspect);
+      setUiAspectId(nextAspect);
+      var nextAspectOpt = ASPECTS.find(function(a) { return String(a.id) === String(nextAspect); });
+      setUiAspectLabel(nextAspectOpt ? nextAspectOpt.t + ' · ' + nextAspectOpt.s : null);
+    }
+    setUploadedFiles([]);
     setPicker(null);
   };
 
@@ -265,7 +410,18 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setTab('prompt');
     setPrompt('');
     setSelectedModelCode(null);
+    setUiModelId(null);
     setSelectedQuality(null);
+    setSelectedDuration(null);
+    setUiQualityValue(null);
+    setUiDurationValue(null);
+    setUiModelLabel(null);
+    setUiQualityLabel(null);
+    setUiDurationLabel(null);
+    setUiAspectLabel(null);
+    setQualityLocked(false);
+    setDurationLocked(false);
+    setAspectLocked(false);
     setPicker(null);
   };
 
@@ -274,7 +430,18 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setSelTpl(null);
     setTemplateLocked(false);
     setSelectedModelCode(null);
+    setUiModelId(null);
     setSelectedQuality(null);
+    setSelectedDuration(null);
+    setUiQualityValue(null);
+    setUiDurationValue(null);
+    setUiModelLabel(null);
+    setUiQualityLabel(null);
+    setUiDurationLabel(null);
+    setUiAspectLabel(null);
+    setQualityLocked(false);
+    setDurationLocked(false);
+    setAspectLocked(false);
     setPicker(null);
   };
 
@@ -283,13 +450,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     var t = String((file && file.type) || '').toLowerCase();
     return t.indexOf('video/') === 0 ? 'video' : 'image';
   };
-  var handleFiles = function(files) {
+  var handleFiles = function(files, slotIndex) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length || uploading) return;
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
-    var allowed = list.filter(function(f) { return mode === 'video' ? /^(image|video)\//.test(f.type || '') : /^image\//.test(f.type || ''); });
+    var slotMode = typeof slotIndex === 'number';
+    var allowed = list.filter(function(f) { return (mode === 'video' && !slotMode) ? /^(image|video)\//.test(f.type || '') : /^image\//.test(f.type || ''); });
     if (allowed.length !== list.length) alert(mode === 'photo' ? 'В генерации фото можно прикреплять только изображения' : 'Можно прикреплять только фото или видео');
-    var room = Math.max(0, 8 - uploadedFiles.length);
+    var room = slotMode ? 1 : Math.max(0, 8 - uploadedFiles.length);
     allowed = allowed.slice(0, room);
     if (!allowed.length) { if (uploadedFiles.length >= 8) alert('Можно загрузить максимум 8 файлов'); return; }
     setUploading(true);
@@ -299,7 +467,15 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         return { url: data.url, file_id: data.file_id, preview: previewUrl, type: fileKind(file), name: file.name || 'file' };
       });
     })).then(function(items) {
-      setUploadedFiles(function(prev) { return prev.concat(items).slice(0, 8); });
+      setUploadedFiles(function(prev) {
+        if (slotMode) {
+          var next = prev.slice();
+          while (next.length < slotIndex) next.push(null);
+          next[slotIndex] = items[0];
+          return next.slice(0, 8);
+        }
+        return prev.concat(items).slice(0, 8);
+      });
       setUploading(false);
     }).catch(function(err) {
       setUploading(false);
@@ -313,18 +489,40 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     if (!currentModelFull) { alert('Модели не загружены, попробуйте позже'); return; }
 
     var inputs = {};
-    if (selectedAspect) inputs.aspect_ratio = selectedAspect.id;
+    var hasSchemaFields = modelFields(currentModelFull).length > 0;
+    var hasField = function(name) { return !hasSchemaFields || !!getModelField(currentModelFull, [name]); };
+    if (effectiveAspectId) inputs.aspect_ratio = effectiveAspectId;
     if (qField && qValue != null) inputs[qField.name] = qValue;
-    var mediaUrls = uploadedFiles.map(function(f) { return f.url; });
-    var imageUrls = uploadedFiles.filter(function(f) { return f.type !== 'video'; }).map(function(f) { return f.url; });
-    var videoUrls = uploadedFiles.filter(function(f) { return f.type === 'video'; }).map(function(f) { return f.url; });
-    if (imageUrls.length) { inputs.image_url = imageUrls[0]; inputs.image_urls = imageUrls; }
-    if (videoUrls.length) { inputs.video_url = videoUrls[0]; inputs.video_urls = videoUrls; }
-    if (mediaUrls.length) inputs.media_urls = mediaUrls;
+    if (durationField && durationValue != null) inputs[durationField.name] = String(durationValue);
+    if (selectedTpl && selectedTpl.templatePipeline && hasField('template_pipeline')) inputs.template_pipeline = selectedTpl.templatePipeline;
+    var cleanFiles = uploadedFiles.filter(Boolean);
+    var mediaUrls = cleanFiles.map(function(f) { return f.url; });
+    var imageFiles = cleanFiles.filter(function(f) { return f.type !== 'video'; });
+    var videoFiles = cleanFiles.filter(function(f) { return f.type === 'video'; });
+    var imageUrls = imageFiles.map(function(f) { return f.url; });
+    var imageIds = imageFiles.map(function(f) { return f.file_id; }).filter(function(id) { return id != null; });
+    var videoUrls = videoFiles.map(function(f) { return f.url; });
+    var videoIds = videoFiles.map(function(f) { return f.file_id; }).filter(function(id) { return id != null; });
+    if (imageUrls.length) {
+      if (hasField('image_url')) {
+        if (singleImageField && singleImageField.type === 'file' && imageIds.length) inputs.image_url = imageIds[0];
+        else inputs.image_url = imageUrls[0];
+      }
+      if (filesField && filesField.type === 'files' && imageIds.length) inputs[filesField.name] = imageIds;
+      else if (hasField('image_urls')) inputs.image_urls = imageUrls;
+    }
+    if (videoUrls.length) {
+      if (hasField('video_url')) {
+        if (singleVideoField && singleVideoField.type === 'file' && videoIds.length) inputs.video_url = videoIds[0];
+        else inputs.video_url = videoUrls[0];
+      }
+      if (hasField('video_urls')) inputs.video_urls = videoUrls;
+    }
+    if (mediaUrls.length && hasField('media_urls')) inputs.media_urls = mediaUrls;
 
     var finalPrompt = (tab === 'prompt' ? prompt.trim() : ((selectedTpl && selectedTpl.prompt) || selTpl)) || null;
     if (mediaUrls.length) {
-      var refs = uploadedFiles.map(function(f, i) { return '[file' + (i + 1) + '] ' + f.url; }).join('\n');
+      var refs = cleanFiles.map(function(f, i) { return '[file' + (i + 1) + '] ' + f.url; }).join('\n');
       finalPrompt = (finalPrompt ? finalPrompt + '\n\n' : '') + 'Прикрепленные медиафайлы для промпта:\n' + refs;
     }
     var payload = {
@@ -365,7 +563,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   // Video "оживить фото": an uploaded image alone is enough — prompt is optional.
   var hasTextInput = (tab === 'tpl' && selTpl) || (tab === 'prompt' && prompt.trim().length > 0);
   var needsTplImage = tab === 'tpl' && selectedTpl && selectedTpl.requiresImage;
-  var ready = (hasTextInput && (!needsTplImage || uploadedFiles.length > 0)) || (mode === 'video' && uploadedFiles.length > 0);
+  var uploadedCount = uploadedFiles.filter(Boolean).length;
+  var requiredRefCount = referenceSlots ? referenceSlots.length : 0;
+  var refsReady = referenceSlots ? uploadedCount >= requiredRefCount : uploadedCount > 0;
+  var ready = (hasTextInput && (!needsTplImage || refsReady)) || (mode === 'video' && uploadedCount > 0);
 
   // ── Generating view ──
   if (genState === 'generating') {
@@ -378,7 +579,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
       <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <GenStageCanvas running={true} done={false} isVideo={isVideoModel} aspectId={selectedAspect && selectedAspect.id} task={currentTask}/>
+        <GenStageCanvas running={true} done={false} isVideo={isVideoModel} aspectId={effectiveAspectId} task={currentTask}/>
         <div className="muted" style={{ fontSize:13.5, textAlign:'center', margin:'14px auto 0', maxWidth:280 }}>
           {mode === 'video'
             ? 'Видео генерируется 2–3 минуты. Можно свернуть — пришлём уведомление в Telegram, когда будет готово.'
@@ -402,7 +603,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
       <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <GenResult task={currentTask} tokens={tokens} onNewGeneration={resetGen} aspectId={selectedAspect && selectedAspect.id}/>
+        <GenResult task={currentTask} tokens={tokens} onNewGeneration={resetGen} aspectId={effectiveAspectId}/>
       </div>
     </div>;
   }
@@ -445,33 +646,50 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
       {/* Mode switcher */}
       <div className="seg">
-        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setUploadedFiles(function(prev) { return prev.filter(function(f) { return f.type !== 'video'; }); }); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
+        <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setUploadedFiles(function(prev) { return prev.filter(function(f) { return f && f.type !== 'video'; }); }); setSelectedModelCode(null); setUiModelId(null); setSelectedQuality(null); setSelectedDuration(null); setUiQualityValue(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setSelTpl(null); setTemplateLocked(false); setQualityLocked(false); setDurationLocked(false); setAspectLocked(false); }}>
           <Ic n="image" s={18}/> Фото
         </button>
-        <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setSelectedQuality(null); setSelTpl(null); setTemplateLocked(false); }}>
+        <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setUiModelId(null); setSelectedQuality(null); setSelectedDuration(null); setUiQualityValue(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setSelTpl(null); setTemplateLocked(false); setQualityLocked(false); setDurationLocked(false); setAspectLocked(false); }}>
           <Ic n="video" s={18}/> Видео
         </button>
       </div>
 
       {/* Hidden file input */}
       <input ref={fileInputRef} type="file" multiple accept={mode === 'photo' ? 'image/*' : 'image/*,video/*'} style={{ display:'none' }}
-        onChange={function(e) { handleFiles(e.target.files); e.target.value = ''; }}/>
+        onChange={function(e) { var slot = uploadSlotRef.current; uploadSlotRef.current = null; handleFiles(e.target.files, slot); e.target.value = ''; }}/>
 
       {/* Drop-zone / upload preview */}
-      {uploadedFiles.length > 0
+      {referenceSlots
+        ? <div className="ref-slots">
+            {referenceSlots.map(function(slot, i) {
+              var f = uploadedFiles[i];
+              return <div className={'ref-slot' + (f ? ' has' : '')} key={i} onClick={function() { if (!uploading) { uploadSlotRef.current = i; fileInputRef.current && fileInputRef.current.click(); } }}>
+                {f ? <React.Fragment>
+                  <img src={f.preview} alt=""/>
+                  <button onClick={function(e) { e.stopPropagation(); setUploadedFiles(function(prev) { var next = prev.slice(); next[i] = null; return next; }); }}>×</button>
+                </React.Fragment> : <div className="ref-empty"><Ic n="addimg" s={22} c="var(--ink)"/></div>}
+                <div className="ref-caption">
+                  <b>{slot.label}</b>
+                  <span>{f ? 'Заменить фото' : (slot.hint || 'Загрузить фото')}</span>
+                </div>
+              </div>;
+            })}
+            {uploading && <div className="ref-uploading"><div className="gen-spinner" style={{ width:20, height:20 }}></div> Загружаю…</div>}
+          </div>
+        : uploadedCount > 0
         ? <div className="drop-zone media-drop" style={{ position:'relative', overflow:'hidden' }}
             onClick={() => fileInputRef.current && fileInputRef.current.click()}>
             <div className="media-grid">
-              {uploadedFiles.map(function(f, i) { return <div className="media-chip" key={i}>
+              {uploadedFiles.filter(Boolean).map(function(f, i) { return <div className="media-chip" key={i}>
                 {f.type === 'video' ? <video src={f.preview} muted playsInline/> : <img src={f.preview} alt=""/>}
                 <b>file{i + 1}</b>
                 <button onClick={function(e) { e.stopPropagation(); setUploadedFiles(function(prev) { return prev.filter(function(_, idx) { return idx !== i; }); }); }}>×</button>
               </div>; })}
-              {uploadedFiles.length < 8 && <div className="media-add"><Ic n="plus" s={20}/><span>{uploadedFiles.length}/8</span></div>}
+              {uploadedCount < 8 && <div className="media-add"><Ic n="plus" s={20}/><span>{uploadedCount}/8</span></div>}
             </div>
             <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, marginTop:8 }}>
               <div className="di"><Ic n="check" s={24} c="#5f9184"/></div>
-              <div className="dt">Загружено файлов: {uploadedFiles.length}/8</div>
+              <div className="dt">Загружено файлов: {uploadedCount}/8</div>
               <div className="ds">В промпте можно ссылаться: file1, file2…</div>
             </div>
           </div>
@@ -493,10 +711,16 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       {tab === 'tpl'
         ? <div className="rail" style={{ marginTop:14 }}>
             {tplList.map(function(t, i) {
+              var isFav = favSet.has(tplKey(t));
               return <div className="thumb" key={i} onClick={() => pickTemplate(t)}
-                style={{ width:120, height:148, scrollSnapAlign:'start', cursor:'pointer',
+                style={{ width:120, height:148, scrollSnapAlign:'start', cursor:'pointer', position:'relative',
                   outline: selTpl === t.t ? '2.5px solid var(--ink)' : 'none', outlineOffset:-1 }}>
-                <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+                <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+                <button className="mob-tpl-fav" title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+                  onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); }}
+                  style={{ position:'absolute', top:6, right:6, background:isFav ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.35)', border:'none', borderRadius:8, padding:'4px 6px', display:'flex', cursor:'pointer', zIndex:2 }}>
+                  <Ic n="star" s={18} c={isFav ? '#f5c542' : '#fff'}/>
+                </button>
                 <div className="shade"></div>
                 <div className="lbl" style={{ fontSize:13 }}>{t.t}</div>
               </div>;
@@ -511,60 +735,96 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       {/* Details: model + aspect */}
       <div className="label-sec" style={{ marginTop:20, marginBottom:8 }}>Детали</div>
       <div className="card" style={{ overflow:'hidden' }}>
-        <div className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
-          <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
-            display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <Ic n="model" s={21} c="var(--ink)"/>
-          </div>
-          <div style={{ minWidth:0, flex:1 }}>
-            <div className="muted" style={{ fontSize:12 }}>Модель</div>
-            <div style={{ fontWeight:700, fontSize:15 }}>
-              {!modelsLoaded ? 'Загрузка…'
-                : currentModelOpt ? currentModelOpt.t + ' · ' + currentPrice + ' ★'
-                : 'Нет доступных моделей'}
+        {showModelPicker && <React.Fragment>
+          <div key={'m-' + displayModelId + '-' + currentPrice} className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
+            <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
+              display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Ic n="model" s={21} c="var(--ink)"/>
             </div>
-            {selectedTpl && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Модель закреплена за шаблоном</div>}
+            <div style={{ minWidth:0, flex:1 }}>
+              <div className="muted" style={{ fontSize:12 }}>Модель</div>
+              <div style={{ fontWeight:700, fontSize:15 }}>
+                {displayModelLabel ? displayModelLabel + ' · ' + currentPrice + ' ★'
+                  : 'Нет доступных моделей'}
+              </div>
+            </div>
+            {!templateLocked && modelOptions.length > 1 && <span className="chev"><Ic n="chev" s={20}/></span>}
           </div>
-          {selectedTpl && <button className={'m-lock-btn' + (!templateLocked ? ' off' : '')}
-            title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'}
-            onClick={function(e) { e.stopPropagation(); setTemplateLocked(!templateLocked); setPicker(templateLocked ? 'model' : null); }}>
-            <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
-          </button>}
-          {!templateLocked && modelOptions.length > 1 && <span className="chev"><Ic n="chev" s={20}/></span>}
-        </div>
-        <div className="divider"></div>
+          <div className="divider"></div>
+        </React.Fragment>}
         {qField && <React.Fragment>
-          <div className="row-link" onClick={() => setPicker('quality')}>
+          <div key={'q-' + (uiQualityValue || 'init')} className={'row-link' + (qualityLocked ? ' locked' : '')} onClick={() => !qualityLocked && setPicker('quality')}>
             <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
               display:'flex', alignItems:'center', justifyContent:'center' }}>
               <Ic n="sparkle" s={21} c="var(--ink)"/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Качество</div>
-              <div style={{ fontWeight:700, fontSize:15 }}>{prettyOption(qValue)}</div>
+              <div style={{ fontWeight:700, fontSize:15 }}>{displayQualityLabel}</div>
+              {selectedTpl && qualityLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Качество закреплено за шаблоном</div>}
             </div>
-            <span className="chev"><Ic n="chev" s={20}/></span>
+            {selectedTpl && <button className={'m-lock-btn' + (!qualityLocked ? ' off' : '')}
+              title={qualityLocked ? 'Качество закреплено. Нажмите, чтобы разблокировать' : 'Качество разблокировано'}
+              onClick={function(e) { e.stopPropagation(); setQualityLocked(!qualityLocked); setPicker(qualityLocked ? 'quality' : null); }}>
+              <Ic n={qualityLocked ? 'lock' : 'unlock'} s={18}/>
+            </button>}
+            {!qualityLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
           </div>
           <div className="divider"></div>
         </React.Fragment>}
-        <div className="row-link" onClick={() => setPicker('aspect')}>
+        {durationField && <React.Fragment>
+          <div key={'d-' + (durationValue || 'init') + '-' + (durationLocked ? 'locked' : 'open')} className={'row-link' + (durationLocked ? ' locked' : '')} onClick={() => !durationLocked && setPicker('duration')}>
+            <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
+              display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Ic n="clock" s={21} c="var(--ink)"/>
+            </div>
+            <div style={{ minWidth:0, flex:1 }}>
+              <div className="muted" style={{ fontSize:12 }}>Длительность</div>
+              <div style={{ fontWeight:700, fontSize:15 }}>{displayDurationLabel}</div>
+              {selectedTpl && durationLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Длительность закреплена за шаблоном</div>}
+            </div>
+            {selectedTpl && durationLocked && <button className={'m-lock-btn' + (!durationLocked ? ' off' : '')}
+              title={selectedTpl.durationUnlockable === false ? 'Длительность закреплена за шаблоном' : 'Длительность закреплена. Нажмите, чтобы разблокировать'}
+              onClick={function(e) { e.stopPropagation(); if (selectedTpl.durationUnlockable === false) return; setDurationLocked(false); setPicker('duration'); }}>
+              <Ic n="lock" s={18}/>
+            </button>}
+            {selectedTpl && !durationLocked && selectedTpl.durationLocked && <button className="m-lock-btn off"
+              title="Длительность разблокирована"
+              onClick={function(e) { e.stopPropagation(); setDurationLocked(true); setPicker(null); }}>
+              <Ic n="unlock" s={18}/>
+            </button>}
+            {!durationLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
+          </div>
+          <div className="divider"></div>
+        </React.Fragment>}
+        <div key={'a-' + (uiAspectId || 'init')} className={'row-link' + (aspectLocked ? ' locked' : '')} onClick={() => !aspectLocked && setPicker('aspect')}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
             display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="aspect" s={21} c="var(--ink)"/>
           </div>
-          <div>
+          <div style={{ minWidth:0, flex:1 }}>
             <div className="muted" style={{ fontSize:12 }}>Соотношение сторон</div>
-            <div style={{ fontWeight:700, fontSize:15 }}>{selectedAspect.t} · {selectedAspect.s}</div>
+            <div style={{ fontWeight:700, fontSize:15 }}>{displayAspectLabel}</div>
+            {selectedTpl && aspectLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Формат закреплён за шаблоном</div>}
           </div>
-          <span className="chev"><Ic n="chev" s={20}/></span>
+          {selectedTpl && <button className={'m-lock-btn' + (!aspectLocked ? ' off' : '')}
+            title={aspectLocked ? 'Формат закреплён. Нажмите, чтобы разблокировать' : 'Формат разблокирован'}
+            onClick={function(e) {
+              e.stopPropagation();
+              if (aspectLocked) { setAspectLocked(false); setPicker('aspect'); }
+              else { setAspectLocked(true); setPicker(null); }
+            }}>
+            <Ic n={aspectLocked ? 'lock' : 'unlock'} s={18}/>
+          </button>}
+          {!aspectLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
         </div>
       </div>
 
       <div style={{ height:20 }}/>
       <button className="btn-primary"
-        disabled={!ready || uploading || !modelsLoaded || !currentModelFull}
+        disabled={!ready || uploading || !currentModelFull}
         onClick={startGeneration}>
-        {!modelsLoaded ? 'Загрузка…' : 'Создать · ' + currentPrice + ' ★'}
+        {'Создать · ' + currentPrice + ' ★'}
       </button>
     </div>
 
@@ -572,21 +832,37 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     {picker === 'model' && !templateLocked && modelOptions.length > 0 && <PickerSheet
       title="Модель" options={modelOptions}
       current={currentModelOpt || modelOptions[0]}
-      onSelect={function(opt) { setSelectedModelCode(opt.id); setSelectedQuality(null); }}
+      onSelect={function(opt) { setSelectedModelCode(opt.id); setUiModelId(opt.id); setUiModelLabel(opt.t || String(opt.id)); setSelectedQuality(null); setUiQualityValue(null); setUiQualityLabel(null); setQualityLocked(false); }}
       onClose={() => setPicker(null)}/>}
 
     {/* Quality picker */}
-    {picker === 'quality' && qField && <PickerSheet
-      title="Качество" options={qOptions.map(function(o) { return { id:String(o), t:prettyOption(o), s:qField.label || 'Качество' }; })}
+    {picker === 'quality' && !qualityLocked && qField && <PickerSheet
+      title="Качество" options={qOptions.map(function(o) { var v = optionValue(o); return { id:String(v), t:optionTitle(o), s:qField.label || 'Качество' }; })}
       current={{ id:String(qValue) }}
-      onSelect={function(opt) { var found = qOptions.find(function(o) { return String(o) === String(opt.id); }); setSelectedQuality(found != null ? found : opt.id); }}
+      onSelect={function(opt) { setSelectedQuality(opt.id); setUiQualityValue(opt.id); setUiQualityLabel(opt.t || prettyOption(opt.id)); }}
+      onClose={() => setPicker(null)}/>}
+
+    {/* Duration picker */}
+    {picker === 'duration' && !durationLocked && durationField && <PickerSheet
+      title="Длительность" options={(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions).map(function(o) { var v = optionValue(o); return { id:String(v), t:String(v) + ' сек', s:'Длительность видео' }; })}
+      current={{ id:String(durationValue) }}
+      onSelect={function(opt) { setSelectedDuration(opt.id); setUiDurationValue(opt.id); setUiDurationLabel((opt.t || (String(opt.id) + ' сек'))); }}
       onClose={() => setPicker(null)}/>}
 
     {/* Aspect picker */}
-    {picker === 'aspect' && <PickerSheet
+    {picker === 'aspect' && !aspectLocked && <PickerSheet
       title="Соотношение сторон" options={ASPECTS}
       current={selectedAspect}
-      onSelect={setSelectedAspect}
+      onSelect={function(opt) {
+        if (opt && opt.id) {
+          var nextAspectId = String(opt.id);
+          setSelectedAspectId(nextAspectId);
+          setUiAspectId(nextAspectId);
+          setUiAspectLabel((opt.t || nextAspectId) + (opt.s ? ' · ' + opt.s : ''));
+          setAspectLocked(false);
+          saveTemplateAspect(selectedTpl, nextAspectId);
+        }
+      }}
       onClose={() => setPicker(null)}/>}
   </div>;
 }
@@ -606,7 +882,7 @@ function PickerSheet({ title, options, current, onSelect, onClose }) {
           return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
             <div className="pick-text">
               <div className="o-t">{o.t}</div>
-              {o.s && <div className="o-s">{o.s}</div>}
+              {o.s && <div className="o-s">{o.s}{o.price && <span className="o-price">{o.price}</span>}</div>}
             </div>
             {String(val) === String(o.id) && <span className="o-check"><Ic n="check" s={18} sw={2.4}/></span>}
           </div>;

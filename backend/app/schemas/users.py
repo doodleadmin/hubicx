@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserOut(BaseModel):
@@ -11,7 +11,34 @@ class UserOut(BaseModel):
     language_code: str
     language_selected: bool
     balance_credits: int
+    bonus_credits: int = 0
     is_admin: bool
     ref_code: str
     active_menu_chat_id: int | None = None
     active_menu_message_id: int | None = None
+
+
+class RegisterIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+    first_name: str | None = Field(default=None, max_length=120)
+
+
+class LoginIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class LinkEmailIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+
+
+class LinkTelegramIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AuthOut(BaseModel):
+    token: str
+    user: UserOut

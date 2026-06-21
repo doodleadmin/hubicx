@@ -1,4 +1,5 @@
 /* ============ App shell ============ */
+/* BUILD: 20260620-pricing2 */
 const { useState: uS, useEffect: uE, useRef: uR } = React;
 const DESKTOP = !!window.DESKTOP_MODE;
 const THEME_KEY = 'hbx_theme_v1';
@@ -140,7 +141,17 @@ function App() {
   // Load user balance on mount
   uE(() => {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setAuthChecked(true); return; }
-    window.HubicxApi.me().then(function(u) { setUser(u); setAuthChecked(true); })
+    window.HubicxApi.me().then(function(u) { setUser(u); setAuthChecked(true);
+      // Track referral if user came from partner link
+      try {
+        var refCode = localStorage.getItem('hbx_ref_code');
+        if (refCode && u && !u.referred_by_partner_id) {
+          window.HubicxApi.trackRef(refCode).then(function() {
+            try { localStorage.removeItem('hbx_ref_code'); } catch(e) {}
+          }).catch(function() {});
+        }
+      } catch(e) {}
+    })
       .catch(function(e) {
         // Stale/invalid desktop token → drop it so the auth screen shows
         if (e && (e.code === 'token_expired' || e.code === 'invalid_token' || e.status === 401) && !window.HubicxApi.isTelegram()) {
@@ -217,11 +228,12 @@ function App() {
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
   const [createModelCode, setCreateModelCode] = uS(null);
+  const [createKey, setCreateKey] = uS(0);
   const [templatesOpen, setTemplatesOpen] = uS(false);
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
-  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setCreateOpen(true); };
+  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
   const openTemplates = () => { setCreateOpen(false); setActiveChat(null); setTemplatesOpen(true); };
   const goTab = (t) => {
     if (t === 'templates') { openTemplates(); return; }
@@ -392,7 +404,8 @@ function App() {
 
   let body;
   if (createOpen) {
-    body = <CreateScreen tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
+    body = <CreateScreen key={createKey + ':' + mode + ':' + (preset && (preset.code || preset.t) || '') + ':' + (createModelCode || '')}
+      tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
       onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} refreshBalance={refreshBalance}/>;
   } else if (templatesOpen) {
     body = <TemplatesScreen onBack={() => setTemplatesOpen(false)}
@@ -485,13 +498,26 @@ function App() {
 function Topup({ tokens, onClose }) {
   const { Star } = window.MiraCore;
   const fallbackPacks = [
-    { code:'start',  title:'160 токенов',  tokens:160,  price_rub:149,  bonus_tokens:11,  total_tokens:160,  effective_price_per_token:0.93 },
-    { code:'basic',  title:'450 токенов',  tokens:450,  price_rub:399,  bonus_tokens:51,  total_tokens:450,  effective_price_per_token:0.89 },
-    { code:'pro',    title:'1000 токенов', tokens:1000, price_rub:849,  bonus_tokens:151, total_tokens:1000, effective_price_per_token:0.85 },
-    { code:'max',    title:'2200 токенов', tokens:2200, price_rub:1690, bonus_tokens:510, total_tokens:2200, effective_price_per_token:0.77 },
-    { code:'ultra',  title:'4200 токенов', tokens:4200, price_rub:2990, bonus_tokens:1210,total_tokens:4200, effective_price_per_token:0.71 },
+    { code:'topup_300',   title:'300 токенов',    tokens:300,   price_rub:249,  bonus_tokens:0, total_tokens:300,   effective_price_per_token:0.83 },
+    { code:'topup_1000',  title:'1 000 токенов',  tokens:1000,  price_rub:790,  bonus_tokens:0, total_tokens:1000,  effective_price_per_token:0.79 },
+    { code:'topup_3000',  title:'3 000 токенов',  tokens:3000,  price_rub:1990, bonus_tokens:0, total_tokens:3000,  effective_price_per_token:0.66 },
+    { code:'topup_10000', title:'10 000 токенов', tokens:10000, price_rub:5990, bonus_tokens:0, total_tokens:10000, effective_price_per_token:0.60 },
   ];
+  const fallbackSubs = [
+    { code:'templates_mini', title:'Шаблоны Mini', price_rub:790, period:'month', tokens_per_month:800, badge:'Старт', features:['Базовые шаблоны','Фото-шаблоны'] },
+    { code:'templates_plus', title:'Шаблоны Plus', price_rub:2590, period:'month', tokens_per_month:3500, badge:'Для контента', features:['Все шаблоны','Видео-шаблоны'] },
+    { code:'creator', title:'Creator', price_rub:1490, period:'month', tokens_per_month:1800, badge:'Личный', features:['Фото и видео','Базовые модели'] },
+    { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:6500, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
+    { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:18000, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
+  ];
+  const fallbackBonus = { title:'Получите до 190 бесплатных токенов', total_tokens:190, note:'Бонусные токены доступны для базовых фото-моделей и простых сценариев.', tasks:[
+    { code:'signup', title:'Бонус за регистрацию', tokens:50, kind:'automatic', claimed:true },
+    { code:'social_subscribe', title:'Подписаться на наш канал', tokens:70, kind:'manual_claim', claimable:true },
+    { code:'post_comment', title:'Оставить комментарий под постом', tokens:70, kind:'manual_claim', claimable:true },
+  ] };
   const [packs, setPacks] = uS(null); // null = loading; set by API or fallback on error
+  const [subs, setSubs] = uS(fallbackSubs);
+  const [bonus, setBonus] = uS(fallbackBonus);
   const [paymentsEnabled, setPaymentsEnabled] = uS(false);
   const [sel, setSel] = uS(1);
   const [customAmount, setCustomAmount] = uS('');
@@ -508,6 +534,8 @@ function Topup({ tokens, onClose }) {
           setPacks(data.token_packages);
         else
           setPacks(fallbackPacks);
+        if (data && Array.isArray(data.subscription_plans) && data.subscription_plans.length) setSubs(data.subscription_plans);
+        if (data && data.bonus_program) setBonus(data.bonus_program);
         if (data && data.payments_enabled) setPaymentsEnabled(true);
       }).catch(() => { if (alive) setPacks(fallbackPacks); });
     } else {
@@ -518,8 +546,8 @@ function Topup({ tokens, onClose }) {
 
   if (packs === null) {
     return <div className="sheet-ov" onClick={onClose}>
-      <div className="sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'36px 20px' }}>
+      <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
+        <div className="sheet-card topup-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'36px 20px' }}>
           <div className="gen-spinner"></div>
           <div className="muted" style={{ fontSize:14 }}>Загружаем пакеты…</div>
         </div>
@@ -571,18 +599,48 @@ function Topup({ tokens, onClose }) {
   };
 
   const ctaPrice = customValid ? customNum : (chosen ? chosen.price_rub : '');
+  const claimBonus = (code) => {
+    if (!window.HubicxApi || !window.HubicxApi.claimBonus) return;
+    window.HubicxApi.claimBonus(code).then(function() {
+      return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null;
+    }).then(function(data) { if (data) setBonus(data); }).catch(function(err) {
+      setPayError((err && err.message) || 'Не удалось начислить бонус');
+    });
+  };
 
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card">
+    <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card topup-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">Пополнить токены</div>
         <div className="muted" style={{ fontSize:13.5, marginBottom:14 }}>Текущий баланс: {tokens} ★</div>
 
-        <div className="label-sec" style={{ marginBottom:8 }}>Готовые пакеты</div>
-        <div style={{ display:'flex', flexDirection:'column', gap:9 }}>
+        {bonus && <div className="bonus-card">
+          <div className="bonus-title">{bonus.title || 'Получите бесплатные токены'}</div>
+          <div className="bonus-note">{bonus.note || 'Бонусные токены доступны для базовых моделей.'}</div>
+          <div className="bonus-tasks">
+            {(bonus.tasks || []).map(function(t) { var claimed = !!t.claimed; var manual = t.kind === 'manual_claim'; return <div className="bonus-task" key={t.code}>
+              <div><b>{t.title}</b><span>+{t.tokens} токенов</span></div>
+              {claimed ? <em>Готово</em> : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button> : <em>Авто</em>}
+            </div>; })}
+          </div>
+        </div>}
+
+        {subs && subs.length > 0 && <React.Fragment>
+          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Подписки</div>
+          <div className="sub-list">
+            {subs.map(function(p) { return <div className="sub-card" key={p.code}>
+              <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
+              <p>{p.tokens_per_month} токенов / месяц</p>
+              <strong>{p.price_rub} ₽/мес</strong>
+            </div>; })}
+          </div>
+        </React.Fragment>}
+
+        <div className="label-sec topup-label" style={{ marginBottom:8 }}>Готовые пакеты</div>
+        <div className="topup-packs" style={{ display:'flex', flexDirection:'column', gap:9 }}>
           {packs.map((p, i) => (
-            <div key={i} className="opt" onClick={() => { setSel(i); setCustomAmount(''); setCustomError(''); }}
+            <div key={i} className="opt topup-opt" onClick={() => { setSel(i); setCustomAmount(''); setCustomError(''); }}
               style={{ border:'1px solid ' + (sel === i && !customValid ? 'var(--ink)' : 'var(--line)'),
                 borderRadius:14, padding:'13px 14px', background: (sel === i && !customValid) ? '#f8f7f2' : 'transparent' }}>
               <Star s={20} c="#c9c7f4"/>
@@ -598,8 +656,8 @@ function Topup({ tokens, onClose }) {
           ))}
         </div>
 
-        <div className="label-sec" style={{ marginTop:16, marginBottom:8 }}>Своя сумма</div>
-        <div style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
+        <div className="label-sec topup-label" style={{ marginTop:16, marginBottom:8 }}>Своя сумма</div>
+        <div className="topup-custom" style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
           padding:'10px 14px', border:'1px solid ' + (customValid ? 'var(--ink)' : 'var(--line)') }}>
           <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
             onChange={e => handleCustomChange(e.target.value)}
@@ -618,7 +676,7 @@ function Topup({ tokens, onClose }) {
 
         {payError && <div style={{ fontSize:12.5, marginTop:10, color:'#c0473e', fontWeight:600 }}>{payError}</div>}
         {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>}
-        <button className="sheet-cta" onClick={handlePay}
+        <button className="sheet-cta topup-cta" onClick={handlePay}
           disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
           style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
                    cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>

@@ -182,7 +182,7 @@
       var name = (uploadFileObj && uploadFileObj.name) || (file && file.name) || 'upload';
       if (uploadFileObj && uploadFileObj.type) formData.append('file', uploadFileObj, name);
       else formData.append('file', new Blob([uploadFileObj], { type: type }), name);
-      return fetch(API_URL + '/api/files/upload', {
+      return fetch(apiBase() + '/api/files/upload', {
         method: 'POST',
         headers: auth,
         body: formData,
@@ -218,7 +218,7 @@
 
     var ctrl = new AbortController();
 
-    fetch(API_URL + '/api/agent/chats/' + chatId + '/stream', {
+    fetch(apiBase() + '/api/agent/chats/' + chatId + '/stream', {
       method: 'POST',
       headers: sseHeaders,
       body: JSON.stringify({ content: content }),
@@ -291,6 +291,9 @@
     },
     me:             function()          { return request('/auth/me'); },
     pricing:        function()          { return request('/pricing'); },
+    bonuses:        function()          { return request('/bonuses'); },
+    claimBonus:     function(code)      { return request('/bonuses/' + encodeURIComponent(code) + '/claim', { method:'POST', body:'{}' }); },
+    trackRef:       function(refCode)   { return request('/referral/track', { method:'POST', body: JSON.stringify({ ref_code: refCode }) }); },
     profile:        function()          { return request('/profile'); },
     updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
     models:         function(category)  { return requestPublic('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },

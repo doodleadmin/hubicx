@@ -78,6 +78,11 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
   const [viewTask, setViewTask] = useState(null);
   const saveTimerRef = useRef(null);
 
+  useEffect(function() {
+    document.body.classList.toggle('hbx-modal-open', !!editor);
+    return function() { document.body.classList.remove('hbx-modal-open'); };
+  }, [!!editor]);
+
   // Save to localStorage on every change
   useEffect(() => {
     var toStore = Object.assign({}, p);
@@ -267,28 +272,15 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
           title="Черты характера" ph="Например: спокойный, внимательный…" last/>
       </div>
 
-      <div style={{ marginTop:18, marginBottom:6 }}>
-        <span className="label-sec">О Вас</span>
-      </div>
-      <div className="card" style={{ padding:'4px 16px' }}>
-        <ValRow field="name" label="Имя" promptLabel="Указать имя" title="Имя" ph="Ваше имя"/>
-        <ValRow field="gender" label="Пол" promptLabel="Указать пол" title="Пол" kind="opts"/>
-        <ValRow field="age" label="Возраст" promptLabel="Указать возраст" title="Возраст" kind="opts"/>
-        <ValRow field="location" label="Локация" promptLabel="Указать локацию" title="Локация" ph="Город"/>
-        <ValRow field="activity" label="Вид деятельности" promptLabel="Указать деятельность" title="Деятельность" ph="Чем вы занимаетесь"/>
-        <ValRow field="interests" label="Интересы" promptLabel="Указать интересы" title="Интересы" ph="Ваши интересы"/>
-        <ValRow field="timezone" label="Часовой пояс" promptLabel="Указать часовой пояс" title="Часовой пояс" kind="opts" last/>
-      </div>
-
       <div style={{ height:24 }}/>
 
-      {editor && editor.kind === 'opts' && <OptsSheet title={editor.title} options={editor.options}
-        current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
-      {editor && editor.kind === 'text' && <TextSheet title={editor.title} ph={editor.ph}
-        current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
-      {editor && editor.kind === 'emoji' && <EmojiSheet current={p.emoji}
-        onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>}
     </div>
+    {editor && editor.kind === 'opts' && <OptsSheet title={editor.title} options={editor.options}
+      current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
+    {editor && editor.kind === 'text' && <TextSheet title={editor.title} ph={editor.ph}
+      current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
+    {editor && editor.kind === 'emoji' && <EmojiSheet current={p.emoji}
+      onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>}
   </div>;
 }
 
@@ -297,18 +289,20 @@ function OptsSheet({ title, options, current, onSave, onClose }) {
   const { Ic } = window.MiraCore;
   const [val, setVal] = useState(current);
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card">
+    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card profile-sheet-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">{title}</div>
-        {options.map(o => (
-          <div className="opt" key={o} onClick={() => setVal(o)}>
-            <div className="o-t" style={{ fontWeight:700 }}>{o}</div>
-            {val === o && <span className="o-check"><Ic n="check" s={22} sw={2.4}/></span>}
-          </div>
-        ))}
+        <div className="profile-sheet-scroll">
+          {options.map(o => (
+            <div className="opt" key={o} onClick={() => setVal(o)}>
+              <div className="o-t" style={{ fontWeight:700 }}>{o}</div>
+              {val === o && <span className="o-check"><Ic n="check" s={22} sw={2.4}/></span>}
+            </div>
+          ))}
+        </div>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
       </div>
-      <button className="sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
     </div>
   </div>;
 }
@@ -317,32 +311,34 @@ function TextSheet({ title, ph, current, onSave, onClose }) {
   const ref = useRef(null);
   useEffect(() => { if (ref.current) ref.current.focus(); }, []);
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card">
+    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card profile-sheet-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">{title}</div>
         <input ref={ref} className="text-in" placeholder={ph || "Введите значение"} value={val}
           onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { onSave(val.trim()); onClose(); } }}/>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val.trim()); onClose(); }}>Сохранить</button>
       </div>
-      <button className="sheet-cta" onClick={() => { onSave(val.trim()); onClose(); }}>Сохранить</button>
     </div>
   </div>;
 }
 function EmojiSheet({ current, onSave, onClose }) {
   const [val, setVal] = useState(current);
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card">
+    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card profile-sheet-card">
         <div className="sheet-grab"></div>
         <div className="sheet-title">Любимый эмодзи</div>
-        <div className="emoji-grid">
-          {EMOJIS.map(e => (
-            <div key={e} className={'emoji-cell' + (val === e ? ' on' : '')} onClick={() => setVal(e)}>{e}</div>
-          ))}
+        <div className="profile-sheet-scroll">
+          <div className="emoji-grid">
+            {EMOJIS.map(e => (
+              <div key={e} className={'emoji-cell' + (val === e ? ' on' : '')} onClick={() => setVal(e)}>{e}</div>
+            ))}
+          </div>
         </div>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
       </div>
-      <button className="sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
     </div>
   </div>;
 }

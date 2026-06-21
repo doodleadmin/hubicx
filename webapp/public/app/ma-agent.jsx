@@ -1,9 +1,14 @@
 /* ============ Agent (home) screen ============ */
 function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
   onStartChat, chats, onOpenChat, onDeleteChat, onTab, onTemplate, onTemplates }) {
-  const { Ic, Star, TopNav, HERO, TEMPLATES } = window.MiraCore;
-  const [val, setVal] = useState("");
-  const send = () => { const t = val.trim(); if (!t) return; setVal(""); onStartChat(t); };
+  const { Ic, Star, TopNav, TEMPLATES, TemplateMedia } = window.MiraCore;
+  var pickedK = Math.floor(Math.random() * 6) + 1;
+  var pickedS = Math.floor(Math.random() * 5) + 1;
+  var pickedH = Math.floor(Math.random() * 4) + 1;
+  var klingSrc = 'assets/video/kling/' + pickedK + '.mp4';
+  var seedanceSrc = 'assets/video/seedance/' + (pickedS === 4 ? '5.MP4' : pickedS === 5 ? '6.MP4' : pickedS + '.mp4');
+  var happyHorseExt = pickedH <= 2 ? '.mov' : '.mp4';
+  var happyHorseSrc = 'assets/video/happyhorse/' + pickedH + happyHorseExt;
 
   const acts = [
     { t:"Создать фото", s:"Из описания или фото", ic:"image", bg:"#e6efe9", c:"#5f9184", go: onCreatePhoto },
@@ -24,19 +29,9 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
 
       <div className="rise" style={{ '--d':'.04s' }}>
         <h1 className="greeting">Привет! Я здесь,<br/><span className="grad">чтобы помочь вам</span> ✨</h1>
-        <p className="greeting-sub">Спроси, создавай или вдохновись идеей</p>
       </div>
 
-      <div className="askbar rise" style={{ '--d':'.1s' }}>
-        <input placeholder="Спросить что-нибудь…" value={val}
-          onChange={e => setVal(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') send(); }}/>
-        <div className={'send' + (val.trim() ? ' on' : '')} onClick={send}>
-          <Ic n="arrowUp" s={20}/>
-        </div>
-      </div>
-
-      <div className="act-grid rise" style={{ '--d':'.16s' }}>
+      <div className="act-grid rise" style={{ '--d':'.1s' }}>
         {acts.map((a, i) => (
           <div key={i} className="act-card" onClick={a.go}>
             <div className="ic" style={{ background:a.bg }}><Ic n={a.ic} s={21} c={a.c}/></div>
@@ -45,25 +40,25 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
         ))}
       </div>
 
-      <div className="sec-h rise" style={{ '--d':'.22s', marginTop:22 }}>
+      <div className="sec-h rise" style={{ '--d':'.16s', marginTop:22 }}>
         <h2>Популярные шаблоны</h2>
         <span className="all" onClick={onTemplates}>Все</span>
       </div>
-      <div className="tpl-rail rise" style={{ '--d':'.26s' }}>
+      <div className="tpl-rail rise" style={{ '--d':'.2s' }}>
         {TEMPLATES.slice(0, 6).map(function(t, i) {
           return <div className="thumb tpl-card" key={i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
-            <img src={t.img} alt="" loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+            <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
             <div className="shade"></div>
             <div className="lbl">{t.t}</div>
           </div>;
         })}
       </div>
 
-      <div className="sec-h rise" style={{ '--d':'.3s', marginTop:22, marginBottom:12 }}>
+      <div className="sec-h rise" style={{ '--d':'.24s', marginTop:22, marginBottom:12 }}>
         <h2>Быстрые идеи</h2>
         <div style={{ width:18, height:18, borderRadius:'50%', border:'2px solid var(--faint)' }}></div>
       </div>
-      <div className="idea-grid rise" style={{ '--d':'.34s' }}>
+      <div className="idea-grid rise" style={{ '--d':'.28s' }}>
         {ideas.map((t, i) => (
           <div key={i} className="idea-tile" style={{ background:t.bg }}
             onClick={() => onStartChat(t.l)}>
@@ -71,6 +66,30 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
             <div className="l" style={{ color:'#1c1c1a' }}>{t.l}</div>
           </div>
         ))}
+      </div>
+
+      <div className="model-promo-list rise" style={{ '--d':'.32s', marginTop:18 }}>
+        <div className="model-promo" style={{ background:'#171b2b', color:'#dfe7ff' }}
+          onClick={() => onCreateVideo && onCreateVideo('kling_21_i2v')}>
+          <video className="promo-video" src={klingSrc} muted autoPlay playsInline loop
+            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <div className="model-promo-t">Kling</div>
+          <div className="model-promo-s">Киношное движение из фото</div>
+        </div>
+        <div className="model-promo" style={{ background:'#1c302a', color:'#e5fff4' }}
+          onClick={() => onCreateVideo && onCreateVideo('seedance_2_auto')}>
+          <video className="promo-video" src={seedanceSrc} muted autoPlay playsInline loop
+            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <div className="model-promo-t">Seedance 2.0</div>
+          <div className="model-promo-s">Топовое качество · сам выберет text/image/reference</div>
+        </div>
+        <div className="model-promo" style={{ background:'#1a1b2e', color:'#e8e0ff' }}
+          onClick={() => onCreateVideo && onCreateVideo('happy_horse_i2v')}>
+          <video className="promo-video" src={happyHorseSrc} muted autoPlay playsInline loop
+            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <div className="model-promo-t">Happy Horse</div>
+          <div className="model-promo-s">1080p видео от Alibaba со звуком и lip-sync</div>
+        </div>
       </div>
     </div>
   </div>;
