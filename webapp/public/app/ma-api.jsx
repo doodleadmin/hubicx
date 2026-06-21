@@ -293,7 +293,7 @@
     pricing:        function()          { return request('/pricing'); },
     bonuses:        function()          { return request('/bonuses'); },
     claimBonus:     function(code)      { return request('/bonuses/' + encodeURIComponent(code) + '/claim', { method:'POST', body:'{}' }); },
-    trackRef:       function(refCode)   { return request('/referral/track', { method:'POST', body: JSON.stringify({ ref_code: refCode }) }); },
+    trackRef:       function(refCode)   { return request('/admin/referral/track', { method:'POST', body: JSON.stringify({ ref_code: refCode }) }); },
     profile:        function()          { return request('/profile'); },
     updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
     models:         function(category)  { return requestPublic('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },

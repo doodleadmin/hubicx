@@ -12,6 +12,7 @@ cors_origins = list(dict.fromkeys([
     "https://app.hubicx.ru",
     "https://webapp.hubicx.ru",
     "https://admin.hubicx.ru",
+    "https://partners.hubicx.ru",
     "http://localhost:3000",
 ]))
 app.add_middleware(
