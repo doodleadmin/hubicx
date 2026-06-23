@@ -348,7 +348,7 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
       <div className="dk-menu-lbl">МЕНЮ</div>
       <nav className="dk-navs">
         {nav.map(function(n) {
-          return <div key={n.id} className={'dk-nav' + (tab === n.id ? ' on' : '')} onClick={() => onTab(n.id)}>
+            return <div key={n.id} data-onb={'desk-nav-' + n.id} className={'dk-nav' + (tab === n.id ? ' on' : '')} onClick={() => onTab(n.id)}>
             <span className="dk-ni"><Ic n={n.icon} s={19}/></span>
             <span className="dk-nl">{n.label}</span>
             {n.badge ? <span className="dk-badge">{n.badge}</span> : null}
@@ -361,10 +361,10 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
         <div className="dk-bal-row">
           <div className="dk-bal-num"><Star s={17} c="#c9c7f4"/> {tokens} <span className="dk-bal-un">токенов</span></div>
         </div>
-        <button className="dk-topup" onClick={onTopup}>Пополнить</button>
+        <button className="dk-topup" data-onb="desk-topup" onClick={onTopup}>Пополнить</button>
       </div>
 
-      <div className={'dk-user' + (tab === 'profile' ? ' on' : '')} onClick={onProfile}>
+      <div className={'dk-user' + (tab === 'profile' ? ' on' : '')} data-onb="desk-profile" onClick={onProfile}>
         <div className="dk-ava">{initial}</div>
         <div className="dk-uinfo">
           <div className="dk-uname">{name} <span className="dk-pro">Pro</span></div>
@@ -477,7 +477,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
 
   return <div className="dk-page dk-templates-page">
     <div className="dk-home-top">
-    <div className="dk-hero">
+    <div className="dk-hero" data-onb="desk-home-hero">
       <h1 className="dk-hero-h">Чем займёмся <span className="dk-grad">сегодня?</span></h1>
       <p className="dk-hero-sub">Опишите идею — Hubicx превратит её в фото, видео или текст.</p>
 
@@ -489,7 +489,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
         })}
       </div>
 
-      <div className="dk-askbar">
+      <div className="dk-askbar" data-onb="desk-create">
         <input placeholder={hmode === 'chat' ? 'Спросите что-нибудь…' : 'Например: портрет в неоновом ночном городе, дождь, отражения, киберпанк…'}
           value={val} onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
@@ -563,7 +563,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
       </div>
     </div>
 
-    <div className="dk-acts dk-home-acts">
+    <div className="dk-acts dk-home-acts" data-onb="desk-actions">
       {acts.map(function(a, i) {
         return <div key={i} className="dk-act" onClick={a.go}>
           <div className="dk-act-ic" style={{ background:a.bg }}><Ic n={a.ic} s={22} c={a.c}/></div>
@@ -574,7 +574,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
     </div>
     </div>
 
-    <div className="dk-sec">
+    <div className="dk-sec" data-onb="desk-templates-head">
       <h2>Популярные шаблоны</h2>
       <span className="dk-all" onClick={() => onTemplate(null)}>Все шаблоны</span>
     </div>

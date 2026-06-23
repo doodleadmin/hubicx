@@ -785,3 +785,46 @@ html.desktop .askbar { height: 62px; border-radius: 22px; }
   .gen-skel::after, .gen-chip.act i, .gen-dot{animation:none}
   .gen-media{transition:none; opacity:1; filter:none; transform:none}
 }
+
+/* ============================================================
+   Hubicx onboarding v1
+   ============================================================ */
+.onb, .mob-onb { position: fixed; inset: 0; z-index: 9999; pointer-events: none; font-family: inherit; }
+.onb-dim, .mob-onb-dim { position: absolute; inset: 0; background: rgba(8,10,14,.56); backdrop-filter: blur(4px); pointer-events: auto; }
+.onb-spot {
+  position: absolute; border-radius: 22px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(8,10,14,.56), 0 0 0 2px rgba(252,253,118,.95), 0 22px 60px rgba(0,0,0,.28);
+  background: rgba(255,255,255,.05); transition: all .22s var(--ease, ease);
+}
+.onb-card {
+  position: absolute; width: min(360px, calc(100vw - 32px)); pointer-events: auto;
+  background: var(--card); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 24px; padding: 22px; box-shadow: 0 28px 90px rgba(0,0,0,.24);
+}
+.onb-card h3, .mob-onb-sheet h3 { margin: 6px 0 8px; font-size: 22px; line-height: 1.08; letter-spacing: -.03em; }
+.onb-card p, .mob-onb-sheet p { color: var(--muted); font-size: 14px; line-height: 1.48; }
+.onb-kicker, .mob-onb-k { color: var(--link); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.onb-dots, .mob-onb-dots { display: flex; gap: 6px; margin: 18px 0 16px; }
+.onb-dots i, .mob-onb-dots i { width: 7px; height: 7px; border-radius: 99px; background: var(--line); transition: .18s; }
+.onb-dots i.on, .mob-onb-dots i.on { width: 22px; background: var(--accent); }
+.onb-actions, .mob-onb-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.onb-actions button, .mob-onb-actions button { border: 0; border-radius: 13px; height: 40px; padding: 0 15px; font-family: inherit; font-weight: 900; cursor: pointer; }
+.onb-ghost, .mob-onb-ghost { background: var(--nav-bg); color: var(--muted); }
+.onb-primary, .mob-onb-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 8px 20px rgba(210,210,80,.26); }
+html.theme-dark .onb-card, html.theme-dark .mob-onb-sheet { background: #191c23; border-color: #292d36; }
+html.theme-dark .onb-ghost, html.theme-dark .mob-onb-ghost { background: #252a34; color: #c4cad4; }
+
+.mob-onb { display: flex; align-items: flex-end; justify-content: center; }
+.mob-onb-sheet {
+  position: relative; width: min(100%, 430px); pointer-events: auto; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 28px 28px 0 0;
+  padding: 22px 20px max(22px, env(safe-area-inset-bottom)); box-shadow: 0 -24px 70px rgba(0,0,0,.22);
+  animation: mobOnbIn .24s var(--ease, ease);
+}
+.mob-onb-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border: 0; border-radius: 12px; background: var(--nav-bg); color: var(--muted); font-size: 22px; line-height: 1; }
+.mob-onb-ic { width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; font-size: 26px; background: var(--soft); margin-bottom: 12px; }
+@keyframes mobOnbIn { from { transform: translateY(18px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+
+@media (max-width: 720px) {
+  .onb-card { left: 16px !important; right: 16px; top: auto !important; bottom: 16px; }
+}

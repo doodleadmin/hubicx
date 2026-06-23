@@ -85,6 +85,110 @@ function deskPathForTab(tab) {
   return DESK_TAB_TO_PATH[tab] || '/app';
 }
 
+const ONBOARD_KEY = 'hbx_onboarding_v1';
+function isOnboardingDone() {
+  try { return localStorage.getItem(ONBOARD_KEY) === 'done'; } catch(e) { return true; }
+}
+function finishOnboarding() {
+  try { localStorage.setItem(ONBOARD_KEY, 'done'); } catch(e) {}
+}
+
+function DesktopOnboarding({ onTab, onTopup }) {
+  const [open, setOpen] = uS(() => DESKTOP && !isOnboardingDone());
+  const [step, setStep] = uS(0);
+  const [rect, setRect] = uS(null);
+  const steps = [
+    { tab:'home', selector:'[data-onb="desk-home-hero"]', title:'Добро пожаловать в Hubicx', text:'Это ваше рабочее пространство: здесь можно быстро создать фото, видео или начать чат с AI.' },
+    { tab:'home', selector:'[data-onb="desk-create"]', title:'Главная строка создания', text:'Опишите идею, выберите модель, формат и количество результатов. Enter или кнопка «Создать» запускают генерацию.' },
+    { tab:'home', selector:'[data-onb="desk-actions"]', title:'Быстрые действия', text:'Переходите к фото, видео, чату, шаблонам и истории в один клик.' },
+    { tab:'tpl', selector:'[data-onb="desk-nav-tpl"]', title:'Шаблоны', text:'Готовые сценарии помогают быстро получить стильный результат. Фото-шаблоны доступны даже без подписки через базовую модель.' },
+    { tab:'chat', selector:'[data-onb="desk-nav-chat"]', title:'Чат с AI', text:'Чат помогает придумывать промпты, тексты и идеи. Настройки общения находятся внутри самого чата.' },
+    { tab:'profile', selector:'[data-onb="desk-profile"]', title:'Профиль и бонусы', text:'В профиле — баланс, бонусные задания, последние работы и настройки аккаунта.' },
+    { tab:'home', selector:'[data-onb="desk-topup"]', title:'Баланс и пополнение', text:'Бонусные токены доступны для базовых фото-моделей. Видео и тяжёлые модели оплачиваются обычными токенами.' },
+  ];
+  const cur = steps[step] || steps[0];
+  const close = function() { finishOnboarding(); setOpen(false); };
+  const next = function() { if (step >= steps.length - 1) close(); else setStep(step + 1); };
+
+  uE(function() {
+    if (!open || !cur) return;
+    if (cur.tab && onTab) onTab(cur.tab, { replace:true });
+  }, [open, step]);
+
+  uE(function() {
+    if (!open || !cur) return;
+    var alive = true;
+    var update = function() {
+      var el = document.querySelector(cur.selector);
+      if (!alive) return;
+      if (!el) { setRect(null); return; }
+      var r = el.getBoundingClientRect();
+      setRect({ left:r.left, top:r.top, width:r.width, height:r.height });
+    };
+    var t = setTimeout(update, 90);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return function() { alive = false; clearTimeout(t); window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); };
+  }, [open, step]);
+
+  if (!open) return null;
+  var pad = 10;
+  var box = rect ? {
+    left: Math.max(8, rect.left - pad),
+    top: Math.max(8, rect.top - pad),
+    width: Math.min(window.innerWidth - 16, rect.width + pad * 2),
+    height: Math.min(window.innerHeight - 16, rect.height + pad * 2),
+  } : null;
+  var cardLeft = box ? Math.min(Math.max(260, box.left + box.width + 18), window.innerWidth - 390) : null;
+  var cardTop = box ? Math.min(Math.max(24, box.top), window.innerHeight - 260) : null;
+
+  return <div className="onb onb-desktop">
+    <div className="onb-dim"></div>
+    {box && <div className="onb-spot" style={{ left:box.left, top:box.top, width:box.width, height:box.height }}></div>}
+    <div className="onb-card" style={box ? { left:cardLeft, top:cardTop } : null}>
+      <div className="onb-kicker">Старт · {step + 1}/{steps.length}</div>
+      <h3>{cur.title}</h3>
+      <p>{cur.text}</p>
+      <div className="onb-dots">{steps.map(function(_, i) { return <i key={i} className={i === step ? 'on' : ''}></i>; })}</div>
+      <div className="onb-actions">
+        <button className="onb-ghost" onClick={close}>Пропустить</button>
+        {step > 0 && <button className="onb-ghost" onClick={() => setStep(step - 1)}>Назад</button>}
+        <button className="onb-primary" onClick={next}>{step >= steps.length - 1 ? 'Готово' : 'Далее'}</button>
+      </div>
+    </div>
+  </div>;
+}
+
+function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile }) {
+  const [open, setOpen] = uS(() => !DESKTOP && !isOnboardingDone());
+  const [step, setStep] = uS(0);
+  const steps = [
+    { icon:'✨', title:'Hubicx готов к работе', text:'Создавайте фото, видео, используйте шаблоны и общайтесь с AI прямо в Telegram.' },
+    { icon:'🎨', title:'Генерации и шаблоны', text:'Начните с готового шаблона или напишите свою идею. Фото-шаблоны доступны без подписки через базовую модель.', action:'Шаблоны', fn:onTemplates },
+    { icon:'💬', title:'Чат с AI', text:'Чат помогает с промптами, текстами и идеями. Настройки общения теперь внутри чата.', action:'Открыть чат', fn:onChat },
+    { icon:'🎁', title:'Бонусы и профиль', text:'В профиле лежат бонусные задания, баланс, история генераций и настройки аккаунта.', action:'Профиль', fn:onProfile },
+  ];
+  const cur = steps[step] || steps[0];
+  const close = function() { finishOnboarding(); setOpen(false); };
+  const next = function() { if (step >= steps.length - 1) close(); else setStep(step + 1); };
+  if (!open) return null;
+  return <div className="mob-onb">
+    <div className="mob-onb-dim" onClick={close}></div>
+    <div className="mob-onb-sheet">
+      <button className="mob-onb-x" onClick={close}>×</button>
+      <div className="mob-onb-ic">{cur.icon}</div>
+      <div className="mob-onb-k">Первый запуск · {step + 1}/{steps.length}</div>
+      <h3>{cur.title}</h3>
+      <p>{cur.text}</p>
+      <div className="mob-onb-dots">{steps.map(function(_, i) { return <i key={i} className={i === step ? 'on' : ''}></i>; })}</div>
+      <div className="mob-onb-actions">
+        {cur.fn && <button className="mob-onb-ghost" onClick={() => { close(); cur.fn(); }}>{cur.action}</button>}
+        <button className="mob-onb-primary" onClick={next}>{step >= steps.length - 1 ? 'Понятно' : 'Далее'}</button>
+      </div>
+    </div>
+  </div>;
+}
+
 /* Convert server chat messages to local format */
 function serverMsgsToLocal(msgs) {
   return (msgs || []).map(function(m) {
@@ -486,12 +590,14 @@ function App() {
           </div>
         </div>
       </div>}
+      <DesktopOnboarding onTab={goDtab} onTopup={() => setTopup(true)}/>
     </React.Fragment>;
   }
 
   return <div className="phone">
     {mainContent}
-    {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>}
+    {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
+    <MobileOnboarding onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')}/>
   </div>;
 }
 
