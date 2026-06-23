@@ -76,6 +76,10 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
   const [history, setHistory] = useState([]);
   const [histLoaded, setHistLoaded] = useState(false);
   const [viewTask, setViewTask] = useState(null);
+  const [bonus, setBonus] = useState(null);
+  const [bonusState, setBonusState] = useState('');
+  const [bonusToast, setBonusToast] = useState(false);
+  const bonusRef = useRef(null);
   const saveTimerRef = useRef(null);
 
   useEffect(function() {
@@ -103,6 +107,17 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
     window.HubicxApi.profile().then(function(data) {
       if (!alive) return;
       setP(function(prev) { return Object.assign({}, prev, serverToUI(data)); });
+    }).catch(function() {});
+    return function() { alive = false; };
+  }, []);
+
+  // Load bonus tasks on mount
+  useEffect(function() {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth() || !window.HubicxApi.bonuses) return;
+    var alive = true;
+    window.HubicxApi.bonuses().then(function(data) {
+      if (!alive) return;
+      setBonus(data && data.bonus_program ? data.bonus_program : data);
     }).catch(function() {});
     return function() { alive = false; };
   }, []);
@@ -135,6 +150,34 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
     var code = LANG_MAP_REV[p.lang] || 'ru';
     if (window.HubicxI18n && window.HubicxI18n.setLang) window.HubicxI18n.setLang(code);
   }, [p.lang]);
+
+  var bonusTasks = (bonus && Array.isArray(bonus.tasks)) ? bonus.tasks : [];
+  var bonusBalance = bonus ? (typeof bonus.bonus_credits === 'number' ? bonus.bonus_credits : (typeof bonus.total_tokens === 'number' ? bonus.total_tokens : null)) : null;
+  var hasManualBonus = bonusTasks.some(function(t) { return t && !t.claimed && (t.claimable !== false || t.action_url); });
+  useEffect(function() {
+    if (!hasManualBonus) return;
+    var now = Date.now();
+    var last = 0;
+    try { last = parseInt(localStorage.getItem('hbx_bonus_toast_seen_v1') || '0', 10) || 0; } catch(e) {}
+    if (now - last < 24 * 60 * 60 * 1000) return;
+    setBonusToast(true);
+    try { localStorage.setItem('hbx_bonus_toast_seen_v1', String(now)); } catch(e) {}
+  }, [hasManualBonus]);
+
+  const claimProfileBonus = (code) => {
+    if (!window.HubicxApi || !window.HubicxApi.claimBonus || !code) return;
+    setBonusState('Начисляем…');
+    window.HubicxApi.claimBonus(code).then(function() {
+      setBonusState('Бонус начислен');
+      return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null;
+    }).then(function(data) {
+      if (data) setBonus(data && data.bonus_program ? data.bonus_program : data);
+      setTimeout(function() { setBonusState(''); }, 2200);
+    }).catch(function(e) {
+      setBonusState((e && e.message) || 'Не удалось начислить бонус');
+      setTimeout(function() { setBonusState(''); }, 3200);
+    });
+  };
 
   const openOpts = (field, title) => setEditor({ kind:'opts', field, title, options:OPTS[field] });
   const openText = (field, title, ph) => setEditor({ kind:'text', field, title, ph });
@@ -203,8 +246,6 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       <div className="card" style={{ overflow:'hidden' }}>
         <Row chip={<IconChip bg="#e6eeff"><Star s={16} c="#6060c0"/></IconChip>}
           title="Мои токены" value={tokens} onClick={onTopup}/>
-        <Row chip={<IconChip bg="#ead0f5"><Ic n="wand" s={18} c="#9b3fc8"/></IconChip>}
-          title="LLM-модель" value={p.llm} onClick={() => openOpts('llm','LLM-модель')}/>
         <Row chip={<IconChip bg="#d0e8f5"><Ic n="globe" s={18} c="#2f80ed"/></IconChip>}
           title="Язык" value={p.lang} onClick={() => openOpts('lang','Язык')} last/>
       </div>
@@ -254,23 +295,40 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
         })}
       </div>
 
-      <div style={{ marginTop:18, marginBottom:6 }}>
-        <span className="label-sec">Личность Hubicx</span>
-      </div>
-      <div className="card" style={{ padding:'2px 16px' }}>
-        <ValRow field="style" label="Стиль общения" promptLabel="Указать стиль общения" title="Стиль общения" kind="opts"/>
-        <ValRow field="hubicxLang" label="Язык Hubicx" promptLabel="Указать язык Hubicx" title="Язык Hubicx" kind="opts"/>
-        <div className="prow" onClick={openEmoji}>
-          <div style={{ flex:1 }}>
-            <div className="muted" style={{ fontSize:13 }}>Любимый эмодзи</div>
-            <div style={{ fontSize:24, marginTop:2 }}>{p.emoji}</div>
+      {bonus && <div ref={bonusRef} className="card bonus-card-v2" style={{ marginTop:18 }}>
+        <div className="bonus-head-v2">
+          <div style={{ display:'flex', alignItems:'flex-start', gap:12, minWidth:0 }}>
+            <IconChip bg="#fff2c7">🎁</IconChip>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontWeight:850, fontSize:17 }}>Бонусные токены</div>
+              <div className="muted" style={{ fontSize:13, lineHeight:1.35, marginTop:3 }}>{bonus.title || '50 токенов сразу + бонусы за задания после проверки'}</div>
+            </div>
           </div>
-          <span className="chev"><Ic n="chev" s={18}/></span>
+          {bonusBalance !== null && <div className="bonus-bal-v2"><b>{bonusBalance}</b><span>★</span></div>}
         </div>
-        <div className="divider" style={{ marginLeft:0 }}></div>
-        <ValRow field="traits" label="Черты характера" promptLabel="Указать черты характера"
-          title="Черты характера" ph="Например: спокойный, внимательный…" last/>
-      </div>
+        <div className="bonus-list-v2">
+          {bonusTasks.map(function(t) {
+            var claimed = !!t.claimed;
+            var manual = t.kind === 'manual_claim' && t.claimable !== false;
+            var url = t.action_url || '';
+            var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
+            return <div className={'bonus-task-v2' + (claimed ? ' done' : '')} key={t.code}>
+              <div className="bonus-copy-v2">
+                <span>{t.title}</span>
+                <small>{t.description || ''}</small>
+              </div>
+              <div className="bonus-act-v2">
+                <b>+{t.tokens || t.credits || 0} ★</b>
+                {claimed ? <em>Готово</em>
+                  : manual ? <button onClick={() => claimProfileBonus(t.code)}>Забрать</button>
+                  : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
+                  : <em>{status}</em>}
+              </div>
+            </div>;
+          })}
+        </div>
+        {bonusState && <div className="muted" style={{ marginTop:8, fontSize:13 }}>{bonusState}</div>}
+      </div>}
 
       <div style={{ height:24 }}/>
 
@@ -280,7 +338,12 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
     {editor && editor.kind === 'text' && <TextSheet title={editor.title} ph={editor.ph}
       current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
     {editor && editor.kind === 'emoji' && <EmojiSheet current={p.emoji}
-      onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>}
+      onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>} 
+    {bonusToast && <div style={{ position:'fixed', left:16, right:16, bottom:88, zIndex:80, background:'rgba(28,28,26,.94)', color:'#fff', borderRadius:18, padding:'12px 14px', boxShadow:'0 18px 45px rgba(0,0,0,.24)', display:'flex', alignItems:'center', gap:10 }}>
+      <div style={{ flex:1, fontWeight:800, fontSize:14 }}>🎁 У вас есть бесплатные токены</div>
+      <button style={{ border:0, borderRadius:12, padding:'8px 10px', fontWeight:850, background:'#fff', color:'#1c1c1a' }} onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Посмотреть</button>
+      <button style={{ border:0, background:'transparent', color:'#fff', fontSize:18, padding:'4px' }} onClick={() => setBonusToast(false)}>×</button>
+    </div>}
   </div>;
 }
 

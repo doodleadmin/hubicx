@@ -54,7 +54,7 @@ async def public_pricing(session: AsyncSession = Depends(get_session)) -> dict:
         "token_packages": [serialize_package(pkg) for pkg in packages_result.scalars().all()],
         "subscription_plans": SUBSCRIPTION_PLANS_V2,
         "bonus_program": {
-            "title": f"Получите до {BONUS_TOTAL_TOKENS} бесплатных токенов",
+            "title": "50 токенов сразу + бонусы за задания после проверки",
             "total_tokens": BONUS_TOTAL_TOKENS,
             "note": "Бонусные токены доступны для базовых фото-моделей и простых сценариев.",
             "tasks": BONUS_TASKS_V2,

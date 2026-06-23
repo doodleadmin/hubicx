@@ -510,10 +510,9 @@ function Topup({ tokens, onClose }) {
     { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:6500, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
     { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:18000, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
   ];
-  const fallbackBonus = { title:'Получите до 190 бесплатных токенов', total_tokens:190, note:'Бонусные токены доступны для базовых фото-моделей и простых сценариев.', tasks:[
+  const fallbackBonus = { title:'50 токенов сразу + бонусы за задания после проверки', total_tokens:120, note:'Бонусные токены доступны для базовых фото-моделей и простых сценариев.', tasks:[
     { code:'signup', title:'Бонус за регистрацию', tokens:50, kind:'automatic', claimed:true },
-    { code:'social_subscribe', title:'Подписаться на наш канал', tokens:70, kind:'manual_claim', claimable:true },
-    { code:'post_comment', title:'Оставить комментарий под постом', tokens:70, kind:'manual_claim', claimable:true },
+    { code:'social_subscribe', title:'Подписаться на наш канал', description:'Откройте Telegram-канал. Автопроверка появится после подключения канала к боту.', tokens:70, kind:'external_check', action_url:'https://t.me/hubicx_bot', action_label:'Открыть канал', status_label:'Проверка скоро' },
   ] };
   const [packs, setPacks] = uS(null); // null = loading; set by API or fallback on error
   const [subs, setSubs] = uS(fallbackSubs);
@@ -615,14 +614,30 @@ function Topup({ tokens, onClose }) {
         <div className="sheet-title">Пополнить токены</div>
         <div className="muted" style={{ fontSize:13.5, marginBottom:14 }}>Текущий баланс: {tokens} ★</div>
 
-        {bonus && <div className="bonus-card">
-          <div className="bonus-title">{bonus.title || 'Получите бесплатные токены'}</div>
-          <div className="bonus-note">{bonus.note || 'Бонусные токены доступны для базовых моделей.'}</div>
-          <div className="bonus-tasks">
-            {(bonus.tasks || []).map(function(t) { var claimed = !!t.claimed; var manual = t.kind === 'manual_claim'; return <div className="bonus-task" key={t.code}>
-              <div><b>{t.title}</b><span>+{t.tokens} токенов</span></div>
-              {claimed ? <em>Готово</em> : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button> : <em>Авто</em>}
-            </div>; })}
+        {bonus && <div className="bonus-card-v2" style={{ margin:'4px 0 18px' }}>
+          <div className="bonus-head-v2">
+            <div>
+              <div className="bonus-title">{bonus.title || '50 токенов сразу + бонусы за задания после проверки'}</div>
+              <div className="bonus-note">{bonus.note || 'Бонусные токены доступны для базовых моделей.'}</div>
+            </div>
+          </div>
+          <div className="bonus-list-v2">
+            {(bonus.tasks || []).map(function(t) {
+              var claimed = !!t.claimed;
+              var manual = t.kind === 'manual_claim' && t.claimable !== false;
+              var url = t.action_url || '';
+              var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
+              return <div className={'bonus-task-v2' + (claimed ? ' done' : '')} key={t.code}>
+                <div className="bonus-copy-v2"><span>{t.title}</span><small>{t.description || ''}</small></div>
+                <div className="bonus-act-v2">
+                  <b>+{t.tokens || t.credits || 0} ★</b>
+                  {claimed ? <em>Готово</em>
+                    : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button>
+                    : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
+                    : <em>{status}</em>}
+                </div>
+              </div>;
+            })}
           </div>
         </div>}
 

@@ -10,7 +10,7 @@
     try { return String(window.location && window.location.hostname || '').toLowerCase(); } catch (e) { return ''; }
   }
 
-  function apiBase() { var h = host(); if (h === 'webapp.hubicx.ru' || h === 'app.hubicx.ru' || h === 'admin.hubicx.ru') return ''; return 'https://api.hubicx.ru'; }
+  function apiBase() { var h = host(); if (h === 'hubicx.ru' || h === 'www.hubicx.ru' || h === 'webapp.hubicx.ru' || h === 'app.hubicx.ru' || h === 'admin.hubicx.ru') return ''; return 'https://api.hubicx.ru'; }
   function isMiniAppHost() {
     if (window.HUBICX_APP_CONTEXT === 'telegram' || host() === 'webapp.hubicx.ru') return true;
     if (window.HUBICX_APP_CONTEXT === 'auto') {
@@ -21,7 +21,8 @@
   }
 
   function isBrowserHost() {
-    return window.HUBICX_APP_CONTEXT === 'browser' || host() === 'app.hubicx.ru';
+    var h = host();
+    return window.HUBICX_APP_CONTEXT === 'browser' || h === 'app.hubicx.ru' || h === 'hubicx.ru' || h === 'www.hubicx.ru';
   }
 
   function getInitData() {

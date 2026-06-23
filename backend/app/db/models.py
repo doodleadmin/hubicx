@@ -20,6 +20,8 @@ class User(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     username: Mapped[str | None] = mapped_column(String(255))
     first_name: Mapped[str | None] = mapped_column(String(255))
     language_code: Mapped[str] = mapped_column(String(8), default="ru")

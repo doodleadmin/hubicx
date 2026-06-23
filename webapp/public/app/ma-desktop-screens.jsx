@@ -2,9 +2,9 @@
    Hubicx — Desktop (PC) screens
    Loaded only in desktop.html, before ma-app.jsx.
 
-   BUILD: 20260620-pricing2
+   BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260620-pricing2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260623-bonus1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
@@ -259,7 +259,7 @@ function DeskAuth({ onAuthed }) {
 
   return <div className="dk-auth">
     <div className="dk-auth-card">
-      <div className="dk-auth-brand"><div className="dk-logo">✦</div><div className="dk-word">Hubicx</div></div>
+      <div className="dk-auth-brand"><div className="dk-logo"><img src="assets/logo.jpg" alt="Hubicx"/></div><div className="dk-word">Hubicx</div></div>
       <div className="dk-auth-h">{tab === 'login' ? 'Вход в аккаунт' : 'Регистрация'}</div>
       <div className="dk-auth-sub">Фото, видео и AI-чат на компьютере</div>
 
@@ -342,7 +342,7 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
   return <div className="dk" onClick={() => notifOpen && setNotifOpen(false)}>
     <aside className="dk-side">
       <div className="dk-brand">
-        <div className="dk-logo">✦</div>
+        <div className="dk-logo"><img src="assets/logo.jpg" alt="Hubicx"/></div>
         <div className="dk-word">Hubicx</div>
       </div>
       <div className="dk-menu-lbl">МЕНЮ</div>
@@ -464,7 +464,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
     { t:'Создать видео', s:'Оживить изображение', ic:'video', bg:'#eae8fb', c:'#6f6cc8', go:() => onGen('video','') },
     { t:'Чат с AI', s:'Идеи, тексты, помощь', ic:'chat', bg:'#e4eef4', c:'#5b8fb0', go:() => onStartChat('Привет!') },
     { t:'Шаблоны', s:'Каталог образов', ic:'sparkle', bg:'#fbeede', c:'#c98a4e', go:() => onTemplate(null) },
-    { t:'История', s:'Ваши результаты', ic:'history', bg:'#eef0e8', c:'#7f8d73', go:() => onHistory && onHistory() },
+    { t:'История', s:'Ваши результаты', ic:'clock', bg:'#eef0e8', c:'#7f8d73', go:() => onHistory && onHistory() },
   ];
   var favSet = new Set(favTplKeys);
   const toggleFavTpl = function(t) {
@@ -1336,7 +1336,7 @@ function DeskHistory() {
   }
 
   return <div className="dk-page dk-history-page">
-    {loaded && history.length === 0 && <div className="dk-empty-card">
+    {loaded && history.length === 0 && <div className="dk-empty-card dk-empty-fill dk-history-empty">
       <div style={{ fontSize:38 }}>✨</div>
       <div className="dk-canvas-et">Здесь появятся ваши работы</div>
       <div className="dk-canvas-es">Создайте первое фото или видео — результат сохранится в истории</div>
@@ -1422,6 +1422,10 @@ function DeskLinkEmail({ mode, onClose, onLinked }) {
 function DeskProfile({ tokens, user, onTopup, onSettings }) {
   const { Ic, Star } = window.MiraCore;
   const [linkMode, setLinkMode] = useState(null); // null | 'create' | 'merge'
+  const [bonus, setBonus] = useState(null);
+  const [bonusState, setBonusState] = useState('');
+  const [bonusToast, setBonusToast] = useState(false);
+  const bonusRef = useRef(null);
   const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
   const hasPassword = user && user.has_password;
   const logout = function() { if (window.HubicxApi) window.HubicxApi.logout(); window.location.reload(); };
@@ -1431,6 +1435,16 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
     window.HubicxApi.history().then(function(items) { if (Array.isArray(items)) setHistory(items); }).catch(function() {});
   }, []);
 
+  useEffect(function() {
+    if (!window.HubicxApi || !window.HubicxApi.hasAuth() || !window.HubicxApi.bonuses) return;
+    var alive = true;
+    window.HubicxApi.bonuses().then(function(data) {
+      if (!alive) return;
+      setBonus(data && data.bonus_program ? data.bonus_program : data);
+    }).catch(function() {});
+    return function() { alive = false; };
+  }, []);
+
   const done = history.filter(function(i) { return i.status === 'completed'; });
   const photos = done.filter(function(i) { return i.task_type !== 'video'; }).length;
   const videos = done.filter(function(i) { return i.task_type === 'video'; }).length;
@@ -1438,6 +1452,34 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
   const uname = (user && user.username) ? '@' + user.username : '@hubicx';
   const initial = (name || 'H').trim().charAt(0).toUpperCase();
   const recent = done.slice(0, 4);
+  const bonusTasks = (bonus && Array.isArray(bonus.tasks)) ? bonus.tasks : [];
+  const bonusBalance = bonus ? (typeof bonus.bonus_credits === 'number' ? bonus.bonus_credits : (typeof bonus.total_tokens === 'number' ? bonus.total_tokens : null)) : null;
+  const hasManualBonus = bonusTasks.some(function(t) { return t && !t.claimed && (t.claimable !== false || t.action_url); });
+
+  useEffect(function() {
+    if (!hasManualBonus) return;
+    var now = Date.now();
+    var last = 0;
+    try { last = parseInt(localStorage.getItem('hbx_bonus_toast_seen_v1') || '0', 10) || 0; } catch(e) {}
+    if (now - last < 24 * 60 * 60 * 1000) return;
+    setBonusToast(true);
+    try { localStorage.setItem('hbx_bonus_toast_seen_v1', String(now)); } catch(e) {}
+  }, [hasManualBonus]);
+
+  const claimProfileBonus = function(code) {
+    if (!window.HubicxApi || !window.HubicxApi.claimBonus || !code) return;
+    setBonusState('Начисляем…');
+    window.HubicxApi.claimBonus(code).then(function() {
+      setBonusState('Бонус начислен');
+      return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null;
+    }).then(function(data) {
+      if (data) setBonus(data && data.bonus_program ? data.bonus_program : data);
+      setTimeout(function() { setBonusState(''); }, 2200);
+    }).catch(function(e) {
+      setBonusState((e && e.message) || 'Не удалось начислить бонус');
+      setTimeout(function() { setBonusState(''); }, 3200);
+    });
+  };
 
   const stats = [
     { ic:'sparkle', c:'#7a9c92', n:done.length, l:'генераций' },
@@ -1477,7 +1519,7 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
               </div>;
             })}
           </div>
-        : <div className="dk-empty-card"><div style={{ fontSize:34 }}>✨</div><div className="dk-canvas-es">Ваши работы появятся здесь</div></div>}
+        : <div className="dk-empty-card dk-empty-fill dk-profile-empty"><div style={{ fontSize:34 }}>✨</div><div className="dk-canvas-es">Ваши работы появятся здесь</div></div>}
     </div>
 
     <div className="dk-prof-side">
@@ -1488,20 +1530,49 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
         <div className="dk-side-note">1 фото ≈ 2 ★ · 1 видео ≈ 5 ★</div>
       </div>
 
-      <div className="dk-card dk-pad">
-        <div className="dk-side-h"><Ic n="bolt" s={17} c="#c98a4e"/> Hubicx Pro</div>
-        <div className="dk-kv"><span>Подписка</span><b>активна</b></div>
-        <div className="dk-kv"><span>Лимит в день</span><b>без лимита</b></div>
-        <div className="dk-kv"><span>Все модели</span><b>доступны</b></div>
-      </div>
+      {bonusToast && <div className="dk-card dk-pad" style={{ borderColor:'rgba(127,170,157,.55)', background:'linear-gradient(135deg, rgba(127,170,157,.18), rgba(255,255,255,.72))' }}>
+        <div className="dk-side-h">🎁 У вас есть бесплатные токены</div>
+        <div className="dk-side-note" style={{ marginTop:0, marginBottom:10, textAlign:'left' }}>Заберите доступные бонусы в профиле.</div>
+        <button className="dk-btn-sec" style={{ width:'100%' }} onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Посмотреть</button>
+      </div>}
+
+      {bonus && <div ref={bonusRef} className="dk-card dk-pad dk-bonus-card-v2">
+        <div className="dk-bonus-head">
+          <div>
+            <div className="dk-side-h">🎁 Бонусные токены</div>
+            <div className="dk-side-note" style={{ marginTop:4, textAlign:'left' }}>{bonus.title || '50 токенов сразу + бонусы за задания после проверки'}</div>
+          </div>
+          {bonusBalance !== null && <div className="dk-bonus-bal"><b>{bonusBalance}</b><span>★</span></div>}
+        </div>
+        <div className="dk-bonus-tasks">
+          {bonusTasks.map(function(t) {
+            var claimed = !!t.claimed;
+            var manual = t.kind === 'manual_claim' && t.claimable !== false;
+            var url = t.action_url || '';
+            var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
+            return <div className={'dk-bonus-task' + (claimed ? ' done' : '')} key={t.code}>
+              <div className="dk-bonus-copy">
+                <span>{t.title}</span>
+                <small>{t.description || ''}</small>
+              </div>
+              <div className="dk-bonus-act">
+                <b>+{t.tokens || t.credits || 0} ★</b>
+                {claimed ? <em>Готово</em>
+                  : manual ? <button onClick={() => claimProfileBonus(t.code)}>Забрать</button>
+                  : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
+                  : <em>{status}</em>}
+              </div>
+            </div>;
+          })}
+        </div>
+        {bonusState && <div className="dk-side-note" style={{ marginTop:10 }}>{bonusState}</div>}
+      </div>}
 
       <div className="dk-card dk-pad">
-        <div className="dk-side-h">Пригласить друга</div>
-        <div className="dk-side-note" style={{ marginTop:0, marginBottom:10 }}>+50 ★ вам и другу за регистрацию</div>
-        <div className="dk-ref">
-          <span className="dk-ref-link">hubicx.ru/r/{(user && user.username) || 'you'}</span>
-          <button className="dk-ref-copy" onClick={() => { try { navigator.clipboard.writeText('https://hubicx.ru/r/' + ((user && user.username) || 'you')); } catch(e) {} }}><Ic n="copy" s={15}/></button>
-        </div>
+        <div className="dk-side-h"><Ic n="bolt" s={17} c="#c98a4e"/> Доступ</div>
+        <div className="dk-kv"><span>Подписка</span><b>нет</b></div>
+        <div className="dk-kv"><span>Фото-шаблоны</span><b style={{ color:'#5f9184' }}>доступны</b></div>
+        <div className="dk-side-note" style={{ marginTop:8, textAlign:'left' }}>Без подписки фото-шаблоны запускаются на базовой модели. Видео по-прежнему требует платные токены.</div>
       </div>
 
       <div className="dk-card dk-pad">
@@ -1538,10 +1609,9 @@ function DeskTopup({ tokens, onClose }) {
     { code:'creator_pro', title:'Creator Pro', price_rub:3990, tokens_per_month:6500, badge:'Популярный' },
     { code:'studio', title:'Studio', price_rub:9900, tokens_per_month:18000, badge:'Для бизнеса' },
   ];
-  const fallbackBonus = { title:'Получите до 190 бесплатных токенов', note:'Бонусные токены доступны для базовых фото-моделей.', tasks:[
+  const fallbackBonus = { title:'50 токенов сразу + бонусы за задания после проверки', note:'Бонусные токены доступны для базовых фото-моделей.', tasks:[
     { code:'signup', title:'Бонус за регистрацию', tokens:50, kind:'automatic', claimed:true },
-    { code:'social_subscribe', title:'Подписаться на наш канал', tokens:70, kind:'manual_claim', claimable:true },
-    { code:'post_comment', title:'Оставить комментарий под постом', tokens:70, kind:'manual_claim', claimable:true },
+    { code:'social_subscribe', title:'Подписаться на наш канал', description:'Откройте Telegram-канал. Автопроверка появится после подключения канала к боту.', tokens:70, kind:'external_check', action_url:'https://t.me/hubicx_bot', action_label:'Открыть канал', status_label:'Проверка скоро' },
   ] };
   const [packs, setPacks] = useState(null);
   const [subs, setSubs] = useState(fallbackSubs);
@@ -1590,7 +1660,7 @@ function DeskTopup({ tokens, onClose }) {
       .catch(function(e) { setPayErr((e && e.message) || 'Не удалось начислить бонус'); });
   };
   return <div className="dk-modal-ov" onClick={onClose}>
-    <div className="dk-modal" onClick={e => e.stopPropagation()}>
+    <div className="dk-modal dk-topup-modal" onClick={e => e.stopPropagation()}>
       <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
       <div className="dk-modal-title">Пополнить токены</div>
       <div className="dk-modal-sub">Текущий баланс: {tokens} ★</div>
@@ -1598,15 +1668,27 @@ function DeskTopup({ tokens, onClose }) {
       {packs === null
         ? <div style={{ padding:'40px 0', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>
         : <>
-        {bonus && <div className="dk-bonus-card">
+        {bonus && <div className="dk-bonus-card dk-bonus-card-v2 dk-topup-bonus">
           <div className="dk-bonus-title">{bonus.title}</div>
-          <div className="dk-bonus-note">{bonus.note}</div>
-          <div className="dk-bonus-tasks">{(bonus.tasks || []).map(function(t) { var claimed = !!t.claimed; var manual = t.kind === 'manual_claim'; return <div className="dk-bonus-task" key={t.code}>
-            <span>{t.title} <b>+{t.tokens}</b></span>
-            {claimed ? <em>Готово</em> : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button> : <em>Авто</em>}
+          {bonus.note && <div className="dk-bonus-note">{bonus.note}</div>}
+          <div className="dk-bonus-tasks">{(bonus.tasks || []).map(function(t) {
+            var claimed = !!t.claimed;
+            var manual = t.kind === 'manual_claim' && t.claimable !== false;
+            var url = t.action_url || '';
+            var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
+            return <div className={'dk-bonus-task' + (claimed ? ' done' : '')} key={t.code}>
+              <div className="dk-bonus-copy"><span>{t.title}</span><small>{t.description || ''}</small></div>
+              <div className="dk-bonus-act">
+                <b>+{t.tokens || t.credits || 0} ★</b>
+                {claimed ? <em>Готово</em>
+                  : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button>
+                  : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
+                  : <em>{status}</em>}
+              </div>
           </div>; })}</div>
         </div>}
 
+        <div className="dk-topup-label">Подписки</div>
         <div className="dk-sub-grid">
           {subs.map(function(p) { return <div className="dk-sub-card" key={p.code}>
             <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
@@ -1615,6 +1697,7 @@ function DeskTopup({ tokens, onClose }) {
           </div>; })}
         </div>
 
+        <div className="dk-topup-label">Пакеты токенов</div>
         <div className="dk-packs">
           {packs.map(function(p, i) {
             var best = i === 1;

@@ -12,6 +12,7 @@ from backend.app.config import settings
 from backend.app.db.models import User
 from backend.app.services.users import get_or_create_user
 from backend.app.utils.errors import AppError
+from backend.app.utils.security import decode_jwt
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,14 @@ async def get_current_user(
     authorization: str | None = Header(default=None),
     x_telegram_init_data: str | None = Header(default=None),
 ) -> User:
+    if authorization and authorization.lower().startswith("bearer "):
+        payload = decode_jwt(authorization[7:].strip())
+        user_id = int(payload.get("sub") or 0)
+        user = await session.get(User, user_id)
+        if not user:
+            raise AppError("invalid_token", "Пользователь не найден", 401)
+        return user
+
     init_data = x_telegram_init_data
     if authorization and authorization.lower().startswith("tma "):
         init_data = authorization[4:]

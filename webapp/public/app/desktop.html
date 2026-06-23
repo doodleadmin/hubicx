@@ -3,25 +3,46 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<!-- Analytics: Google Analytics + Yandex.Metrika -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-011XWWK2NX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-011XWWK2NX');
+</script>
+<script type="text/javascript">
+  (function(m,e,t,r,i,k,a){
+    m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+    k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+  })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=110060052', 'ym');
+  ym(110060052, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
 <base href="/app/"/>
 <title>Hubicx — AI-хаб для фото, видео и чата в Telegram</title>
-<meta name="description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели — без VPN, прямо в Telegram и в браузере. 20 токенов в подарок."/>
+<meta name="description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели — без VPN, прямо в Telegram и в браузере. 50 токенов в подарок."/>
 <meta name="robots" content="index, follow"/>
-<link rel="canonical" href="https://app.hubicx.ru/"/>
+<link rel="canonical" href="https://hubicx.ru/"/>
+<link rel="icon" type="image/x-icon" href="/app/assets/favicon.ico"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/app/assets/favicon-32x32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="/app/assets/favicon-16x16.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/app/assets/apple-touch-icon.png"/>
 <meta property="og:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
 <meta property="og:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram."/>
 <meta property="og:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
-<meta property="og:url" content="https://app.hubicx.ru/"/>
+<meta property="og:url" content="https://hubicx.ru/"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Hubicx"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
 <meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
 <meta name="twitter:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
-<script>window.__APP_BUILD__='20260620-pricing2';</script>
+<script>window.__APP_BUILD__='20260623-bonus1';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 <link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/polaroid-party/cover.webp" fetchpriority="high"/>
@@ -29,10 +50,11 @@
 <link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/tv-broadcast/cover.mp4" fetchpriority="high"/>
 <link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/catastrophic-love/cover.mp4" fetchpriority="high"/>
 <link rel="stylesheet" href="/app/loader.css?v=20260619-catlove1"/>
-<link rel="stylesheet" href="/app/ma.css?v=20260620-pricing2"/>
-<link rel="stylesheet" href="/app/ma-desktop.css?v=20260620-pricing2"/>
+<link rel="stylesheet" href="/app/ma.css?v=20260624-profile-icons1"/>
+<link rel="stylesheet" href="/app/ma-desktop.css?v=20260624-desktop-final1"/>
 </head>
 <body>
+<noscript><div><img src="https://mc.yandex.ru/watch/110060052" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <div id="root"></div>
 
 <!-- Loading overlay (desktop + Telegram desktop) -->
@@ -90,16 +112,16 @@
 <script src="/app/assets/vendor/react-dom.production.min.js"></script>
 <script>window.babel = { cache: false };</script>
 <script src="/app/assets/vendor/babel.min.js"></script>
-<script src="/app/ma-api.jsx?v=20260620-pricing2"></script>
+<script src="/app/ma-api.jsx?v=20260622-auth-hubicx1"></script>
 <script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
 <script type="text/babel" src="/app/ma-core.jsx?v=20260620-pricing2"></script>
-<script type="text/babel" src="/app/ma-chat.jsx?v=20260619-catlove1"></script>
+<script type="text/babel" src="/app/ma-chat.jsx?v=20260623-chat-settings1"></script>
 <script type="text/babel" src="/app/ma-agent.jsx?v=20260620-pricing2"></script>
 <script type="text/babel" src="/app/ma-generation.jsx?v=20260620-pricing2"></script>
-<script type="text/babel" src="/app/ma-create.jsx?v=20260620-pricing2"></script>
-<script type="text/babel" src="/app/ma-profile.jsx?v=20260620-pricing2"></script>
-<script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260620-pricing2"></script>
-<script type="text/babel" src="/app/ma-landing.jsx?v=20260619-catlove1"></script>
-<script type="text/babel" src="/app/ma-app.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-create.jsx?v=20260624-profile-icons1"></script>
+<script type="text/babel" src="/app/ma-profile.jsx?v=20260624-profile-icons1"></script>
+<script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260624-desktop-final1"></script>
+<script type="text/babel" src="/app/ma-landing.jsx?v=20260623-bonus1"></script>
+<script type="text/babel" src="/app/ma-app.jsx?v=20260623-bonus-ui2"></script>
 </body>
 </html>

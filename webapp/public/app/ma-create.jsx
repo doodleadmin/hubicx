@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen ============ */
-/* BUILD: 20260620-pricing2 */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260620-pricing2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+/* BUILD: 20260622-v3 */
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260623-bonus1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -737,9 +737,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       <div className="card" style={{ overflow:'hidden' }}>
         {showModelPicker && <React.Fragment>
           <div key={'m-' + displayModelId + '-' + currentPrice} className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
-            <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Ic n="model" s={21} c="var(--ink)"/>
+            <div className="cr-detail-ic">
+              <Ic n="model" s={21}/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Модель</div>
@@ -754,9 +753,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         </React.Fragment>}
         {qField && <React.Fragment>
           <div key={'q-' + (uiQualityValue || 'init')} className={'row-link' + (qualityLocked ? ' locked' : '')} onClick={() => !qualityLocked && setPicker('quality')}>
-            <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Ic n="sparkle" s={21} c="var(--ink)"/>
+            <div className="cr-detail-ic">
+              <Ic n="sparkle" s={21}/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Качество</div>
@@ -774,9 +772,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         </React.Fragment>}
         {durationField && <React.Fragment>
           <div key={'d-' + (durationValue || 'init') + '-' + (durationLocked ? 'locked' : 'open')} className={'row-link' + (durationLocked ? ' locked' : '')} onClick={() => !durationLocked && setPicker('duration')}>
-            <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
-              display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <Ic n="clock" s={21} c="var(--ink)"/>
+            <div className="cr-detail-ic">
+              <Ic n="clock" s={21}/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Длительность</div>
@@ -798,9 +795,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
           <div className="divider"></div>
         </React.Fragment>}
         <div key={'a-' + (uiAspectId || 'init')} className={'row-link' + (aspectLocked ? ' locked' : '')} onClick={() => !aspectLocked && setPicker('aspect')}>
-          <div style={{ width:42, height:42, borderRadius:13, background:'#f1f0ea',
-            display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <Ic n="aspect" s={21} c="var(--ink)"/>
+          <div className="cr-detail-ic">
+            <Ic n="aspect" s={21}/>
           </div>
           <div style={{ minWidth:0, flex:1 }}>
             <div className="muted" style={{ fontSize:12 }}>Соотношение сторон</div>

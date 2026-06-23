@@ -73,16 +73,12 @@ BONUS_TASKS_V2 = [
     {
         "code": "social_subscribe",
         "title": "Подписаться на наш канал",
-        "description": "Подпишитесь на Telegram/соцсеть Hubicx и получите бонусные токены.",
+        "description": "Перейдите в Telegram-канал Hubicx. Автоматическая проверка подписки появится после подключения канала к боту.",
         "tokens": 70,
-        "kind": "manual_claim",
-    },
-    {
-        "code": "post_comment",
-        "title": "Оставить комментарий под постом",
-        "description": "Оставьте комментарий под нашим постом и заберите бонус.",
-        "tokens": 70,
-        "kind": "manual_claim",
+        "kind": "external_check",
+        "action_label": "Открыть канал",
+        "action_url": "https://t.me/hubicx_bot",
+        "status_label": "Проверка скоро",
     },
 ]
 

@@ -14,7 +14,25 @@ from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
 
 MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
+FREE_TEMPLATE_FALLBACK_MODEL_CODE = "nano_banana_2"
+TEMPLATE_FALLBACK_MODEL_CODES = {"nano_banana_pro"}
 logger = logging.getLogger(__name__)
+
+
+def _is_photo_template(template: Template, model: AIModel | None) -> bool:
+    template_type = (template.template_type or "").lower()
+    task_type = ((model.task_type if model else None) or "").lower()
+    category = ((model.category if model else None) or "").lower()
+
+    values = {template_type, task_type, category}
+    if any("video" in value for value in values):
+        return False
+    return bool(values & {"image", "photo"})
+
+
+def _user_has_template_subscription(user: User) -> bool:
+    # Хранилище подписок пока не реализовано; точка будущей интеграции.
+    return False
 
 
 def _provider_prompt_preview(provider_input: dict[str, Any]) -> str | None:
@@ -75,11 +93,43 @@ async def create_generation_task(
             raise AppError("model_inactive", "Шаблон временно отключен")
         model = await session.get(AIModel, template.base_model_id) if template.base_model_id else None
         price = template.price_credits
+
+        fallback_metadata = None
+        if (
+            model
+            and model.code in TEMPLATE_FALLBACK_MODEL_CODES
+            and _is_photo_template(template, model)
+            and not _user_has_template_subscription(user)
+        ):
+            fallback_model = await session.scalar(
+                select(AIModel).where(
+                    AIModel.code == FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                    AIModel.is_active.is_(True),
+                )
+            )
+            if fallback_model:
+                fallback_metadata = {
+                    "from": model.code,
+                    "to": fallback_model.code,
+                    "reason": "no_subscription",
+                }
+                model = fallback_model
+                price = await calculate_generation_cost_from_db(session, model, {})
+            else:
+                logger.info(
+                    "TEMPLATE_MODEL_FALLBACK_SKIPPED template_code=%s from_model=%s to_model=%s reason=fallback_inactive_or_missing",
+                    template.code,
+                    model.code,
+                    FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                )
+
         provider = model.provider if model else "fal"
         task_type = model.task_type if model else template.template_type
         validated_inputs = {}
         provider_input = {}
         task_params = {**((model.default_params if model else {}) or {}), **(template.default_params or {}), **(params or {})}
+        if fallback_metadata:
+            task_params["_template_model_fallback"] = fallback_metadata
 
     allow_bonus = is_bonus_eligible_model(model.code if model else None, task_type)
     if provider_input and provider_input.get("template_pipeline"):

@@ -11,6 +11,19 @@ SITEMAP_URLS = [
     {"loc": "https://app.hubicx.ru/#models", "priority": "0.8", "changefreq": "monthly"},
     {"loc": "https://app.hubicx.ru/#pricing", "priority": "0.9", "changefreq": "weekly"},
     {"loc": "https://app.hubicx.ru/#faq", "priority": "0.6", "changefreq": "monthly"},
+    # Blog
+    {"loc": "https://app.hubicx.ru/blog/", "priority": "0.8", "changefreq": "weekly"},
+    {"loc": "https://app.hubicx.ru/blog/ai-foto-gid", "priority": "0.7", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/blog/neiroseti-2026", "priority": "0.7", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/blog/ai-chat-boty", "priority": "0.7", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/blog/video-iz-teksta", "priority": "0.7", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/blog/30-rilsov-za-vecher", "priority": "0.7", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/blog/10-priemov-promptinga", "priority": "0.7", "changefreq": "monthly"},
+    # Pages
+    {"loc": "https://app.hubicx.ru/pages/contacts", "priority": "0.5", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/pages/help", "priority": "0.6", "changefreq": "monthly"},
+    {"loc": "https://app.hubicx.ru/pages/terms", "priority": "0.4", "changefreq": "yearly"},
+    {"loc": "https://app.hubicx.ru/pages/privacy", "priority": "0.4", "changefreq": "yearly"},
 ]
 
 
