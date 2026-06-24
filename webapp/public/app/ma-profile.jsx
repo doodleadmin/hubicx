@@ -243,7 +243,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
 
       <div className="label-sec">Профиль</div>
-      <div className="card" style={{ overflow:'hidden' }}>
+      <div className="card" data-onb="mob-profile-card" style={{ overflow:'hidden' }}>
         <Row chip={<IconChip bg="#e6eeff"><Star s={16} c="#6060c0"/></IconChip>}
           title="Мои токены" value={tokens} onClick={onTopup}/>
         <Row chip={<IconChip bg="#d0e8f5"><Ic n="globe" s={18} c="#2f80ed"/></IconChip>}
@@ -264,7 +264,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       <div style={{ marginTop:18, marginBottom:6 }}>
         <span className="label-sec">История генераций</span>
       </div>
-      <div className="hist-rail">
+      <div className="hist-rail" data-onb="mob-history">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
           <div style={{ fontSize:30 }}>✨</div>
@@ -295,7 +295,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
         })}
       </div>
 
-      {bonus && <div ref={bonusRef} className="card bonus-card-v2" style={{ marginTop:18 }}>
+      {bonus && <div ref={bonusRef} className="card bonus-card-v2" data-onb="mob-bonuses" style={{ marginTop:18 }}>
         <div className="bonus-head-v2">
           <div style={{ display:'flex', alignItems:'flex-start', gap:12, minWidth:0 }}>
             <IconChip bg="#fff2c7">🎁</IconChip>

@@ -39,7 +39,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
     <div className="screen scr-enter">
       <div style={{ height:8 }}/>
 
-      <div className="bal-card rise" style={{ '--d':'.04s' }}>
+      <div className="bal-card rise" data-onb="mob-balance" style={{ '--d':'.04s' }}>
         <div>
           <div className="bk">Мои токены</div>
           <div className="bn"><Star s={20} c="#c9c7f4"/> {tokens}</div>
@@ -47,7 +47,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         <button className="bb" onClick={onTopup}>Пополнить</button>
       </div>
 
-      <div className="card" style={{ marginTop:14, overflow:'hidden' }}>
+      <div className="card" data-onb="mob-create-card" style={{ marginTop:14, overflow:'hidden' }}>
         <div className="row-link" onClick={onCreatePhoto}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#e6efe9', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="image" s={21} c="#5f9184"/>
@@ -109,7 +109,7 @@ function TemplatesScreen({ onBack, onTemplate }) {
       <div className="cr-title">Шаблоны</div>
     </div>
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
-      <div className="tpl-filter">
+      <div className="tpl-filter" data-onb="mob-template-filter">
         <div className="seg">
           {[['all','Все'],['photo','Фото'],['video','Видео']].map(function(f) {
             return <button key={f[0]} className={filter === f[0] ? 'on' : ''} onClick={() => setFilter(f[0])}>{f[1]}</button>;

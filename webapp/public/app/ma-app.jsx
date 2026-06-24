@@ -159,22 +159,58 @@ function DesktopOnboarding({ onTab, onTopup }) {
   </div>;
 }
 
-function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile }) {
+function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
   const [open, setOpen] = uS(() => !DESKTOP && !isOnboardingDone());
   const [step, setStep] = uS(0);
+  const [rect, setRect] = uS(null);
   const steps = [
-    { icon:'✨', title:'Hubicx готов к работе', text:'Создавайте фото, видео, используйте шаблоны и общайтесь с AI прямо в Telegram.' },
-    { icon:'🎨', title:'Генерации и шаблоны', text:'Начните с готового шаблона или напишите свою идею. Фото-шаблоны доступны без подписки через базовую модель.', action:'Шаблоны', fn:onTemplates },
-    { icon:'💬', title:'Чат с AI', text:'Чат помогает с промптами, текстами и идеями. Настройки общения теперь внутри чата.', action:'Открыть чат', fn:onChat },
-    { icon:'🎁', title:'Бонусы и профиль', text:'В профиле лежат бонусные задания, баланс, история генераций и настройки аккаунта.', action:'Профиль', fn:onProfile },
+    { tab:'agent', selector:'[data-onb="mob-hero"]', icon:'✨', title:'Hubicx готов к работе', text:'Это главная: отсюда запускаются фото, видео, чат и шаблоны.' },
+    { tab:'agent', selector:'[data-onb="mob-actions"]', icon:'⚡', title:'Быстрые действия', text:'Нажмите нужную карточку, чтобы сразу создать фото, оживить изображение или открыть чат.' },
+    { tab:'gen', selector:'[data-onb="mob-create-card"]', icon:'🎨', title:'Генерация', text:'Здесь отдельный экран создания: фото, видео и подборки шаблонов.' },
+    { tab:'agent', selector:'[data-onb="mob-templates"]', icon:'🖼️', title:'Шаблоны', text:'Готовые стили помогают получить результат быстрее. Фото-шаблоны доступны без подписки через базовую модель.', action:'Открыть все', fn:onTemplates },
+    { tab:'agent', selector:'[data-onb="mob-tab-profile"]', icon:'🎁', title:'Профиль и бонусы', text:'В профиле лежат баланс, история генераций, бонусные задания и настройки аккаунта.', action:'Профиль', fn:onProfile },
   ];
   const cur = steps[step] || steps[0];
   const close = function() { finishOnboarding(); setOpen(false); };
   const next = function() { if (step >= steps.length - 1) close(); else setStep(step + 1); };
+
+  uE(function() {
+    if (!open || !cur) return;
+    if (cur.tab && onTab) onTab(cur.tab);
+  }, [open, step]);
+
+  uE(function() {
+    if (!open || !cur) return;
+    var alive = true;
+    var update = function() {
+      var el = document.querySelector(cur.selector);
+      if (!alive) return;
+      if (!el) { setRect(null); return; }
+      try { el.scrollIntoView({ block:'center', behavior:'smooth' }); } catch(e) {}
+      setTimeout(function() {
+        if (!alive) return;
+        var r = el.getBoundingClientRect();
+        setRect({ left:r.left, top:r.top, width:r.width, height:r.height });
+      }, 120);
+    };
+    var t = setTimeout(update, 90);
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return function() { alive = false; clearTimeout(t); window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); };
+  }, [open, step]);
+
   if (!open) return null;
+  var pad = 8;
+  var box = rect ? {
+    left: Math.max(8, rect.left - pad),
+    top: Math.max(8, rect.top - pad),
+    width: Math.min(window.innerWidth - 16, rect.width + pad * 2),
+    height: Math.min(window.innerHeight - 16, rect.height + pad * 2),
+  } : null;
   return <div className="mob-onb">
-    <div className="mob-onb-dim" onClick={close}></div>
-    <div className="mob-onb-sheet">
+    <div className="mob-onb-dim"></div>
+    {box && <div className="onb-spot mob-onb-spot" style={{ left:box.left, top:box.top, width:box.width, height:box.height }}></div>}
+    <div className="mob-onb-sheet mob-onb-sheet-spot">
       <button className="mob-onb-x" onClick={close}>×</button>
       <div className="mob-onb-ic">{cur.icon}</div>
       <div className="mob-onb-k">Первый запуск · {step + 1}/{steps.length}</div>
@@ -597,7 +633,7 @@ function App() {
   return <div className="phone">
     {mainContent}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
-    <MobileOnboarding onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')}/>
+    <MobileOnboarding onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
   </div>;
 }
 

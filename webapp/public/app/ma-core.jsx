@@ -91,10 +91,10 @@ function TopNav({ active, onTab }) {
       }).catch(function() { setLoaded(true); });
     }
   };
-  return <div className="topnav">
+  return <div className="topnav" data-onb="mob-topnav">
     <div className="tn-seg">
       {[['agent','Главная'],['gen','Генерация'],['profile','Профиль']].map(([id,l]) => (
-        <div key={id} className={'tn-item' + (active === id ? ' on' : '')} onClick={() => onTab(id)}>{l}</div>
+        <div key={id} data-onb={'mob-tab-' + id} className={'tn-item' + (active === id ? ' on' : '')} onClick={() => onTab(id)}>{l}</div>
       ))}
     </div>
     <div className="tn-icon" onClick={toggleNotifs}>

@@ -28,10 +28,10 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
     <div className="screen scr-enter">
 
       <div className="rise" style={{ '--d':'.04s' }}>
-        <h1 className="greeting">Привет! Я здесь,<br/><span className="grad">чтобы помочь вам</span> ✨</h1>
+        <h1 className="greeting" data-onb="mob-hero">Привет! Я здесь,<br/><span className="grad">чтобы помочь вам</span> ✨</h1>
       </div>
 
-      <div className="act-grid rise" style={{ '--d':'.1s' }}>
+      <div className="act-grid rise" data-onb="mob-actions" style={{ '--d':'.1s' }}>
         {acts.map((a, i) => (
           <div key={i} className="act-card" onClick={a.go}>
             <div className="ic" style={{ background:a.bg }}><Ic n={a.ic} s={21} c={a.c}/></div>
@@ -44,7 +44,7 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
         <h2>Популярные шаблоны</h2>
         <span className="all" onClick={onTemplates}>Все</span>
       </div>
-      <div className="tpl-rail rise" style={{ '--d':'.2s' }}>
+      <div className="tpl-rail rise" data-onb="mob-templates" style={{ '--d':'.2s' }}>
         {TEMPLATES.slice(0, 6).map(function(t, i) {
           return <div className="thumb tpl-card" key={i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
             <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>

@@ -790,11 +790,11 @@ html.desktop .askbar { height: 62px; border-radius: 22px; }
    Hubicx onboarding v1
    ============================================================ */
 .onb, .mob-onb { position: fixed; inset: 0; z-index: 9999; pointer-events: none; font-family: inherit; }
-.onb-dim, .mob-onb-dim { position: absolute; inset: 0; background: rgba(8,10,14,.56); backdrop-filter: blur(4px); pointer-events: auto; }
+.onb-dim, .mob-onb-dim { position: absolute; inset: 0; background: transparent; backdrop-filter: none; pointer-events: auto; }
 .onb-spot {
   position: absolute; border-radius: 22px; pointer-events: none;
   box-shadow: 0 0 0 9999px rgba(8,10,14,.56), 0 0 0 2px rgba(252,253,118,.95), 0 22px 60px rgba(0,0,0,.28);
-  background: rgba(255,255,255,.05); transition: all .22s var(--ease, ease);
+  background: transparent; transition: all .22s var(--ease, ease);
 }
 .onb-card {
   position: absolute; width: min(360px, calc(100vw - 32px)); pointer-events: auto;
@@ -815,12 +815,14 @@ html.theme-dark .onb-card, html.theme-dark .mob-onb-sheet { background: #191c23;
 html.theme-dark .onb-ghost, html.theme-dark .mob-onb-ghost { background: #252a34; color: #c4cad4; }
 
 .mob-onb { display: flex; align-items: flex-end; justify-content: center; }
+.mob-onb-spot { border-radius: 20px; }
 .mob-onb-sheet {
   position: relative; width: min(100%, 430px); pointer-events: auto; color: var(--ink);
   background: var(--card); border: 1px solid var(--line); border-radius: 28px 28px 0 0;
   padding: 22px 20px max(22px, env(safe-area-inset-bottom)); box-shadow: 0 -24px 70px rgba(0,0,0,.22);
   animation: mobOnbIn .24s var(--ease, ease);
 }
+.mob-onb-sheet-spot { margin: 0 10px 10px; border-radius: 24px; }
 .mob-onb-x { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border: 0; border-radius: 12px; background: var(--nav-bg); color: var(--muted); font-size: 22px; line-height: 1; }
 .mob-onb-ic { width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; font-size: 26px; background: var(--soft); margin-bottom: 12px; }
 @keyframes mobOnbIn { from { transform: translateY(18px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
