@@ -101,13 +101,7 @@
     window.dispatchEvent(new CustomEvent('hubicx:lang',{detail:{lang:current}}));
     return current;
   }
-  function t(key){
-    if (!key) return key;
-    var entry = TEXT[current] && TEXT[current][key];
-    if (entry !== undefined) return entry;
-    entry = TEXT['ru'] && TEXT['ru'][key];
-    return entry !== undefined ? entry : key;
-  }
+  function t(key){ return key; }
   window.HubicxI18n = { languages:LANGS, names:LANG_NAMES, norm, detect, getLang:function(){return current;}, setLang, t, apply:schedule };
   window.t = t;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule); else schedule();

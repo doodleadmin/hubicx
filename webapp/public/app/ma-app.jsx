@@ -580,24 +580,9 @@ function App() {
     </div>;
   }
   if (!hasAuth && !isTelegramShell) {
-    if (window.HBX && window.HBX.LandingPage) {
-      return <window.HBX.LandingPage onAuthed={onDeskAuthed}/>;
-    }
-    // Fallback: ждём загрузки landing 5 секунд, потом показываем ошибку
-    const [landingReady, setLandingReady] = React.useState(false);
-    const [landingTimeout, setLandingTimeout] = React.useState(false);
-    React.useEffect(function() {
-      var check = function() {
-        if (window.HBX && window.HBX.LandingPage) { setLandingReady(true); return; }
-        if (!landingTimeout) requestAnimationFrame(check);
-      };
-      var tid = setTimeout(function() { setLandingTimeout(true); }, 5000);
-      check();
-      return function() { clearTimeout(tid); };
-    }, []);
-    if (landingReady) return <window.HBX.LandingPage onAuthed={onDeskAuthed}/>;
-    if (landingTimeout) return <div className="dk-auth"><div className="card" style={{maxWidth:420,textAlign:'center',padding:40}}><h2>Не удалось загрузить</h2><p className="muted">Проверьте соединение и обновите страницу</p><button className="dk-btn-main" style={{marginTop:18}} onClick={function(){window.location.reload();}}>Обновить</button></div></div>;
-    return <div className="dk-auth"><div className="gen-spinner"></div></div>;
+    return window.HBX && window.HBX.LandingPage
+      ? <window.HBX.LandingPage onAuthed={onDeskAuthed}/>
+      : <div className="dk-auth"><div className="gen-spinner"></div></div>;
   }
 
   let body;

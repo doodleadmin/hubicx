@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -167,11 +167,6 @@ class GenerationTask(Base):
     model: Mapped[AIModel | None] = relationship()
     template: Mapped[Template | None] = relationship()
 
-    __table_args__ = (
-        Index("ix_generation_tasks_status_created", "status", "created_at"),
-        Index("ix_generation_tasks_user_status", "user_id", "status"),
-    )
-
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -185,10 +180,6 @@ class Transaction(Base):
     payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"))
     comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = (
-        Index("ix_transactions_user_created", "user_id", "created_at"),
-    )
 
 
 class BalanceLedger(Base):
@@ -242,12 +233,6 @@ class Payment(Base):
     referral_partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-    __table_args__ = (
-        Index("ix_payments_external_id", "external_payment_id"),
-        Index("ix_payments_status", "status"),
-        UniqueConstraint("external_payment_id", name="uq_payments_external_id"),
-    )
 
 
 class File(Base):
@@ -368,7 +353,3 @@ class AgentChatMessage(Base):
 
     chat: Mapped[AgentChat] = relationship(back_populates="messages")
     task: Mapped[GenerationTask | None] = relationship()
-
-    __table_args__ = (
-        Index("ix_agent_chat_messages_chat_created", "chat_id", "created_at"),
-    )

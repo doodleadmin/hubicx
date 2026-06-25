@@ -1,6 +1,5 @@
 from functools import lru_cache
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,7 +25,6 @@ class Settings(BaseSettings):
     tbank_terminal_key: str = ""
     tbank_password: str = ""
     tbank_enabled: bool = False
-    tbank_timeout: int = 15
     s3_endpoint: str = ""
     s3_access_key: str = ""
     s3_secret_key: str = ""
@@ -36,27 +34,9 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    @field_validator("jwt_signing_key")
-    @classmethod
-    def jwt_key_required(cls, v: str) -> str:
-        if not v:
-            raise ValueError("JWT_SIGNING_KEY обязателен. Установите в .env")
-        return v
-
-    @field_validator("bot_token")
-    @classmethod
-    def bot_token_required(cls, v: str) -> str:
-        if not v:
-            raise ValueError("BOT_TOKEN обязателен. Установите в .env")
-        return v
-
     @property
     def admin_id_set(self) -> set[int]:
         return {int(x.strip()) for x in self.admin_ids.split(",") if x.strip().isdigit()}
-
-    @property
-    def is_production(self) -> bool:
-        return not self.debug and "localhost" not in self.database_url
 
 
 @lru_cache

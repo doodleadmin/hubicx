@@ -73,9 +73,9 @@ def validate_inputs_against_schema(
     raw_inputs = inputs or {}
     extra_keys = set(raw_inputs) - set(field_map)
     if extra_keys:
-        if not for_preview:
-            raise AppError("validation_error", f"Недопустимые поля: {', '.join(sorted(extra_keys))}")
-        # For preview: silently ignore unknown keys
+        # Drop unknown keys instead of failing: the simplified webapp UI sends a generic
+        # set of inputs (e.g. aspect_ratio) that does not match every model's schema.
+        logger.info("Dropping unknown input keys for model schema: %s", sorted(extra_keys))
         raw_inputs = {k: v for k, v in raw_inputs.items() if k in field_map}
 
     validated: dict[str, Any] = {}
@@ -118,7 +118,11 @@ def validate_inputs_against_schema(
             if field_type == "select":
                 options = field.get("options", [])
                 if options and str(value) not in [str(o) for o in options]:
-                    raise AppError("validation_error", f"Недопустимое значение для '{field.get('label', name)}'")
+                    # Fall back to default (or first option) instead of failing, so a generic
+                    # client value like aspect_ratio "2:3" doesn't block models with other options.
+                    fallback = default if default is not None else options[0]
+                    logger.info("Invalid select '%s'=%r for model field; using %r", name, value, fallback)
+                    value = fallback
             if field_type == "number":
                 try:
                     value = int(value) if isinstance(value, int) or (isinstance(value, str) and value.isdigit()) else float(value)
@@ -163,6 +167,10 @@ async def resolve_input_files(
                 raise AppError("validation_error", f"Максимум {max_files} файлов для '{field.get('label', name)}'")
             urls = []
             for fid in file_ids:
+                # The webapp uploads to S3 and passes back ready URLs; the bot passes file_ids.
+                if isinstance(fid, str) and fid.startswith("http"):
+                    urls.append(fid)
+                    continue
                 if not isinstance(fid, int):
                     raise AppError("validation_error", "Некорректный file_id")
                 file_obj = await session.scalar(select(File).where(File.id == fid, File.user_id == user_id))
@@ -179,7 +187,11 @@ async def resolve_input_files(
 
         elif field_type == "file" and name in result:
             fid = result[name]
-            if isinstance(fid, int):
+            if isinstance(fid, str) and fid.startswith("http"):
+                # Ready S3 URL from the webapp uploader.
+                result[name] = fid
+                result[f"{name}_resolved"] = fid
+            elif isinstance(fid, int):
                 file_obj = await session.scalar(select(File).where(File.id == fid, File.user_id == user_id))
                 if not file_obj:
                     raise AppError("file_not_found", f"Файл {fid} не найден", 404)

@@ -23,18 +23,6 @@ from worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
 
-# Singleton Bot для переиспользования (не создаём новый на каждый notify)
-_notify_bot: Bot | None = None
-
-
-def _get_notify_bot() -> Bot | None:
-    global _notify_bot
-    if not settings.bot_token:
-        return None
-    if _notify_bot is None:
-        _notify_bot = Bot(settings.bot_token)
-    return _notify_bot
-
 
 TV_BROADCAST_GPT_IMAGE_PROMPT = """Generate a high-quality (4k) photo with the face of the person in the uploaded image, placed onto a realistic scene of a KBO baseball fan captured on live broadcast.
 
@@ -128,13 +116,7 @@ def get_provider(provider: str):
     return None
 
 
-@celery_app.task(
-    name="worker.generation_worker.process_generation_task",
-    autoretry_for=(Exception,),
-    max_retries=3,
-    default_retry_delay=30,  # 30 сек между попытками
-    retry_backoff=True,      # exponential: 30s → 60s → 120s
-)
+@celery_app.task(name="worker.generation_worker.process_generation_task")
 def process_generation_task(task_id: int) -> None:
     asyncio.run(_run_process_generation_task(task_id))
 
@@ -286,10 +268,12 @@ async def persist_generated_file(session: AsyncSession, task: GenerationTask, pr
 
 
 async def notify_user(telegram_id: int, text: str) -> None:
-    bot = _get_notify_bot()
-    if not bot:
+    if not settings.bot_token:
         return
+    bot = Bot(settings.bot_token)
     try:
         await bot.send_message(telegram_id, text)
     except Exception as exc:
         logger.warning("Failed to send Telegram notification to %s: %s", telegram_id, exc)
+    finally:
+        await bot.session.close()

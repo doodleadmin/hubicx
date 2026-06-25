@@ -15,12 +15,15 @@ from backend.app.db.models import AgentChat, AgentChatMessage, User
 from backend.app.db.session import get_session
 from backend.app.services.agent_chat import run_chat_turn, stream_chat_turn
 from backend.app.services.agent_modes import DEFAULT_MODE, VALID_MODES, list_modes
+from backend.app.services.rate_limit import check_rate_limit
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 logger = logging.getLogger(__name__)
 
 MAX_TITLE_LENGTH = 60
+CHAT_RATE_LIMIT = 20  # max messages
+CHAT_RATE_WINDOW = 60  # per 60 seconds
 
 
 # --- Schemas ---
@@ -227,6 +230,7 @@ async def send_message(
     content = (payload.content or "").strip()
     if not content:
         raise AppError("empty_message", "Сообщение не может быть пустым")
+    await check_rate_limit(f"chat:{user.id}", CHAT_RATE_LIMIT, CHAT_RATE_WINDOW)
 
     chat = await session.scalar(
         select(AgentChat)
@@ -255,6 +259,7 @@ async def stream_message(
     content = (payload.content or "").strip()
     if not content:
         raise AppError("empty_message", "Сообщение не может быть пустым")
+    await check_rate_limit(f"chat:{user.id}", CHAT_RATE_LIMIT, CHAT_RATE_WINDOW)
 
     chat = await session.scalar(
         select(AgentChat)

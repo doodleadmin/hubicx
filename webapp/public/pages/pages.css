@@ -99,8 +99,18 @@
 
 .pg-note{margin:18px 0 24px;padding:18px 20px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);box-shadow:var(--shadow-sm);color:var(--mut);font-size:15px;line-height:1.6}
 .pg-note strong{color:var(--ink)}
+.pg-note.warn{border-color:rgba(252,253,118,.75);background:rgba(252,253,118,.16)}
 .pg-pay-logos{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 24px}
 .pg-pay-logos span{height:34px;padding:0 14px;border-radius:11px;border:1px solid var(--line);background:var(--card);display:inline-flex;align-items:center;color:var(--ink);font-size:13px;font-weight:800;box-shadow:var(--shadow-sm)}
+.pg-pay-logo-img{height:34px;max-width:150px;object-fit:contain;border-radius:11px;border:1px solid var(--line);background:var(--card);padding:6px 12px;box-shadow:var(--shadow-sm)}
+.pg-legal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 24px}
+.pg-legal-card{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.74);box-shadow:var(--shadow-sm);padding:16px}
+.pg-legal-card span{display:block;color:var(--faint);font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.pg-legal-card b{display:block;color:var(--ink);font-size:15px;line-height:1.35}
+.pg-req-list{display:grid;gap:8px;margin:8px 0 24px}
+.pg-req-list div{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.68);box-shadow:var(--shadow-sm);font-size:14.5px;line-height:1.45;color:var(--mut)}
+.pg-req-list b{color:#5f9184;flex:0 0 auto}
+.pg-doc-body a{color:var(--ink);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 
 .pg-wrap .lp-foot{margin-top:0;background:rgba(255,255,255,.58);backdrop-filter:blur(18px) saturate(1.2);-webkit-backdrop-filter:blur(18px) saturate(1.2);border-top:1px solid rgba(233,232,227,.9)}
 
@@ -117,5 +127,6 @@
 @media(max-width:680px){
   .pg-cards{grid-template-columns:1fr}
   .pg-help-cats{grid-template-columns:1fr}
+  .pg-legal-grid{grid-template-columns:1fr}
   .pg-wrap .lp-nav-links{display:none}
 }

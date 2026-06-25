@@ -12,6 +12,7 @@ T-Bank (Tinkoff) Internet Acquiring — платёжная форма банка
 """
 
 import hashlib
+import secrets
 from typing import Any
 
 import httpx
@@ -37,12 +38,12 @@ def _password() -> str:
 
 
 def _generate_order_id() -> str:
-    """Генерирует уникальный OrderId для T-Bank на основе UUID4.
+    """Генерирует уникальный OrderId для T-Bank.
 
-    T-Bank требует ASCII-цифры/буквы до 50 символов.
+    T-Bank требует ASCII-цифры/буквы до 50 символов.  Используем timestamp + random.
     """
-    import uuid
-    return f"hx{uuid.uuid4().hex[:16]}"
+    ts = secrets.token_hex(6)  # 12 hex chars
+    return f"hx{ts}"
 
 
 def _sign(params: dict[str, Any]) -> str:
@@ -127,7 +128,7 @@ async def init_payment(
 
     body["Token"] = _sign(body)
 
-    async with httpx.AsyncClient(timeout=float(settings.tbank_timeout)) as client:
+    async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(f"{_api_base()}/Init", json=body)
         resp.raise_for_status()
         data = resp.json()

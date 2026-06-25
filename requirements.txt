@@ -10,4 +10,3 @@ redis==5.2.1
 aiogram==3.17.0
 python-multipart==0.0.20
 boto3==1.35.99
-slowapi==0.1.9

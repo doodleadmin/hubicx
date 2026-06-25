@@ -33,13 +33,6 @@ def _s3_key_from_url(url: str) -> str | None:
     return None
 
 
-def _should_force_document_upload(task: GenerationTask) -> bool:
-    if task.task_type == "video":
-        return True
-    url = (task.output_file_url or "").split("?", 1)[0].lower()
-    return url.endswith((".mp4", ".webm"))
-
-
 async def send_generation_result_to_chat(telegram_id: int, task: GenerationTask) -> None:
     if not settings.bot_token:
         raise AppError("telegram_bot_not_configured", "Telegram bot token is not configured", 500)
@@ -66,11 +59,6 @@ async def _send_message(telegram_id: int, output_text: str) -> None:
 async def _send_document(telegram_id: int, task: GenerationTask) -> None:
     url = f"https://api.telegram.org/bot{settings.bot_token}/sendDocument"
     caption = f"✅ Ваш результат генерации\nМодель: {_model_title(task)}"
-    if _should_force_document_upload(task):
-        async with httpx.AsyncClient(timeout=120) as client:
-            await _send_document_multipart(client, url, telegram_id, task, caption, force_document=True)
-        return
-
     payload = {"chat_id": telegram_id, "document": task.output_file_url, "caption": caption}
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(url, json=payload)
@@ -82,7 +70,7 @@ async def _send_document(telegram_id: int, task: GenerationTask) -> None:
         await _send_document_multipart(client, url, telegram_id, task, caption)
 
 
-async def _send_document_multipart(client: httpx.AsyncClient, url: str, telegram_id: int, task: GenerationTask, caption: str, force_document: bool = False) -> None:
+async def _send_document_multipart(client: httpx.AsyncClient, url: str, telegram_id: int, task: GenerationTask, caption: str) -> None:
     file_response = await client.get(task.output_file_url, follow_redirects=True)
     download_url = task.output_file_url
     if file_response.status_code == 403 and storage_configured():
@@ -97,10 +85,7 @@ async def _send_document_multipart(client: httpx.AsyncClient, url: str, telegram
     file_response.raise_for_status()
     filename = _filename_from_url(task.output_file_url)
     data = {"chat_id": str(telegram_id), "caption": caption}
-    if force_document:
-        data["disable_content_type_detection"] = "true"
-    content_type = "application/octet-stream" if force_document else file_response.headers.get("content-type", "application/octet-stream")
-    files = {"document": (filename, file_response.content, content_type)}
+    files = {"document": (filename, file_response.content, file_response.headers.get("content-type", "application/octet-stream"))}
     response = await client.post(url, data=data, files=files)
     _raise_telegram_error(response)
 

@@ -10,6 +10,10 @@ celery_app.conf.update(
     timezone="UTC",
     imports=("worker.generation_worker", "worker.polling_worker", "worker.refund_worker"),
     beat_schedule={
+        "poll-fal-tasks-every-20s": {
+            "task": "worker.polling_worker.poll_provider_tasks",
+            "schedule": 20.0,
+        },
         "refund-stuck-tasks-every-10min": {
             "task": "worker.refund_worker.refund_failed_tasks",
             "schedule": 600.0,

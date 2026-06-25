@@ -1,109 +1,115 @@
 import asyncio
 import logging
-from sqlalchemy import select
+from datetime import datetime, timezone
 
-from worker.celery_app import celery_app
-from backend.app.db.session import async_session_factory
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
 from backend.app.db.models import GenerationTask
+from backend.app.db.session import async_session, engine
+from backend.app.providers.fal import FalProvider
+from backend.app.services.generations import mark_failed_and_refund
+from worker.celery_app import celery_app
+from worker.generation_worker import notify_user, persist_generated_file
 
 logger = logging.getLogger(__name__)
+
+FAL_TASK_TIMEOUT_SECONDS = 600  # 10 minutes
 
 
 @celery_app.task(name="worker.polling_worker.poll_provider_tasks")
 def poll_provider_tasks() -> dict:
-    """Опрашивает статус активных async-задач у провайдеров (Fal.ai).
-
-    Для задач со статусом 'processing', отправленных с sync_mode=False,
-    периодически запрашивает статус у Fal API и обновляет задачу при завершении.
-    Запускается Celery Beat каждые 60 секунд.
-    """
-    return asyncio.run(_poll())
+    result = asyncio.run(_run_poll())
+    return result
 
 
-async def _poll() -> dict:
-    """Асинхронная логика опроса."""
-    from backend.app.providers.fal import FalProvider
+async def _run_poll() -> dict:
+    try:
+        return await _poll_fal_tasks()
+    finally:
+        await engine.dispose()
 
+
+async def _poll_fal_tasks() -> dict:
+    async with async_session() as session:
+        result = await session.execute(
+            select(GenerationTask)
+            .where(
+                GenerationTask.status == "processing",
+                GenerationTask.provider == "fal",
+                GenerationTask.provider_response_url.isnot(None),
+            )
+            .options(
+                selectinload(GenerationTask.model),
+                selectinload(GenerationTask.template),
+                selectinload(GenerationTask.user),
+            )
+        )
+        tasks = result.scalars().all()
+
+    if not tasks:
+        return {"checked": 0}
+
+    provider = FalProvider()
     checked = 0
     completed = 0
     failed = 0
 
-    try:
-        async with async_session_factory() as session:
-            # Ищем задачи в статусе processing с external_task_id
-            result = await session.execute(
-                select(GenerationTask)
-                .where(
-                    GenerationTask.status == "processing",
-                    GenerationTask.external_task_id.isnot(None),
+    for task in tasks:
+        try:
+            async with async_session() as session:
+                # Re-fetch inside its own session for proper transaction isolation
+                task_fresh = await session.scalar(
+                    select(GenerationTask)
+                    .where(GenerationTask.id == task.id)
+                    .options(
+                        selectinload(GenerationTask.model),
+                        selectinload(GenerationTask.template),
+                        selectinload(GenerationTask.user),
+                    )
                 )
-                .limit(50)
-            )
-            tasks = result.scalars().all()
+                if not task_fresh or task_fresh.status != "processing":
+                    continue
 
-            if not tasks:
-                return {"ok": True, "checked": 0, "message": "No active tasks to poll"}
-
-            provider = FalProvider()
-
-            for task in tasks:
                 checked += 1
-                try:
-                    status = await provider.get_status(task.external_task_id)
 
-                    if status == "COMPLETED":
-                        # Получаем результат
-                        result_data = await provider.get_result(task.external_task_id)
-                        output_url = await _extract_output_url(result_data)
-                        if output_url:
-                            task.status = "completed"
-                            task.output_file_url = output_url
-                            await _notify_user(task)
-                        else:
-                            task.status = "failed"
-                        completed += 1
-
-                    elif status == "FAILED":
-                        task.status = "failed"
+                # Check for timeout
+                started = task_fresh.started_at
+                if started:
+                    age = (datetime.now(timezone.utc) - started.replace(tzinfo=timezone.utc) if started.tzinfo is None else datetime.now(timezone.utc) - started).total_seconds()
+                    if age > FAL_TASK_TIMEOUT_SECONDS:
+                        logger.warning(
+                            "poll: task %s timed out after %.0fs", task_fresh.id, age
+                        )
+                        await mark_failed_and_refund(session, task_fresh, "Превышено время ожидания генерации")
+                        await notify_user(task_fresh.user.telegram_id, "❌ Генерация не удалась: превышено время ожидания. Кредиты возвращены.")
                         failed += 1
+                        continue
 
-                    # IN_PROGRESS — оставляем как есть
+                poll_result = await provider.fetch_result(task_fresh.provider_response_url)
 
-                except Exception as e:
-                    logger.error("Poll error for task %s: %s", task.id, e)
+                if poll_result is None:
+                    # Still in progress — skip until next cycle
+                    logger.debug("poll: task %s still in progress", task_fresh.id)
+                    continue
 
-                await session.commit()
+                if poll_result.success:
+                    task_fresh.status = "completed"
+                    task_fresh.provider_task_id = poll_result.provider_task_id or task_fresh.provider_task_id
+                    task_fresh.output_file_url = await persist_generated_file(session, task_fresh, poll_result.output_url) if poll_result.output_url else None
+                    task_fresh.completed_at = datetime.now(timezone.utc)
+                    await session.commit()
+                    logger.info("poll: task %s completed", task_fresh.id)
+                    await notify_user(task_fresh.user.telegram_id, "✅ Генерация готова")
+                    completed += 1
+                else:
+                    logger.warning("poll: task %s failed: %s", task_fresh.id, poll_result.error)
+                    await mark_failed_and_refund(session, task_fresh, poll_result.error or "generation_failed")
+                    await notify_user(task_fresh.user.telegram_id, "❌ Генерация не удалась, кредиты возвращены")
+                    failed += 1
 
-    except Exception as e:
-        logger.exception("Polling worker failed: %s", e)
-        return {"ok": False, "error": str(e)}
+        except Exception:
+            logger.exception("poll: error processing task %s", task.id)
 
-    return {"ok": True, "checked": checked, "completed": completed, "failed": failed}
-
-
-async def _extract_output_url(result: dict) -> str | None:
-    """Извлекает URL результата из ответа Fal API."""
-    if not result:
-        return None
-    # Видео результат
-    video = result.get("video")
-    if isinstance(video, dict):
-        return video.get("url")
-    if isinstance(video, str):
-        return video
-    # Изображение
-    images = result.get("images")
-    if images and isinstance(images, list) and len(images) > 0:
-        return images[0].get("url")
-    return None
-
-
-async def _notify_user(task: GenerationTask) -> None:
-    """Отправляет уведомление пользователю о завершении генерации."""
-    try:
-        from backend.app.services.telegram_sender import send_result_notification
-        from backend.app.db.session import async_session as async_session_factory
-        async with async_session_factory() as session:
-            await send_result_notification(session, task)
-    except Exception as e:
-        logger.error("Failed to notify user for task %s: %s", task.id, e)
+    logger.info("poll: checked=%d completed=%d failed=%d", checked, completed, failed)
+    return {"checked": checked, "completed": completed, "failed": failed}

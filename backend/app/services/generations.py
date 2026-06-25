@@ -205,39 +205,8 @@ async def history(session: AsyncSession, user: User, limit: int = 20) -> list[Ge
 
 
 async def mark_failed_and_refund(session: AsyncSession, task: GenerationTask, error: str) -> None:
-    if task.status in ("refunded", "failed"):
-        return  # Уже обработано — идемпотентность
     task.status = "refunded"
     task.error_message = error
     task.completed_at = datetime.now(timezone.utc)
     await refund_generation(session, task.user_id, task.id, task.cost_credits)
     await session.commit()
-
-
-async def update_task_from_webhook(
-    session: AsyncSession,
-    external_task_id: str,
-    status: str,
-    output_url: str | None = None,
-) -> GenerationTask | None:
-    """Обновляет задачу по external_task_id из webhook провайдера."""
-    task = await session.scalar(
-        select(GenerationTask).where(GenerationTask.external_task_id == external_task_id)
-    )
-    if not task:
-        return None
-
-    if status == "completed":
-        task.status = "completed"
-        task.completed_at = datetime.now(timezone.utc)
-        if output_url:
-            task.output_file_url = output_url
-    elif status == "failed":
-        task.status = "failed"
-        task.completed_at = datetime.now(timezone.utc)
-        task.error_message = "Provider returned failure"
-    else:
-        task.status = status
-
-    await session.commit()
-    return task

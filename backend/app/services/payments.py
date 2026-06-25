@@ -1,5 +1,4 @@
 from decimal import Decimal
-import logging
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,27 +7,7 @@ from backend.app.config import settings
 from backend.app.db.models import Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
 from backend.app.utils.errors import AppError
 
-logger = logging.getLogger(__name__)
-
 PAYMENT_PACKAGES = {300, 1000, 3000, 10000}
-
-# Subscription packages (code → kind mapping)
-SUBSCRIPTION_CODES: dict[str, str] = {
-    "templates_mini":  "template",
-    "templates_plus":  "template",
-    "creator":         "full",
-    "creator_pro":     "full",
-    "studio":          "full",
-}
-
-# Subscription info: code → (title, tokens, price_rub)
-SUBSCRIPTION_INFO: dict[str, tuple[str, int, int]] = {
-    "templates_mini":  ("Шаблоны Mini", 800, 790),
-    "templates_plus":  ("Шаблоны Plus", 3500, 2590),
-    "creator":         ("Creator", 1800, 1490),
-    "creator_pro":     ("Creator Pro", 6500, 3990),
-    "studio":          ("Studio", 18000, 9900),
-}
 
 _TOKEN_CATEGORY_CODES = {"topup_300", "topup_1000", "topup_3000", "topup_10000"}
 _TEMPLATE_CATEGORY_CODES = {"templates_mini", "templates_plus"}
@@ -81,7 +60,7 @@ async def create_payment(
         )
         if not pkg:
             # Check if it's a subscription code (not in TokenPackage)
-            sub_codes = list(SUBSCRIPTION_CODES.keys())
+            sub_codes = ['templates_mini', 'templates_plus', 'creator', 'creator_pro', 'studio']
             if package_code in sub_codes:
                 final_credits = int(credits)
                 final_amount = float(amount_rub or 0)
@@ -157,7 +136,7 @@ async def create_payment(
             await session.commit()
             await session.refresh(payment)
         except Exception:
-            logger.exception("Referral commission calculation failed for payment %s, category=%s", payment.id, category)
+            pass
 
     return payment, None
 
@@ -180,11 +159,11 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         status = (event.get("Status") or "").upper()
         tbank_payment_id = event.get("PaymentId")
 
-        # Блокируем строку платежа для идемпотентной обработки
         payment = await session.scalar(
             select(Payment).where(Payment.external_payment_id == order_id).with_for_update()
         )
         if not payment:
+            # Try matching by prefix (before the | separator)
             payment = await session.scalar(
                 select(Payment).where(Payment.external_payment_id.like(f"{order_id}%")).with_for_update()
             )
@@ -195,12 +174,11 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         if tbank_payment_id and '|' not in (payment.external_payment_id or ''):
             payment.external_payment_id = f"{order_id}|{tbank_payment_id}"
 
-        # Идемпотентность: не обрабатываем уже завершённые платежи повторно
-        if payment.status in ("confirmed", "refunded", "reversed"):
+        if status == "CONFIRMED" and payment.status == "confirmed":
             await session.commit()
             return
 
-        # Начисляем токены при успешной оплате
+        # Начисляем токены при успешной оплате (ПРОВЕРЯЕМ ДО смены статуса!)
         if status == "CONFIRMED":
             from backend.app.services.balance import apply_balance_operation
 
@@ -219,30 +197,54 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
 
             # --- Активация подписки ---
             pkg = payment.package_code
-            if pkg and pkg in SUBSCRIPTION_CODES:
-                sub_kind = SUBSCRIPTION_CODES[pkg]
+            if pkg and pkg in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
+                sub_kind = "template" if pkg in _TEMPLATE_CATEGORY_CODES else "full"
+                # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
+                # падать на uq_user_subscriptions_user_code.
+                existing_sub = await session.scalar(
+                    select(UserSubscription).where(
+                        UserSubscription.user_id == payment.user_id,
+                        UserSubscription.code == pkg,
+                    ).with_for_update()
+                )
                 old_sub = await session.scalar(
                     select(UserSubscription).where(
                         UserSubscription.user_id == payment.user_id,
                         UserSubscription.kind == sub_kind,
                         UserSubscription.is_active.is_(True),
-                    )
+                    ).with_for_update()
                 )
-                if old_sub:
+                if old_sub and old_sub is not existing_sub:
                     old_sub.is_active = False
-                title, tokens, price = SUBSCRIPTION_INFO.get(pkg, (pkg, int(payment.credits), 0))
-                new_sub = UserSubscription(
-                    user_id=payment.user_id,
-                    code=pkg,
-                    title=title,
-                    kind=sub_kind,
-                    tokens_per_month=tokens,
-                    price_rub=price,
-                    payment_id=payment.id,
-                    is_active=True,
-                )
-                session.add(new_sub)
-        elif status in ("REFUNDED", "REVERSED"):
+                # Map package_code → title/tokens
+                sub_info = {
+                    "templates_mini":  ("Шаблоны Mini", 800, 790),
+                    "templates_plus": ("Шаблоны Plus", 3500, 2590),
+                    "creator":        ("Creator", 1800, 1490),
+                    "creator_pro":    ("Creator Pro", 6500, 3990),
+                    "studio":         ("Studio", 18000, 9900),
+                }
+                title, tokens, price = sub_info.get(pkg, (pkg, int(payment.credits), 0))
+                if existing_sub:
+                    existing_sub.title = title
+                    existing_sub.kind = sub_kind
+                    existing_sub.tokens_per_month = tokens
+                    existing_sub.price_rub = price
+                    existing_sub.payment_id = payment.id
+                    existing_sub.is_active = True
+                else:
+                    new_sub = UserSubscription(
+                        user_id=payment.user_id,
+                        code=pkg,
+                        title=title,
+                        kind=sub_kind,
+                        tokens_per_month=tokens,
+                        price_rub=price,
+                        payment_id=payment.id,
+                        is_active=True,
+                    )
+                    session.add(new_sub)
+        elif status in ("REFUNDED", "REVERSED") and payment.status not in ("refunded", "reversed"):
             from backend.app.services.balance import apply_balance_operation
 
             payment.status = status.lower()
