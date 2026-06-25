@@ -163,40 +163,65 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
   const [open, setOpen] = uS(() => !DESKTOP && !isOnboardingDone());
   const [step, setStep] = uS(0);
   const [rect, setRect] = uS(null);
+  const [stepDir, setStepDir] = uS(0); // -1=back, 1=forward, 0=init
+  var prevTabRef = uR(null);
+  var animKeyRef = uR(0);
+  var pendingTabRef = uR(null);
+
   const steps = [
     { tab:'agent', selector:'[data-onb="mob-hero"]', icon:'✨', title:'Hubicx готов к работе', text:'Это главная: отсюда запускаются фото, видео, чат и шаблоны.' },
     { tab:'agent', selector:'[data-onb="mob-actions"]', icon:'⚡', title:'Быстрые действия', text:'Нажмите нужную карточку, чтобы сразу создать фото, оживить изображение или открыть чат.' },
-    { tab:'gen', selector:'[data-onb="mob-create-card"]', icon:'🎨', title:'Генерация', text:'Здесь отдельный экран создания: фото, видео и подборки шаблонов.' },
     { tab:'agent', selector:'[data-onb="mob-templates"]', icon:'🖼️', title:'Шаблоны', text:'Готовые стили помогают получить результат быстрее. Фото-шаблоны доступны без подписки через базовую модель.', action:'Открыть все', fn:onTemplates },
-    { tab:'agent', selector:'[data-onb="mob-tab-profile"]', icon:'🎁', title:'Профиль и бонусы', text:'В профиле лежат баланс, история генераций, бонусные задания и настройки аккаунта.', action:'Профиль', fn:onProfile },
+    { tab:'gen', selector:'[data-onb="mob-create-card"]', icon:'🎨', title:'Генерация', text:'Экран создания: фото и видео-генерации, подборки шаблонов с фильтрами.' },
+    { tab:'profile', selector:'[data-onb="mob-profile-card"]', icon:'👤', title:'Профиль и баланс', text:'Здесь ваш баланс токенов, история генераций, профиль и настройки аккаунта.', action:'Профиль', fn:onProfile },
+    { tab:'profile', selector:'[data-onb="mob-bonuses"]', icon:'🎁', title:'Бонусные токены', text:'За простые задания можно получить до 120 бонусных токенов. Подпишитесь на канал — получите ещё 70.' },
   ];
-  const cur = steps[step] || steps[0];
-  const close = function() { finishOnboarding(); setOpen(false); };
-  const next = function() { if (step >= steps.length - 1) close(); else setStep(step + 1); };
 
+  var cur = steps[step] || steps[0];
+  var close = function() { finishOnboarding(); setOpen(false); };
+  var next = function() {
+    if (step >= steps.length - 1) close();
+    else { setStepDir(1); animKeyRef.current += 1; setStep(step + 1); }
+  };
+  var prev = function() {
+    if (step > 0) { setStepDir(-1); animKeyRef.current += 1; setStep(step - 1); }
+  };
+
+  // Tab switching - deferred to avoid re-render fighting with step state
   uE(function() {
     if (!open || !cur) return;
-    if (cur.tab && onTab) onTab(cur.tab);
+    var tab = cur.tab;
+    if (!tab || !onTab) return;
+    // Only switch if tab differs from previous to avoid redundant calls
+    if (tab === prevTabRef.current) return;
+    prevTabRef.current = tab;
+    pendingTabRef.current = tab;
+    onTab(tab);
   }, [open, step]);
 
+  // Spotlight positioning
   uE(function() {
     if (!open || !cur) return;
     var alive = true;
+    var selector = cur.selector;
     var update = function() {
-      var el = document.querySelector(cur.selector);
+      var el = document.querySelector(selector);
       if (!alive) return;
       if (!el) { setRect(null); return; }
       try { el.scrollIntoView({ block:'center', behavior:'smooth' }); } catch(e) {}
+      // Longer delay for tab-switch renders
+      var delay = (cur.tab !== (steps[Math.max(0,step-1)]||{}).tab) ? 350 : 120;
       setTimeout(function() {
         if (!alive) return;
         var r = el.getBoundingClientRect();
         setRect({ left:r.left, top:r.top, width:r.width, height:r.height });
-      }, 120);
+      }, delay);
     };
-    var t = setTimeout(update, 90);
+    // Immediate first call, then delayed update
+    update();
+    var t2 = setTimeout(update, cur.tab !== prevTabRef.current ? 250 : 100);
     window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
-    return function() { alive = false; clearTimeout(t); window.removeEventListener('resize', update); window.removeEventListener('scroll', update, true); };
+    return function() { alive = false; clearTimeout(t2); window.removeEventListener('resize', update); };
   }, [open, step]);
 
   if (!open) return null;
@@ -210,7 +235,7 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
   return <div className="mob-onb">
     <div className="mob-onb-dim"></div>
     {box && <div className="onb-spot mob-onb-spot" style={{ left:box.left, top:box.top, width:box.width, height:box.height }}></div>}
-    <div className="mob-onb-sheet mob-onb-sheet-spot">
+    <div className="mob-onb-sheet" key={'s' + animKeyRef.current}>
       <button className="mob-onb-x" onClick={close}>×</button>
       <div className="mob-onb-ic">{cur.icon}</div>
       <div className="mob-onb-k">Первый запуск · {step + 1}/{steps.length}</div>
@@ -219,6 +244,7 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
       <div className="mob-onb-dots">{steps.map(function(_, i) { return <i key={i} className={i === step ? 'on' : ''}></i>; })}</div>
       <div className="mob-onb-actions">
         {cur.fn && <button className="mob-onb-ghost" onClick={() => { close(); cur.fn(); }}>{cur.action}</button>}
+        {step > 0 && <button className="mob-onb-ghost" onClick={prev}>Назад</button>}
         <button className="mob-onb-primary" onClick={next}>{step >= steps.length - 1 ? 'Понятно' : 'Далее'}</button>
       </div>
     </div>
@@ -237,6 +263,7 @@ function App() {
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
   const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
+  const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
   const [theme, setTheme] = uS(getInitialTheme);
 
   // Desktop-only routing state (ignored on mobile)
@@ -262,6 +289,22 @@ function App() {
     var onPop = function() { setDtab(deskTabFromLocation()); };
     window.addEventListener('popstate', onPop);
     return function() { window.removeEventListener('popstate', onPop); };
+  }, []);
+
+  // Handle T-Bank return: ?paid=success → show result + refresh balance + clean URL
+  uE(() => {
+    try {
+      var q = new URL(window.location).searchParams;
+      var paid = q.get('paid');
+      if (paid === 'success' || paid === 'fail') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+        setPaymentResult(paid);
+        if (paid === 'success') {
+          refreshBalance();
+          setTimeout(function() { refreshBalance(); }, 3000);
+        }
+      }
+    } catch(e) {}
   }, []);
 
   const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
@@ -537,9 +580,24 @@ function App() {
     </div>;
   }
   if (!hasAuth && !isTelegramShell) {
-    return window.HBX && window.HBX.LandingPage
-      ? <window.HBX.LandingPage onAuthed={onDeskAuthed}/>
-      : <div className="dk-auth"><div className="gen-spinner"></div></div>;
+    if (window.HBX && window.HBX.LandingPage) {
+      return <window.HBX.LandingPage onAuthed={onDeskAuthed}/>;
+    }
+    // Fallback: ждём загрузки landing 5 секунд, потом показываем ошибку
+    const [landingReady, setLandingReady] = React.useState(false);
+    const [landingTimeout, setLandingTimeout] = React.useState(false);
+    React.useEffect(function() {
+      var check = function() {
+        if (window.HBX && window.HBX.LandingPage) { setLandingReady(true); return; }
+        if (!landingTimeout) requestAnimationFrame(check);
+      };
+      var tid = setTimeout(function() { setLandingTimeout(true); }, 5000);
+      check();
+      return function() { clearTimeout(tid); };
+    }, []);
+    if (landingReady) return <window.HBX.LandingPage onAuthed={onDeskAuthed}/>;
+    if (landingTimeout) return <div className="dk-auth"><div className="card" style={{maxWidth:420,textAlign:'center',padding:40}}><h2>Не удалось загрузить</h2><p className="muted">Проверьте соединение и обновите страницу</p><button className="dk-btn-main" style={{marginTop:18}} onClick={function(){window.location.reload();}}>Обновить</button></div></div>;
+    return <div className="dk-auth"><div className="gen-spinner"></div></div>;
   }
 
   let body;
@@ -627,13 +685,28 @@ function App() {
         </div>
       </div>}
       <DesktopOnboarding onTab={goDtab} onTopup={() => setTopup(true)}/>
+      {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     </React.Fragment>;
   }
 
   return <div className="phone">
     {mainContent}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
-    <MobileOnboarding onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
+    {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
+    <MobileOnboarding key="mob-onb" onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
+  </div>;
+}
+
+function PaymentResultModal({ result, onClose }) {
+  var ok = result === 'success';
+  return <div className="pay-result-ov" onClick={onClose}>
+    <div className={'pay-result-card ' + (ok ? 'ok' : 'fail')} onClick={e => e.stopPropagation()}>
+      <div className="pay-result-mark">{ok ? '✓' : '!'}</div>
+      <div className="pay-result-k">{ok ? 'Платёж подтверждён' : 'Платёж не завершён'}</div>
+      <h3>{ok ? 'Готово, баланс обновляется' : 'Не получилось оплатить'}</h3>
+      <p>{ok ? 'Токены и подписка появятся в профиле после подтверждения банка. Обычно это занимает несколько секунд.' : 'Деньги не списаны, если банк не подтвердил операцию. Можно вернуться к тарифам и попробовать ещё раз.'}</p>
+      <button className="pay-result-btn" onClick={onClose}>{ok ? 'Отлично' : 'Понятно'}</button>
+    </div>
   </div>;
 }
 
@@ -661,6 +734,8 @@ function Topup({ tokens, onClose }) {
   const [bonus, setBonus] = uS(fallbackBonus);
   const [paymentsEnabled, setPaymentsEnabled] = uS(false);
   const [sel, setSel] = uS(1);
+  const [subSel, setSubSel] = uS(0);
+  const [customOpen, setCustomOpen] = uS(false);
   const [customAmount, setCustomAmount] = uS('');
   const [customError, setCustomError] = uS('');
   const [paying, setPaying] = uS(false);
@@ -696,7 +771,13 @@ function Topup({ tokens, onClose }) {
     </div>;
   }
 
-  const chosen = packs[sel] || packs[0];
+  const templateSubs = (subs || []).filter(p => String(p.code || '').indexOf('templates_') === 0);
+  const fullSubs = (subs || []).filter(p => String(p.code || '').indexOf('templates_') !== 0);
+  const visibleSubs = templateSubs.concat(fullSubs);
+  const selectedSub = subSel === null ? null : (visibleSubs[subSel] || visibleSubs[0] || null);
+  const customNum = parseInt(customAmount, 10);
+  const customValid = customAmount && !isNaN(customNum) && customNum >= 99;
+  const chosen = customValid ? null : (selectedSub || packs[sel] || packs[0]);
   const handleCustomChange = (v) => {
     const num = parseInt(v, 10);
     setCustomAmount(v);
@@ -704,9 +785,6 @@ function Topup({ tokens, onClose }) {
     if (num < 99) { setCustomError('Минимум 99 ₽'); return; }
     setCustomError('');
   };
-  const customNum = parseInt(customAmount, 10);
-  const customValid = customAmount && !isNaN(customNum) && customNum >= 99;
-
   const handlePay = () => {
     if (paying || !window.HubicxApi) return;
     setPayError('');
@@ -714,13 +792,15 @@ function Topup({ tokens, onClose }) {
     var payload;
     if (customValid) {
       payload = { amount_rub: customNum, credits: customNum };
+    } else if (selectedSub) {
+      payload = { amount_rub: selectedSub.price_rub, credits: selectedSub.tokens_per_month, package_code: selectedSub.code };
     } else if (chosen) {
       payload = { amount_rub: chosen.price_rub, credits: chosen.total_tokens || chosen.tokens, package_code: chosen.code };
     } else {
       setPaying(false);
       return;
     }
-    window.HubicxApi.createPayment(payload).then(function(data) {
+    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: DESKTOP ? 'https://app.hubicx.ru' : '' })).then(function(data) {
       setPaying(false);
       if (data.payment_url) {
         var tg = window.Telegram && window.Telegram.WebApp;
@@ -753,8 +833,8 @@ function Topup({ tokens, onClose }) {
     <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
       <div className="sheet-card topup-card">
         <div className="sheet-grab"></div>
-        <div className="sheet-title">Пополнить токены</div>
-        <div className="muted" style={{ fontSize:13.5, marginBottom:14 }}>Текущий баланс: {tokens} ★</div>
+        <div className="sheet-title">Тарифы Hubicx</div>
+        <div className="muted" style={{ fontSize:13.5, marginBottom:14 }}>Баланс сейчас: {tokens} ★</div>
 
         {bonus && <div className="bonus-card-v2" style={{ margin:'4px 0 18px' }}>
           <div className="bonus-head-v2">
@@ -783,23 +863,37 @@ function Topup({ tokens, onClose }) {
           </div>
         </div>}
 
-        {subs && subs.length > 0 && <React.Fragment>
-          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Подписки</div>
+        {templateSubs.length > 0 && <React.Fragment>
+          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Для шаблонов</div>
           <div className="sub-list">
-            {subs.map(function(p) { return <div className="sub-card" key={p.code}>
+            {templateSubs.map(function(p, i) { return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(i); setCustomAmount(''); setCustomError(''); }}>
               <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-              <p>{p.tokens_per_month} токенов / месяц</p>
+              <p>Шаблоны + {p.tokens_per_month} токенов / месяц</p>
               <strong>{p.price_rub} ₽/мес</strong>
             </div>; })}
           </div>
         </React.Fragment>}
 
-        <div className="label-sec topup-label" style={{ marginBottom:8 }}>Готовые пакеты</div>
+        {fullSubs.length > 0 && <React.Fragment>
+          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Для генераций</div>
+          <div className="sub-list">
+            {fullSubs.map(function(p, i) {
+              var realIndex = templateSubs.length + i;
+              return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(realIndex); setCustomAmount(''); setCustomError(''); }}>
+                <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
+                <p>Все сценарии + {p.tokens_per_month} токенов / месяц</p>
+                <strong>{p.price_rub} ₽/мес</strong>
+              </div>;
+            })}
+          </div>
+        </React.Fragment>}
+
+        <div className="label-sec topup-label" style={{ marginBottom:8 }}>Разовые пакеты</div>
         <div className="topup-packs" style={{ display:'flex', flexDirection:'column', gap:9 }}>
           {packs.map((p, i) => (
-            <div key={i} className="opt topup-opt" onClick={() => { setSel(i); setCustomAmount(''); setCustomError(''); }}
-              style={{ border:'1px solid ' + (sel === i && !customValid ? 'var(--ink)' : 'var(--line)'),
-                borderRadius:14, padding:'13px 14px', background: (sel === i && !customValid) ? '#f8f7f2' : 'transparent' }}>
+            <div key={i} className="opt topup-opt" onClick={() => { setSubSel(null); setSel(i); setCustomAmount(''); setCustomError(''); }}
+              style={{ border:'1px solid ' + (subSel === null && sel === i && !customValid ? 'var(--ink)' : 'var(--line)'),
+                borderRadius:14, padding:'13px 14px', background: (subSel === null && sel === i && !customValid) ? '#f8f7f2' : 'transparent' }}>
               <Star s={20} c="#c9c7f4"/>
               <div style={{ flex:1 }}>
                 <span style={{ fontWeight:800, fontSize:16 }}>{p.total_tokens || p.tokens} токенов</span>
@@ -813,23 +907,25 @@ function Topup({ tokens, onClose }) {
           ))}
         </div>
 
-        <div className="label-sec topup-label" style={{ marginTop:16, marginBottom:8 }}>Своя сумма</div>
-        <div className="topup-custom" style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
-          padding:'10px 14px', border:'1px solid ' + (customValid ? 'var(--ink)' : 'var(--line)') }}>
-          <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
-            onChange={e => handleCustomChange(e.target.value)}
-            style={{ flex:1, background:'transparent', border:'none', color:'var(--ink)', fontSize:15,
-              fontWeight:600, outline:'none', fontFamily:'inherit', MozAppearance:'textfield' }} min="99"/>
-          <span style={{ fontWeight:700, fontSize:14.5, color:'var(--muted)' }}>₽</span>
-        </div>
-        {customError && <div style={{ fontSize:12, marginTop:5, color:'#c0473e', fontWeight:600 }}>{customError}</div>}
-        {customValid && <div style={{ marginTop:8, padding:'10px 14px', background:'#f0efe8', borderRadius:10 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', fontSize:13.5 }}>
-            <span className="muted">{customNum} ₽</span>
-            <span style={{ fontWeight:800 }}>{customNum} токенов</span>
+        <button className="topup-more" onClick={() => setCustomOpen(!customOpen)}>{customOpen ? 'Скрыть свою сумму' : 'Нужна другая сумма?'}</button>
+        {customOpen && <React.Fragment>
+          <div className="topup-custom" style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
+            padding:'10px 14px', border:'1px solid ' + (customValid ? 'var(--ink)' : 'var(--line)') }}>
+            <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
+              onChange={e => handleCustomChange(e.target.value)}
+              style={{ flex:1, background:'transparent', border:'none', color:'var(--ink)', fontSize:15,
+                fontWeight:600, outline:'none', fontFamily:'inherit', MozAppearance:'textfield' }} min="99"/>
+            <span style={{ fontWeight:700, fontSize:14.5, color:'var(--muted)' }}>₽</span>
           </div>
-          <div className="muted" style={{ fontSize:11.5, marginTop:3 }}>Бонус: 0 · 1 ₽ = 1 токен</div>
-        </div>}
+          {customError && <div style={{ fontSize:12, marginTop:5, color:'#c0473e', fontWeight:600 }}>{customError}</div>}
+          {customValid && <div style={{ marginTop:8, padding:'10px 14px', background:'#f0efe8', borderRadius:10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13.5 }}>
+              <span className="muted">{customNum} ₽</span>
+              <span style={{ fontWeight:800 }}>{customNum} токенов</span>
+            </div>
+            <div className="muted" style={{ fontSize:11.5, marginTop:3 }}>Бонус: 0 · 1 ₽ = 1 токен</div>
+          </div>}
+        </React.Fragment>}
 
         {payError && <div style={{ fontSize:12.5, marginTop:10, color:'#c0473e', fontWeight:600 }}>{payError}</div>}
         {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>}

@@ -632,12 +632,18 @@ html.theme-dark .dk-newchat:hover { background:#343a46; }
 .dk-bonus-act button:hover { transform: translateY(-1px); }
 .dk-topup-label { margin:18px 0 10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; font-size:12px; font-weight:900; }
 .dk-sub-grid { display:grid; grid-template-columns: repeat(5,1fr); gap:10px; margin:0 0 8px; }
-.dk-sub-card { border:1px solid var(--line); border-radius:15px; padding:11px; background:var(--card); }
-.dk-sub-card > div { display:flex; align-items:flex-start; justify-content:space-between; gap:6px; }
-.dk-sub-card b { font-size:13px; }
-.dk-sub-card span { color:#7a9c92; font-size:10.5px; font-weight:900; }
-.dk-sub-card p { margin:6px 0 0; color:var(--muted); font-size:11px; }
-.dk-sub-card strong { display:block; margin-top:8px; font-size:14px; }
+.dk-sub-grid-templates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dk-sub-grid-plans { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dk-sub-card { position:relative; border:1.5px solid var(--line); border-radius:18px; padding:20px 12px 16px; text-align:center; cursor:pointer; background:var(--card); transition:border-color .12s,transform .12s,background .12s; }
+.dk-sub-card:hover { border-color:#c7c6bd; transform:translateY(-1px); }
+.dk-sub-card.on { border-color:var(--accent); background:rgba(252,253,118,.08); box-shadow:0 0 0 1px rgba(252,253,118,.18) inset; }
+.dk-sub-card .dk-sub-badge { position:absolute; top:-10px; left:50%; transform:translateX(-50%); background:var(--accent); color:var(--accent-ink); font-size:11px; font-weight:800; padding:2px 10px; border-radius:8px; white-space:nowrap; }
+.dk-sub-card .dk-sub-title { font-size:13px; font-weight:700; margin-bottom:4px; }
+.dk-sub-card .dk-sub-n { font-size:24px; font-weight:800; letter-spacing:-.02em; margin-top:8px; }
+.dk-sub-card .dk-sub-meta { font-size:11.5px; color:var(--muted); margin-top:4px; }
+.dk-sub-card .dk-sub-price { font-size:15px; font-weight:800; margin-top:10px; }
+html.theme-dark .dk-sub-card:hover { border-color:#454b58; }
+html.theme-dark .dk-sub-card.on { background:rgba(252,253,118,.08); border-color:var(--accent); box-shadow:0 0 0 1px rgba(252,253,118,.16) inset; }
 
 .dk-packs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 18px; }
 .dk-pack { position: relative; border: 1.5px solid var(--line); border-radius: 18px; padding: 20px 12px 16px; text-align: center; cursor: pointer; background: var(--card); transition: border-color .12s, transform .12s, background .12s; }
@@ -688,6 +694,20 @@ html.theme-dark .dk-pack.on { background: rgba(252,253,118,.08); border-color: v
 .dk-pack-bonus { font-size: 11.5px; font-weight: 800; color: #7a9c92; margin-top: 2px; }
 .dk-pack-price { font-size: 15px; font-weight: 800; margin-top: 10px; }
 
+.dk-topup-more {
+  width: 100%; min-height: 44px; border: 1px dashed var(--line); border-radius: 15px;
+  background: var(--nav-bg); color: var(--link); font-family: inherit; font-size: 13px;
+  font-weight: 900; cursor: pointer; margin: -4px 0 12px;
+}
+.dk-topup-more:hover { border-color:#c7c6bd; transform: translateY(-1px); }
+.dk-custom-box { display:grid; gap:8px; margin: 0 0 14px; }
+.dk-custom-preview {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 12px; border-radius:14px; background:var(--nav-bg); color:var(--muted);
+  font-size:13px;
+}
+.dk-custom-preview b { color:var(--ink); }
+
 .dk-feats { display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; padding: 4px 0 4px; }
 .dk-feats span { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .dk-pay-err { font-size: 13px; color: #c0473e; font-weight: 600; text-align: center; margin-top: 12px; }
@@ -705,7 +725,7 @@ html.theme-dark .dk-pack.on { background: rgba(252,253,118,.08); border-color: v
   .dk-acts { grid-template-columns: repeat(2, 1fr); }
   .dk-tpl-grid { grid-template-columns: repeat(3, 1fr); }
   .dk-packs { grid-template-columns: repeat(2, 1fr); }
-  .dk-sub-grid { grid-template-columns: repeat(2, 1fr); }
+  .dk-sub-grid, .dk-sub-grid-templates, .dk-sub-grid-plans { grid-template-columns: repeat(2, 1fr); }
   .dk-bonus-tasks { grid-template-columns: 1fr; }
   .dk-gen { grid-template-columns: 380px 1fr; }
 }

@@ -1021,7 +1021,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
       <footer className="lp-foot">
         <div className="lp-foot-in">
           <div className="lp-foot-brand">
-            <div className="lp-brand"><span className="lp-logo"><LogoMark size={34} /></span> Hubicx</div>
+            <div className="lp-brand"><span className="lp-logo"><img src="assets/logo.jpg" alt="Hubicx" width="34" height="34" style={{borderRadius:10}} /></span> Hubicx</div>
             <p style={{ color: 'var(--mut)', fontSize: 14, lineHeight: 1.55 }}>Ваш AI-хаб для фото, видео, чата и промптов. Прямо в Telegram и в браузере.</p>
             <div className="lp-socials">
               {['tg', 'x', 'yt', 'ig'].map(s => <a className="lp-soc" key={s} href="#" onClick={e => e.preventDefault()}><Ic n={s} s={18} /></a>)}
@@ -1029,8 +1029,8 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           </div>
           {[
             ['Продукт', [['/#features','Возможности'], ['/#models','Модели'], ['/#pricing','Тарифы'], ['/#templates','Примеры']]],
-            ['Компания', [['#','О нас'], ['/blog/','Блог'], ['/pages/contacts','Контакты'], ['#','Вакансии']]],
-            ['Поддержка', [['/pages/help','Помощь'], ['#','Документация'], ['/pages/terms','Условия'], ['/pages/privacy','Конфиденциальность']]],
+            ['Компания', [['#','О нас'], ['/blog/','Блог'], ['/pages/contacts','Контакты']]],
+            ['Поддержка', [['/pages/help','Помощь'], ['/pages/docs','Документация'], ['/pages/terms','Условия'], ['/pages/privacy','Конфиденциальность']]],
           ].map(col => (
             <div className="lp-foot-col" key={col[0]}>
               <h4>{col[0]}</h4>

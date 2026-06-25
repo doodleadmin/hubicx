@@ -42,10 +42,9 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def _jwt_key() -> bytes:
-    key = settings.jwt_signing_key or settings.admin_panel_token or settings.bot_token
-    if not key:
-        raise AppError("jwt_not_configured", "JWT_SIGNING_KEY не настроен", 503)
-    return key.encode("utf-8")
+    if not settings.jwt_signing_key:
+        raise AppError("jwt_not_configured", "JWT_SIGNING_KEY не настроен. Установите уникальный ключ в .env", 503)
+    return settings.jwt_signing_key.encode("utf-8")
 
 
 def create_jwt(user_id: int) -> str:

@@ -3,6 +3,9 @@ from pydantic import BaseModel
 
 class PaymentCreate(BaseModel):
     credits: int
+    amount_rub: float | None = None
+    package_code: str | None = None
+    return_url: str | None = None
 
 
 class PaymentOut(BaseModel):

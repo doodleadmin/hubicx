@@ -61,11 +61,11 @@ async def public_pricing(session: AsyncSession = Depends(get_session)) -> dict:
         },
         "custom_topup": {
             "enabled": True,
-            "payments_enabled": False,
+            "payments_enabled": True,
             "min_amount_rub": 99,
             "rub_to_token_rate": 1,
             "bonus_tokens": 0,
         },
         "model_prices": [serialize_model_price(price) for price in prices_result.scalars().all()],
-        "payments_enabled": False,
+        "payments_enabled": True,
     }

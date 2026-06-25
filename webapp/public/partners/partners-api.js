@@ -1,6 +1,8 @@
 // Hubicx Partners API client
 (function() {
-  var API_HOST = 'https://api.hubicx.ru';
+  var API_HOST = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:8000'
+    : 'https://api.hubicx.ru';
   var code = new URLSearchParams(window.location.search).get('code') || '';
 
   window.PartnersApi = {
@@ -12,18 +14,38 @@
     },
     request: function(path, opts) {
       opts = opts || {};
-      return fetch(this._url(path), {
-        method: opts.method || 'GET',
-        headers: Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {}),
-        body: opts.body || undefined
-      }).then(function(r) {
-        if (!r.ok) {
-          if (r.status === 401) { code = ''; throw new Error('AUTH_REQUIRED'); }
-          return r.json().then(function(d) { throw new Error(d.detail || 'API error'); });
-        }
-        return r.json();
-      });
-    },
+      var controller = new AbortController();
+      var timeout = setTimeout(function() { controller.abort(); }, 15000);
+      var retries = 0;
+      var maxRetries = (opts.method || 'GET') === 'GET' ? 2 : 0;
+      var self = this;
+
+      function doFetch() {
+        return fetch(self._url(path), {
+          method: opts.method || 'GET',
+          headers: Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {}),
+          body: opts.body || undefined,
+          signal: controller.signal,
+          cache: 'no-store'
+        }).then(function(r) {
+          clearTimeout(timeout);
+          if (!r.ok) {
+            if (r.status === 401) { code = ''; throw new Error('AUTH_REQUIRED'); }
+            return r.json().then(function(d) { throw new Error(d.detail || 'API error'); });
+          }
+          return r.json();
+        }).catch(function(err) {
+          if (err.name === 'AbortError') throw new Error('TIMEOUT');
+          if (retries < maxRetries) {
+            retries++;
+            controller = new AbortController();
+            timeout = setTimeout(function() { controller.abort(); }, 15000);
+            return doFetch();
+          }
+          throw err;
+        });
+      }
+      return doFetch();
 
     // Partner endpoints
     me:         function()  { return this.request('/api/partners/me'); },

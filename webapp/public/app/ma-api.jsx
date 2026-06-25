@@ -3,6 +3,8 @@
   var TIMEOUT_MS = 12000;
   var UPLOAD_TIMEOUT_MS = 120000;
   var TELEGRAM_ERROR = 'Откройте приложение через Telegram-бота';
+  var BROWSER_LOGIN_ERROR = 'Войдите в аккаунт для продолжения';
+  var SSE_TIMEOUT_MS = 120000;
 
   var TOKEN_KEY = 'hubicx_jwt';
 
@@ -79,7 +81,7 @@
   function request(path, opts) {
     opts = opts || {};
     var auth = authHeaders();
-    if (!auth) return Promise.reject({ code: 'unauthorized', message: TELEGRAM_ERROR });
+    if (!auth) return Promise.reject({ code: 'unauthorized', message: isBrowserHost() ? BROWSER_LOGIN_ERROR : TELEGRAM_ERROR });
 
     var ctrl = new AbortController();
     var timer = setTimeout(function() { ctrl.abort(); }, TIMEOUT_MS);
@@ -218,6 +220,7 @@
     for (var a = 0; a < ak.length; a++) sseHeaders[ak[a]] = auth[ak[a]];
 
     var ctrl = new AbortController();
+    var sseTimer = setTimeout(function() { ctrl.abort(); }, SSE_TIMEOUT_MS);
 
     fetch(apiBase() + '/api/agent/chats/' + chatId + '/stream', {
       method: 'POST',
@@ -227,6 +230,7 @@
       cache: 'no-store',
     }).then(function(res) {
       if (!res.ok) {
+        clearTimeout(sseTimer);
         return res.json().catch(function() { return {}; }).then(function(err) {
           if (onError) onError(String(err.detail || 'Ошибка чата'));
         });
@@ -237,7 +241,7 @@
 
       function read() {
         reader.read().then(function(result) {
-          if (result.done) { if (onDone) onDone(); return; }
+          if (result.done) { clearTimeout(sseTimer); if (onDone) onDone(); return; }
           buf += decoder.decode(result.value, { stream: true });
           var lines = buf.split('\n');
           buf = lines.pop();
@@ -245,7 +249,7 @@
             var line = lines[i].trim();
             if (!line.startsWith('data:')) continue;
             var raw = line.slice(5).trim();
-            if (raw === '[DONE]') { if (onDone) onDone(); return; }
+            if (raw === '[DONE]') { clearTimeout(sseTimer); if (onDone) onDone(); return; }
             try {
               var obj = JSON.parse(raw);
               if (obj.error) { if (onError) onError(obj.error); return; }

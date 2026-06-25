@@ -30,9 +30,17 @@ def _is_photo_template(template: Template, model: AIModel | None) -> bool:
     return bool(values & {"image", "photo"})
 
 
-def _user_has_template_subscription(user: User) -> bool:
-    # Хранилище подписок пока не реализовано; точка будущей интеграции.
-    return False
+async def _user_has_template_subscription(session, user_id: int) -> bool:
+    from backend.app.db.models import UserSubscription
+    from sqlalchemy import select as sa_select
+    sub = await session.scalar(
+        sa_select(UserSubscription).where(
+            UserSubscription.user_id == user_id,
+            UserSubscription.kind == "template",
+            UserSubscription.is_active.is_(True),
+        )
+    )
+    return sub is not None
 
 
 def _provider_prompt_preview(provider_input: dict[str, Any]) -> str | None:
@@ -99,7 +107,7 @@ async def create_generation_task(
             model
             and model.code in TEMPLATE_FALLBACK_MODEL_CODES
             and _is_photo_template(template, model)
-            and not _user_has_template_subscription(user)
+            and not await _user_has_template_subscription(session, user.id)
         ):
             fallback_model = await session.scalar(
                 select(AIModel).where(
@@ -197,8 +205,39 @@ async def history(session: AsyncSession, user: User, limit: int = 20) -> list[Ge
 
 
 async def mark_failed_and_refund(session: AsyncSession, task: GenerationTask, error: str) -> None:
+    if task.status in ("refunded", "failed"):
+        return  # Уже обработано — идемпотентность
     task.status = "refunded"
     task.error_message = error
     task.completed_at = datetime.now(timezone.utc)
     await refund_generation(session, task.user_id, task.id, task.cost_credits)
     await session.commit()
+
+
+async def update_task_from_webhook(
+    session: AsyncSession,
+    external_task_id: str,
+    status: str,
+    output_url: str | None = None,
+) -> GenerationTask | None:
+    """Обновляет задачу по external_task_id из webhook провайдера."""
+    task = await session.scalar(
+        select(GenerationTask).where(GenerationTask.external_task_id == external_task_id)
+    )
+    if not task:
+        return None
+
+    if status == "completed":
+        task.status = "completed"
+        task.completed_at = datetime.now(timezone.utc)
+        if output_url:
+            task.output_file_url = output_url
+    elif status == "failed":
+        task.status = "failed"
+        task.completed_at = datetime.now(timezone.utc)
+        task.error_message = "Provider returned failure"
+    else:
+        task.status = status
+
+    await session.commit()
+    return task

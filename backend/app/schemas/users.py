@@ -1,4 +1,16 @@
 from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime
+
+
+class SubOut(BaseModel):
+    code: str
+    title: str
+    kind: str
+    tokens_per_month: int = 0
+    price_rub: int = 0
+    is_active: bool = True
+    started_at: datetime | None = None
+    expires_at: datetime | None = None
 
 
 class UserOut(BaseModel):
@@ -16,6 +28,7 @@ class UserOut(BaseModel):
     ref_code: str
     active_menu_chat_id: int | None = None
     active_menu_message_id: int | None = None
+    subscription: SubOut | None = None
 
 
 class RegisterIn(BaseModel):

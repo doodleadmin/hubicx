@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -167,6 +167,11 @@ class GenerationTask(Base):
     model: Mapped[AIModel | None] = relationship()
     template: Mapped[Template | None] = relationship()
 
+    __table_args__ = (
+        Index("ix_generation_tasks_status_created", "status", "created_at"),
+        Index("ix_generation_tasks_user_status", "user_id", "status"),
+    )
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -180,6 +185,10 @@ class Transaction(Base):
     payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"))
     comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_transactions_user_created", "user_id", "created_at"),
+    )
 
 
 class BalanceLedger(Base):
@@ -199,6 +208,25 @@ class BalanceLedger(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class UserSubscription(Base):
+    __tablename__ = "user_subscriptions"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_subscriptions_user_code"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    code: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(32))       # "template" / "full"
+    tokens_per_month: Mapped[int] = mapped_column(Integer, default=0)
+    price_rub: Mapped[int] = mapped_column(Integer, default=0)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
 class Payment(Base):
     __tablename__ = "payments"
 
@@ -208,11 +236,18 @@ class Payment(Base):
     amount_rub: Mapped[float | None] = mapped_column(Numeric(10, 2))
     amount_usd: Mapped[float | None] = mapped_column(Numeric(10, 2))
     credits: Mapped[int] = mapped_column(Integer)
+    package_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="created")
     external_payment_id: Mapped[str | None] = mapped_column(String(255))
     referral_partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        Index("ix_payments_external_id", "external_payment_id"),
+        Index("ix_payments_status", "status"),
+        UniqueConstraint("external_payment_id", name="uq_payments_external_id"),
+    )
 
 
 class File(Base):
@@ -333,3 +368,7 @@ class AgentChatMessage(Base):
 
     chat: Mapped[AgentChat] = relationship(back_populates="messages")
     task: Mapped[GenerationTask | None] = relationship()
+
+    __table_args__ = (
+        Index("ix_agent_chat_messages_chat_created", "chat_id", "created_at"),
+    )

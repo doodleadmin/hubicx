@@ -367,7 +367,7 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
       <div className={'dk-user' + (tab === 'profile' ? ' on' : '')} data-onb="desk-profile" onClick={onProfile}>
         <div className="dk-ava">{initial}</div>
         <div className="dk-uinfo">
-          <div className="dk-uname">{name} <span className="dk-pro">Pro</span></div>
+          <div className="dk-uname">{name} {user && user.subscription && user.subscription.is_active ? <span className="dk-pro">{user.subscription.title}</span> : null}</div>
           <div className="dk-uhandle">{uname}</div>
         </div>
         <span className="dk-theme" title="Сменить тему" onClick={(e) => { e.stopPropagation(); if (onToggleTheme) onToggleTheme(); }}><Ic n={theme === 'dark' ? 'sun' : 'moon'} s={17} c="var(--faint)"/></span>
@@ -1492,7 +1492,7 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
       <div className="dk-prof-card">
         <div className="dk-prof-ava">{initial}</div>
         <div className="dk-prof-id">
-          <div className="dk-prof-name">{name} <span className="dk-pro">Pro</span></div>
+          <div className="dk-prof-name">{name} {user && user.subscription && user.subscription.is_active ? <span className="dk-pro">{user.subscription.title}</span> : null}</div>
           <div className="dk-prof-handle">{uname}</div>
           <div className="dk-prof-btns">
             <button className="dk-btn-sec" onClick={onSettings}><Ic n="gear" s={16}/> Настройки</button>
@@ -1570,7 +1570,7 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
 
       <div className="dk-card dk-pad">
         <div className="dk-side-h"><Ic n="bolt" s={17} c="#c98a4e"/> Доступ</div>
-        <div className="dk-kv"><span>Подписка</span><b>нет</b></div>
+        <div className="dk-kv"><span>Подписка</span><b>{user && user.subscription && user.subscription.is_active ? user.subscription.title : 'нет'}</b></div>
         <div className="dk-kv"><span>Фото-шаблоны</span><b style={{ color:'#5f9184' }}>доступны</b></div>
         <div className="dk-side-note" style={{ marginTop:8, textAlign:'left' }}>Без подписки фото-шаблоны запускаются на базовой модели. Видео по-прежнему требует платные токены.</div>
       </div>
@@ -1617,7 +1617,11 @@ function DeskTopup({ tokens, onClose }) {
   const [subs, setSubs] = useState(fallbackSubs);
   const [bonus, setBonus] = useState(fallbackBonus);
   const [enabled, setEnabled] = useState(false);
-  const [sel, setSel] = useState(1);
+  const [packSel, setPackSel] = useState(1);
+  const [subSel, setSubSel] = useState(0); // null = token package selected
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customAmount, setCustomAmount] = useState('');
+  const [customErr, setCustomErr] = useState('');
   const [paying, setPaying] = useState(false);
   const [payErr, setPayErr] = useState('');
 
@@ -1637,11 +1641,23 @@ function DeskTopup({ tokens, onClose }) {
   }, []);
 
   const pay = function() {
-    if (paying || !window.HubicxApi || !packs) return;
-    var chosen = packs[sel] || packs[0];
-    if (!chosen) return;
+    if (paying || !window.HubicxApi) return;
+    var payload;
+    var customNum = parseInt(customAmount, 10);
+    var customValid = customOpen && customAmount && !isNaN(customNum) && customNum >= 99;
+    if (customValid) {
+      payload = { amount_rub: customNum, credits: customNum };
+    } else if (subSel !== null) {
+      var sub = selectedSub;
+      if (!sub) return;
+      payload = { amount_rub: sub.price_rub, credits: sub.tokens_per_month, package_code: sub.code };
+    } else {
+      var chosen = packs && (packs[packSel] || packs[0]);
+      if (!chosen) return;
+      payload = { amount_rub: chosen.price_rub, credits: chosen.total_tokens || chosen.tokens, package_code: chosen.code };
+    }
     setPayErr(''); setPaying(true);
-    window.HubicxApi.createPayment({ amount_rub: chosen.price_rub, credits: chosen.total_tokens || chosen.tokens, package_code: chosen.code })
+    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: 'https://app.hubicx.ru' }))
       .then(function(data) {
         setPaying(false);
         if (data.payment_url) {
@@ -1652,7 +1668,22 @@ function DeskTopup({ tokens, onClose }) {
       }).catch(function(e) { setPaying(false); setPayErr((e && e.message) || 'Ошибка при создании платежа'); });
   };
 
-  const chosen = packs && (packs[sel] || packs[0]);
+  var templateSubs = (subs || []).filter(function(p) { return String(p.code || '').indexOf('templates_') === 0; });
+  var fullSubs = (subs || []).filter(function(p) { return String(p.code || '').indexOf('templates_') !== 0; });
+  var visibleSubs = templateSubs.concat(fullSubs);
+  var selectedSub = subSel === null ? null : (visibleSubs[subSel] || visibleSubs[0] || null);
+  var customNumView = parseInt(customAmount, 10);
+  var customValidView = customOpen && customAmount && !isNaN(customNumView) && customNumView >= 99;
+  var chosen = customValidView ? { price_rub: customNumView, title:'Своя сумма' } : (selectedSub || (packs && (packs[packSel] || packs[0])));
+  var chosenPrice = chosen ? chosen.price_rub : '';
+  var chosenLabel = selectedSub ? selectedSub.title : (customValidView ? 'Своя сумма' : '');
+  const handleCustomChange = function(v) {
+    var num = parseInt(v, 10);
+    setCustomAmount(v);
+    if (!v || isNaN(num)) { setCustomErr(''); return; }
+    if (num < 99) { setCustomErr('Минимум 99 ₽'); return; }
+    setCustomErr('');
+  };
   const claimBonus = function(code) {
     if (!window.HubicxApi || !window.HubicxApi.claimBonus) return;
     window.HubicxApi.claimBonus(code).then(function() { return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null; })
@@ -1662,8 +1693,8 @@ function DeskTopup({ tokens, onClose }) {
   return <div className="dk-modal-ov" onClick={onClose}>
     <div className="dk-modal dk-topup-modal" onClick={e => e.stopPropagation()}>
       <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
-      <div className="dk-modal-title">Пополнить токены</div>
-      <div className="dk-modal-sub">Текущий баланс: {tokens} ★</div>
+      <div className="dk-modal-title">Тарифы Hubicx</div>
+      <div className="dk-modal-sub">Баланс сейчас: {tokens} ★</div>
 
       {packs === null
         ? <div style={{ padding:'40px 0', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>
@@ -1688,20 +1719,44 @@ function DeskTopup({ tokens, onClose }) {
           </div>; })}</div>
         </div>}
 
-        <div className="dk-topup-label">Подписки</div>
-        <div className="dk-sub-grid">
-          {subs.map(function(p) { return <div className="dk-sub-card" key={p.code}>
-            <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-            <p>{p.tokens_per_month} токенов / месяц</p>
-            <strong>{p.price_rub} ₽/мес</strong>
+        {templateSubs.length > 0 && <React.Fragment>
+        <div className="dk-topup-label">Для шаблонов</div>
+        <div className="dk-sub-grid dk-sub-grid-templates">
+          {templateSubs.map(function(p, i) { return <div key={p.code}
+              className={'dk-sub-card' + (selectedSub && selectedSub.code === p.code && !customValidView ? ' on' : '')}
+              onClick={() => { setSubSel(i); setPackSel(1); setCustomAmount(''); setCustomErr(''); }}>
+            {p.badge && <div className="dk-sub-badge">{p.badge}</div>}
+            <div className="dk-sub-title">{p.title}</div>
+            <div className="dk-sub-n"><Star s={22} c="#c9c7f4"/> {p.tokens_per_month}</div>
+            <div className="dk-sub-meta">токенов / месяц</div>
+            <div className="dk-sub-price">{p.price_rub} ₽/мес</div>
           </div>; })}
         </div>
+        </React.Fragment>}
 
-        <div className="dk-topup-label">Пакеты токенов</div>
+        {fullSubs.length > 0 && <React.Fragment>
+        <div className="dk-topup-label">Для генераций</div>
+        <div className="dk-sub-grid dk-sub-grid-plans">
+          {fullSubs.map(function(p, i) {
+            var realIndex = templateSubs.length + i;
+            return <div key={p.code}
+              className={'dk-sub-card' + (selectedSub && selectedSub.code === p.code && !customValidView ? ' on' : '')}
+              onClick={() => { setSubSel(realIndex); setPackSel(1); setCustomAmount(''); setCustomErr(''); }}>
+              {p.badge && <div className="dk-sub-badge">{p.badge}</div>}
+              <div className="dk-sub-title">{p.title}</div>
+              <div className="dk-sub-n"><Star s={22} c="#c9c7f4"/> {p.tokens_per_month}</div>
+              <div className="dk-sub-meta">токенов / месяц</div>
+              <div className="dk-sub-price">{p.price_rub} ₽/мес</div>
+            </div>;
+          })}
+        </div>
+        </React.Fragment>}
+
+        <div className="dk-topup-label">Разовые пакеты</div>
         <div className="dk-packs">
           {packs.map(function(p, i) {
             var best = i === 1;
-            return <div key={i} className={'dk-pack' + (sel === i ? ' on' : '')} onClick={() => setSel(i)}>
+            return <div key={i} className={'dk-pack' + (subSel === null && packSel === i && !customValidView ? ' on' : '')} onClick={() => { setSubSel(null); setPackSel(i); setCustomAmount(''); setCustomErr(''); }}>
               {best && <div className="dk-pack-best">Выгодно</div>}
               <Star s={22} c="#c9c7f4"/>
               <div className="dk-pack-n">{p.total_tokens || p.tokens}</div>
@@ -1710,6 +1765,15 @@ function DeskTopup({ tokens, onClose }) {
             </div>;
           })}
         </div>
+
+        <button className="dk-topup-more" onClick={() => setCustomOpen(!customOpen)}>
+          {customOpen ? 'Скрыть свою сумму' : 'Нужна другая сумма?'}
+        </button>
+        {customOpen && <div className="dk-custom-box">
+          <input className="dk-auth-in" type="number" min="99" placeholder="Введите сумму от 99 ₽" value={customAmount} onChange={function(e) { handleCustomChange(e.target.value); }}/>
+          {customValidView && <div className="dk-custom-preview"><span>{customNumView} ₽</span><b>{customNumView} токенов</b></div>}
+          {customErr && <div className="dk-pay-err">{customErr}</div>}
+        </div>}
 
         <div className="dk-feats">
           <span><Ic n="bolt" s={14} c="#c98a4e"/> Мгновенное зачисление</span>
@@ -1720,8 +1784,8 @@ function DeskTopup({ tokens, onClose }) {
         {payErr && <div className="dk-pay-err">{payErr}</div>}
         {!enabled && <div className="dk-modal-sub" style={{ marginTop:10 }}>Оплата скоро будет доступна</div>}
 
-        <button className="dk-cta" disabled={!enabled || paying || !chosen} onClick={pay} style={{ marginTop:14 }}>
-          {paying ? 'Создаём платёж…' : enabled ? 'Оплатить · ' + (chosen ? chosen.price_rub : '') + ' ₽' : 'Скоро будет доступно · ' + (chosen ? chosen.price_rub : '') + ' ₽'}
+        <button className="dk-cta" disabled={!enabled || paying || !chosen || !!customErr} onClick={pay} style={{ marginTop:14 }}>
+          {paying ? 'Создаём платёж…' : enabled ? 'Оплатить' + (chosen && chosenPrice ? ' · ' + chosenPrice + ' ₽' + (chosenLabel ? ' — ' + chosenLabel : '') : '') : 'Скоро будет доступно'}
         </button>
       </>}
     </div>

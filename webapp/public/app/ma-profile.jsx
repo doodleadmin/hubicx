@@ -339,10 +339,14 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
     {editor && editor.kind === 'emoji' && <EmojiSheet current={p.emoji}
       onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>} 
-    {bonusToast && <div style={{ position:'fixed', left:16, right:16, bottom:88, zIndex:80, background:'rgba(28,28,26,.94)', color:'#fff', borderRadius:18, padding:'12px 14px', boxShadow:'0 18px 45px rgba(0,0,0,.24)', display:'flex', alignItems:'center', gap:10 }}>
-      <div style={{ flex:1, fontWeight:800, fontSize:14 }}>🎁 У вас есть бесплатные токены</div>
-      <button style={{ border:0, borderRadius:12, padding:'8px 10px', fontWeight:850, background:'#fff', color:'#1c1c1a' }} onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Посмотреть</button>
-      <button style={{ border:0, background:'transparent', color:'#fff', fontSize:18, padding:'4px' }} onClick={() => setBonusToast(false)}>×</button>
+    {bonusToast && <div className="bonus-toast-top">
+      <div className="bonus-toast-ic">🎁</div>
+      <div className="bonus-toast-copy">
+        <b>У вас есть бесплатные токены</b>
+        <span>Заберите бонусы в профиле</span>
+      </div>
+      <button className="bonus-toast-main" onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Смотреть</button>
+      <button className="bonus-toast-x" onClick={() => setBonusToast(false)}>×</button>
     </div>}
   </div>;
 }

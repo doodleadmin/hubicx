@@ -33,6 +33,7 @@ async def get_or_create_user(session: AsyncSession, tg_user: dict, ref_code: str
         is_admin=int(tg_user["id"]) in settings.admin_id_set,
         ref_code=make_ref_code(),
         referrer_id=referrer_id,
+        bonus_credits=0,
     )
     session.add(user)
     try:

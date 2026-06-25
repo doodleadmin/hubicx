@@ -1,9 +1,13 @@
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import BalanceLedger, Transaction, User, UserBonusTask
 from backend.app.utils.errors import AppError
+
+logger = logging.getLogger(__name__)
 
 
 async def apply_balance_operation(
@@ -57,7 +61,7 @@ async def get_paid_balance(session: AsyncSession, user_id: int) -> int:
 
 
 async def has_enough_balance(session: AsyncSession, user_id: int, amount: int, allow_bonus: bool = True) -> bool:
-    user = await session.get(User, user_id)
+    user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
     if not user:
         return False
     if allow_bonus:
@@ -190,8 +194,12 @@ async def referral_bonus(session: AsyncSession, user_id: int, payment_id: int, a
     if not user or not user.referrer_id:
         return
     bonus = max(amount // 10, 0)
-    if bonus:
-        await admin_add_balance(session, user.referrer_id, bonus, f"Referral bonus for payment {payment_id}")
+    if bonus < 10:
+        logger.info("Referral bonus skipped: amount=%s too small for user=%s", amount, user_id)
+        return
+    from backend.app.config import settings as _s
+    logger.info("Referral bonus: %s tokens to user %s from payment %s", bonus, user.referrer_id, payment_id)
+    await admin_add_balance(session, user.referrer_id, bonus, f"Referral bonus for payment {payment_id}")
 
 
 async def _is_text_task(session: AsyncSession, task_id: int) -> bool:

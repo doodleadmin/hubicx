@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.deps import current_user
-from backend.app.db.models import User
+from backend.app.db.models import User, UserSubscription
 from backend.app.db.session import get_session
 from backend.app.schemas.users import AuthOut, LinkEmailIn, LinkTelegramIn, LoginIn, RegisterIn, UserOut
 from backend.app.services.balance import award_bonus_tokens
@@ -44,6 +44,7 @@ async def register(payload: RegisterIn, session: AsyncSession = Depends(get_sess
         language_code="ru",
         is_admin=False,
         ref_code=make_ref_code(),
+        bonus_credits=0,
     )
     session.add(user)
     await session.commit()
@@ -82,5 +83,14 @@ async def link_telegram(payload: LinkTelegramIn, user: User = Depends(current_us
 
 
 @router.get("/me", response_model=UserOut)
-async def me(user: User = Depends(current_user)) -> User:
-    return user
+async def me(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+    # Get active subscription
+    sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == user.id,
+            UserSubscription.is_active == True,
+        ).order_by(UserSubscription.started_at.desc())
+    )
+    user_dict = user.__dict__.copy()
+    user_dict["subscription"] = sub
+    return user_dict
