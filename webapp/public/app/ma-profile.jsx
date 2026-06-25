@@ -133,6 +133,21 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
   const saveTimerRef = useRef(null);
   const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
   const hasPassword = user && user.has_password;
+  const tgProfile = (() => {
+    try {
+      var tgUser = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
+      return tgUser || {};
+    } catch(e) { return {}; }
+  })();
+  const displayName = (user && (user.first_name || user.username)) || tgProfile.first_name || p.name || 'Пользователь';
+  const displayHandle = user && user.username ? '@' + user.username : (tgProfile.username ? '@' + tgProfile.username : (user && user.email ? user.email : 'Hubicx'));
+  const avatarUrl = (user && user.photo_url) || tgProfile.photo_url || '';
+  const avatarInitial = String(displayName || 'H').trim().charAt(0).toUpperCase() || 'H';
+  const activeSub = user && user.subscription && user.subscription.is_active ? user.subscription : null;
+  const subTitle = activeSub ? activeSub.title : 'Без подписки';
+  const subMeta = activeSub
+    ? ((activeSub.kind === 'template' ? 'Шаблоны' : 'Генерации') + (activeSub.tokens_per_month ? ' · ' + activeSub.tokens_per_month + ' токенов/мес' : ''))
+    : 'Можно выбрать тариф для шаблонов';
 
   useEffect(function() {
     document.body.classList.toggle('hbx-modal-open', !!editor);
@@ -295,7 +310,27 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
 
       <div className="label-sec">Профиль</div>
-      <div className="card" data-onb="mob-profile-card" style={{ overflow:'hidden' }}>
+      <div className="card mob-profile-hero" data-onb="mob-profile-card">
+        <div className="mob-profile-avatar">
+          {avatarUrl ? <img src={avatarUrl} alt=""/> : <span>{avatarInitial}</span>}
+        </div>
+        <div className="mob-profile-id">
+          <div className="mob-profile-name">{displayName}</div>
+          <div className="mob-profile-handle">{displayHandle}</div>
+        </div>
+        <button className="mob-profile-topup" onClick={onTopup}><Star s={14} c="#c9c7f4"/> {tokens}</button>
+      </div>
+
+      <div className={'card mob-sub-card' + (activeSub ? ' active' : '')}>
+        <div>
+          <div className="mob-sub-k">Текущий тариф</div>
+          <div className="mob-sub-title">{subTitle}</div>
+          <div className="mob-sub-meta">{subMeta}</div>
+        </div>
+        <button onClick={onTopup}>{activeSub ? 'Управлять' : 'Выбрать'}</button>
+      </div>
+
+      <div className="card" style={{ overflow:'hidden' }}>
         <Row chip={<IconChip bg="#e6eeff"><Star s={16} c="#6060c0"/></IconChip>}
           title="Мои токены" value={tokens} onClick={onTopup}/>
         <Row chip={<IconChip bg="#d0e8f5"><Ic n="globe" s={18} c="#2f80ed"/></IconChip>}
