@@ -686,17 +686,22 @@ function PaymentResultModal({ result, onClose }) {
   var ok = result === 'success';
   return <div className="pay-result-ov" onClick={onClose}>
     <div className={'pay-result-card ' + (ok ? 'ok' : 'fail')} onClick={e => e.stopPropagation()}>
-      <div className="pay-result-mark">{ok ? '✓' : '!'}</div>
-      <div className="pay-result-k">{ok ? 'Платёж подтверждён' : 'Платёж не завершён'}</div>
-      <h3>{ok ? 'Готово, баланс обновляется' : 'Не получилось оплатить'}</h3>
-      <p>{ok ? 'Токены и подписка появятся в профиле после подтверждения банка. Обычно это занимает несколько секунд.' : 'Деньги не списаны, если банк не подтвердил операцию. Можно вернуться к тарифам и попробовать ещё раз.'}</p>
-      <button className="pay-result-btn" onClick={onClose}>{ok ? 'Отлично' : 'Понятно'}</button>
+      <div className="pay-result-glow"></div>
+      <div className="pay-result-mark"><span>{ok ? '✓' : '!'}</span></div>
+      <div className="pay-result-k">{ok ? 'Оплата прошла' : 'Оплата не завершена'}</div>
+      <h3>{ok ? 'Тариф почти у вас' : 'Платёж не подтвердился'}</h3>
+      <p>{ok ? 'Банк подтвердил платёж. Мы обновим баланс и подписку автоматически, обычно это занимает несколько секунд.' : 'Если банк не подтвердил операцию, деньги не списываются. Вернитесь к тарифам и попробуйте ещё раз.'}</p>
+      <div className="pay-result-note">
+        <b>{ok ? 'Что дальше' : 'Подсказка'}</b>
+        <span>{ok ? 'Можно продолжать генерацию — баланс подтянется сам.' : 'Лучше не закрывать Telegram до возврата из платёжной формы.'}</span>
+      </div>
+      <button className="pay-result-btn" onClick={onClose}>{ok ? 'Продолжить' : 'Вернуться'}</button>
     </div>
   </div>;
 }
 
 function Topup({ tokens, onClose }) {
-  const { Star } = window.MiraCore;
+  const { Star, Ic } = window.MiraCore;
   const fallbackPacks = [
     { code:'topup_300',   title:'300 токенов',    tokens:300,   price_rub:249,  bonus_tokens:0, total_tokens:300,   effective_price_per_token:0.83 },
     { code:'topup_1000',  title:'1 000 токенов',  tokens:1000,  price_rub:790,  bonus_tokens:0, total_tokens:1000,  effective_price_per_token:0.79 },
@@ -723,6 +728,8 @@ function Topup({ tokens, onClose }) {
   const [customOpen, setCustomOpen] = uS(false);
   const [customAmount, setCustomAmount] = uS('');
   const [customError, setCustomError] = uS('');
+  const [fullOpen, setFullOpen] = uS(false);
+  const [packsOpen, setPacksOpen] = uS(false);
   const [paying, setPaying] = uS(false);
   const [payError, setPayError] = uS('');
 
@@ -819,110 +826,117 @@ function Topup({ tokens, onClose }) {
     <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
       <div className="sheet-card topup-card">
         <div className="sheet-grab"></div>
-        <div className="sheet-title">Тарифы Hubicx</div>
-        <div className="muted" style={{ fontSize:13.5, marginBottom:14 }}>Баланс сейчас: {tokens} ★</div>
-
-        {bonus && <div className="bonus-card-v2" style={{ margin:'4px 0 18px' }}>
-          <div className="bonus-head-v2">
-            <div>
-              <div className="bonus-title">{bonus.title || '50 токенов сразу + бонусы за задания после проверки'}</div>
-              <div className="bonus-note">{bonus.note || 'Бонусные токены доступны для базовых моделей.'}</div>
-            </div>
+        <button className="topup-close" onClick={onClose} aria-label="Закрыть"><Ic n="close" s={17}/></button>
+        <div className="topup-head">
+          <div>
+            <div className="sheet-title">Тарифы Hubicx</div>
+            <div className="topup-sub">Сначала доступ к шаблонам</div>
           </div>
-          <div className="bonus-list-v2">
-            {(bonus.tasks || []).map(function(t) {
-              var claimed = !!t.claimed;
-              var manual = t.kind === 'manual_claim' && t.claimable !== false;
-              var url = t.action_url || '';
-              var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
-              return <div className={'bonus-task-v2' + (claimed ? ' done' : '')} key={t.code}>
-                <div className="bonus-copy-v2"><span>{t.title}</span><small>{t.description || ''}</small></div>
-                <div className="bonus-act-v2">
-                  <b>+{t.tokens || t.credits || 0} ★</b>
-                  {claimed ? <em>Готово</em>
-                    : manual ? <button onClick={() => claimBonus(t.code)}>Забрать</button>
-                    : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
-                    : <em>{status}</em>}
-                </div>
-              </div>;
-            })}
-          </div>
-        </div>}
-
-        {templateSubs.length > 0 && <React.Fragment>
-          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Для шаблонов</div>
-          <div className="sub-list">
-            {templateSubs.map(function(p, i) { return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(i); setCustomAmount(''); setCustomError(''); }}>
-              <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-              <p>Шаблоны + {p.tokens_per_month} токенов / месяц</p>
-              <strong>{p.price_rub} ₽/мес</strong>
-            </div>; })}
-          </div>
-        </React.Fragment>}
-
-        {fullSubs.length > 0 && <React.Fragment>
-          <div className="label-sec topup-label" style={{ marginBottom:8 }}>Для генераций</div>
-          <div className="sub-list">
-            {fullSubs.map(function(p, i) {
-              var realIndex = templateSubs.length + i;
-              return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(realIndex); setCustomAmount(''); setCustomError(''); }}>
-                <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-                <p>Все сценарии + {p.tokens_per_month} токенов / месяц</p>
-                <strong>{p.price_rub} ₽/мес</strong>
-              </div>;
-            })}
-          </div>
-        </React.Fragment>}
-
-        <div className="label-sec topup-label" style={{ marginBottom:8 }}>Разовые пакеты</div>
-        <div className="topup-packs" style={{ display:'flex', flexDirection:'column', gap:9 }}>
-          {packs.map((p, i) => (
-            <div key={i} className="opt topup-opt" onClick={() => { setSubSel(null); setSel(i); setCustomAmount(''); setCustomError(''); }}
-              style={{ border:'1px solid ' + (subSel === null && sel === i && !customValid ? 'var(--ink)' : 'var(--line)'),
-                borderRadius:14, padding:'13px 14px', background: (subSel === null && sel === i && !customValid) ? '#f8f7f2' : 'transparent' }}>
-              <Star s={20} c="#c9c7f4"/>
-              <div style={{ flex:1 }}>
-                <span style={{ fontWeight:800, fontSize:16 }}>{p.total_tokens || p.tokens} токенов</span>
-                {p.bonus_tokens > 0 && <span style={{ fontSize:12, fontWeight:800, color:'#7a9c92', marginLeft:6 }}>+{p.bonus_tokens} бонус</span>}
-                <div className="muted" style={{ fontSize:11, marginTop:2 }}>
-                  {p.effective_price_per_token != null ? p.effective_price_per_token + ' ₽ за токен' : p.price_rub + ' ₽'}
-                </div>
-              </div>
-              <span style={{ fontWeight:800, fontSize:15, whiteSpace:'nowrap' }}>{p.price_rub} ₽</span>
-            </div>
-          ))}
+          <div className="topup-balance"><Star s={14} c="#c9c7f4"/> {tokens}</div>
         </div>
 
-        <button className="topup-more" onClick={() => setCustomOpen(!customOpen)}>{customOpen ? 'Скрыть свою сумму' : 'Нужна другая сумма?'}</button>
-        {customOpen && <React.Fragment>
-          <div className="topup-custom" style={{ display:'flex', alignItems:'center', gap:10, background:'#f8f7f2', borderRadius:12,
-            padding:'10px 14px', border:'1px solid ' + (customValid ? 'var(--ink)' : 'var(--line)') }}>
-            <input type="number" placeholder="Введите сумму от 99 ₽" value={customAmount}
-              onChange={e => handleCustomChange(e.target.value)}
-              style={{ flex:1, background:'transparent', border:'none', color:'var(--ink)', fontSize:15,
-                fontWeight:600, outline:'none', fontFamily:'inherit', MozAppearance:'textfield' }} min="99"/>
-            <span style={{ fontWeight:700, fontSize:14.5, color:'var(--muted)' }}>₽</span>
-          </div>
-          {customError && <div style={{ fontSize:12, marginTop:5, color:'#c0473e', fontWeight:600 }}>{customError}</div>}
-          {customValid && <div style={{ marginTop:8, padding:'10px 14px', background:'#f0efe8', borderRadius:10 }}>
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:13.5 }}>
-              <span className="muted">{customNum} ₽</span>
-              <span style={{ fontWeight:800 }}>{customNum} токенов</span>
+        <div className="topup-body">
+          {bonus && <div className="topup-bonus-lite">
+            <div className="topup-bonus-ic">🎁</div>
+            <div>
+              <b>{bonus.title || '50 токенов сразу + бонусы'}</b>
+              <span>{bonus.note || 'Бонусы доступны для базовых фото-моделей.'}</span>
             </div>
-            <div className="muted" style={{ fontSize:11.5, marginTop:3 }}>Бонус: 0 · 1 ₽ = 1 токен</div>
+            {bonus.total_tokens ? <strong>+{bonus.total_tokens} ★</strong> : null}
           </div>}
-        </React.Fragment>}
 
-        {payError && <div style={{ fontSize:12.5, marginTop:10, color:'#c0473e', fontWeight:600 }}>{payError}</div>}
-        {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginTop:14 }}>Оплата скоро будет доступна</div>}
-        <button className="sheet-cta topup-cta" onClick={handlePay}
-          disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
-          style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
-                   cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>
-          {paying ? 'Создаём платёж…'
-            : paymentsEnabled ? `Оплатить · ${ctaPrice} ₽`
-            : `Скоро будет доступно · ${ctaPrice} ₽`}
-        </button>
+          {templateSubs.length > 0 && <React.Fragment>
+            <div className="topup-section-title">
+              <span>Для шаблонов</span>
+              <em>рекомендуем</em>
+            </div>
+            <div className="topup-template-list">
+              {templateSubs.map(function(p, i) { return <button className={'topup-plan template' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(i); setCustomAmount(''); setCustomError(''); }}>
+                <span className="topup-plan-radio"></span>
+                <span className="topup-plan-main">
+                  <b>{p.title}</b>
+                  <small>Шаблоны + {p.tokens_per_month} токенов / месяц</small>
+                </span>
+                <span className="topup-plan-side">
+                  {p.badge && <em>{p.badge}</em>}
+                  <strong>{p.price_rub} ₽</strong>
+                </span>
+              </button>; })}
+            </div>
+          </React.Fragment>}
+
+          {fullSubs.length > 0 && <div className="topup-fold-block">
+            <button className={'topup-fold' + (fullOpen ? ' open' : '')} onClick={() => setFullOpen(!fullOpen)}>
+              <span>Тарифы для генераций</span>
+              <b>{fullSubs.length} тарифа</b>
+              <i>{fullOpen ? '−' : '+'}</i>
+            </button>
+            {fullOpen && <div className="sub-list compact">
+              {fullSubs.map(function(p, i) {
+                var realIndex = templateSubs.length + i;
+                return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(realIndex); setCustomAmount(''); setCustomError(''); }}>
+                  <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
+                  <p>Все сценарии + {p.tokens_per_month} токенов / месяц</p>
+                  <strong>{p.price_rub} ₽/мес</strong>
+                </div>;
+              })}
+            </div>}
+          </div>}
+
+          <div className="topup-fold-block">
+            <button className={'topup-fold' + (packsOpen ? ' open' : '')} onClick={() => setPacksOpen(!packsOpen)}>
+              <span>Разовые токены</span>
+              <b>без подписки</b>
+              <i>{packsOpen ? '−' : '+'}</i>
+            </button>
+            {packsOpen && <React.Fragment>
+              <div className="topup-packs">
+                {packs.map((p, i) => (
+                  <div key={i} className={'opt topup-opt' + (subSel === null && sel === i && !customValid ? ' on' : '')} onClick={() => { setSubSel(null); setSel(i); setCustomAmount(''); setCustomError(''); }}>
+                    <Star s={18} c="#c9c7f4"/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <span>{p.total_tokens || p.tokens} токенов</span>
+                      <div className="muted">
+                        {p.effective_price_per_token != null ? p.effective_price_per_token + ' ₽ за токен' : p.price_rub + ' ₽'}
+                      </div>
+                    </div>
+                    <strong>{p.price_rub} ₽</strong>
+                  </div>
+                ))}
+              </div>
+              <button className="topup-more" onClick={() => setCustomOpen(!customOpen)}>{customOpen ? 'Скрыть свою сумму' : 'Ввести свою сумму'}</button>
+              {customOpen && <React.Fragment>
+                <div className="topup-custom">
+                  <input type="number" placeholder="Сумма от 99 ₽" value={customAmount}
+                    onChange={e => handleCustomChange(e.target.value)}
+                    min="99"/>
+                  <span>₽</span>
+                </div>
+                {customError && <div className="topup-error">{customError}</div>}
+                {customValid && <div className="topup-custom-preview">
+                  <span>{customNum} ₽</span>
+                  <b>{customNum} токенов</b>
+                </div>}
+              </React.Fragment>}
+            </React.Fragment>}
+          </div>
+        </div>
+
+        <div className="topup-footer">
+          {payError && <div className="topup-error">{payError}</div>}
+          {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginBottom:8 }}>Оплата скоро будет доступна</div>}
+          <button className="sheet-cta topup-cta" onClick={handlePay}
+            disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
+            style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
+                     cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>
+            {paying ? 'Создаём платёж…'
+              : paymentsEnabled ? `Оплатить · ${ctaPrice} ₽`
+              : `Скоро будет доступно · ${ctaPrice} ₽`}
+          </button>
+          <div className="topup-footer-note">
+            {selectedSub ? 'Подписка продлевается повторной покупкой.' : 'Разовые токены не сгорают.'}
+          </div>
+        </div>
       </div>
     </div>
   </div>;
