@@ -270,7 +270,6 @@ function App() {
   const [dtab, setDtab] = uS(deskTabFromLocation);
   const [genInit, setGenInit] = uS({ mode:'photo', prompt:'', tpl:null, modelCode:null, aspectId:null, qualityField:null, qualityValue:null, batchCount:1 });
   const [genKey, setGenKey] = uS(0);
-  const [settingsOpen, setSettingsOpen] = uS(false);
   const [deskSearch, setDeskSearch] = uS('');
 
   // Desktop auth gate: true once we know whether the user is logged in
@@ -648,7 +647,7 @@ function App() {
     else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat} onSetAgent={setChatAgent}/>;
     else if (dtab === 'history') dbody = <DeskHistory/>;
     else if (dtab === 'fav') dbody = <DeskFavorites/>;
-    else dbody = <DeskProfile tokens={tokens} user={user} onTopup={() => setTopup(true)} onSettings={() => setSettingsOpen(true)} onUserUpdate={setUser}/>;
+    else dbody = <DeskProfile tokens={tokens} user={user} onTopup={() => setTopup(true)} onUserUpdate={setUser}/>;
 
     return <React.Fragment>
       <DeskShell tab={dtab} onTab={goDtab} onProfile={() => goDtab('profile')}
@@ -658,17 +657,6 @@ function App() {
         {dbody}
       </DeskShell>
       {topup && <DeskTopup tokens={tokens} onClose={() => setTopup(false)}/>}
-      {settingsOpen && <div className="dk-modal-ov" onClick={() => setSettingsOpen(false)}>
-        <div className="dk-settings" onClick={e => e.stopPropagation()}>
-          <div className="dk-settings-top">
-            <span>Настройки профиля</span>
-            <button className="dk-settings-x" onClick={() => setSettingsOpen(false)}>✕</button>
-          </div>
-          <div className="dk-settings-body">
-            <ProfileScreen tokens={tokens} onTopup={() => { setSettingsOpen(false); setTopup(true); }} onTab={() => setSettingsOpen(false)} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser}/>
-          </div>
-        </div>
-      </div>}
       <DesktopOnboarding onTab={goDtab} onTopup={() => setTopup(true)}/>
       {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     </React.Fragment>;

@@ -291,7 +291,7 @@ function DeskAuth({ onAuthed }) {
           ? <span>Нет аккаунта? <b onClick={() => { setTab('register'); setErr(''); }}>Зарегистрироваться</b></span>
           : <span>Уже есть аккаунт? <b onClick={() => { setTab('login'); setErr(''); }}>Войти</b></span>}
       </div>
-      <div className="dk-auth-note">Уже пользуетесь ботом в Telegram? Откройте «Настройки → Привязать email», чтобы входить с тем же балансом.</div>
+      <div className="dk-auth-note">Уже пользуетесь ботом в Telegram? Откройте профиль в Mini App и нажмите «Связать аккаунты», чтобы входить с тем же балансом.</div>
     </div>
   </div>;
 }
@@ -1158,6 +1158,7 @@ function deskAgentByCode(code) {
 function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDeleteChat, onSetAgent }) {
   const { Ic } = window.MiraCore;
   const [val, setVal] = useState('');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const bodyRef = useRef(null);
   const cur = chats.find(function(c) { return c.id === activeChat; });
   const msgs = (cur && cur.msgs) || [];
@@ -1257,6 +1258,9 @@ function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDelete
           <div className="dk-agents-title">AI-агенты</div>
           <div className="dk-agents-sub">Выберите роль для текущего чата</div>
         </div>
+        <button className="dk-chat-settings-btn" onClick={() => setSettingsOpen(true)} title="Настройки общения">
+          <Ic n="sliders" s={17}/>
+        </button>
       </div>
       <div className="dk-agents-grid">
         {DESK_AGENTS.map(function(a) {
@@ -1270,6 +1274,7 @@ function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDelete
       </div>
       <div className="dk-agents-hint">Агент меняет стиль и системный промпт следующих сообщений в чате.</div>
     </div>
+    {settingsOpen && window.ChatSettingsSheet && <window.ChatSettingsSheet onClose={() => setSettingsOpen(false)}/>}
   </div>;
 }
 
@@ -1374,44 +1379,82 @@ function DeskFavorites() {
   </div>;
 }
 
-/* ---- link-email modal (Telegram ↔ desktop account) ----
-   mode='create' → set a new email+password on this Telegram account (linkEmail)
-   mode='merge'  → connect an account already registered on the website (linkTelegram) */
-function DeskLinkEmail({ mode, onClose, onLinked }) {
+/* ---- account linking modal (Telegram ↔ desktop account) ---- */
+function DeskLinkEmail({ onClose, onLinked }) {
   const { Ic } = window.MiraCore;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
-  const isMerge = mode === 'merge';
 
   const submit = function() {
     var em = email.trim();
     if (!em || password.length < 6) { setErr('Email и пароль (от 6 символов)'); return; }
     setBusy(true); setErr('');
-    var p = isMerge ? window.HubicxApi.linkTelegram(em, password) : window.HubicxApi.linkEmail(em, password);
-    p.then(function(u) { setBusy(false); setDone(true); if (onLinked) onLinked(u && u.user ? u.user : u); })
-      .catch(function(e) { setBusy(false); setErr((e && e.message) || 'Не удалось привязать'); });
+    function finish(u) {
+      setBusy(false); setDone(true);
+      if (onLinked) onLinked(u && u.user ? u.user : u);
+    }
+    function fail(e, fallback) {
+      setBusy(false);
+      setErr((e && e.message) || fallback || 'Не удалось связать аккаунты');
+    }
+    window.HubicxApi.linkTelegram(em, password).then(finish).catch(function(firstErr) {
+      window.HubicxApi.linkEmail(em, password).then(finish).catch(function(secondErr) {
+        var msg = String((secondErr && secondErr.message) || '').toLowerCase();
+        if (msg.indexOf('существ') >= 0 || msg.indexOf('занят') >= 0 || msg.indexOf('already') >= 0) {
+          fail(firstErr, 'Email уже зарегистрирован. Проверьте пароль от аккаунта сайта.');
+        } else {
+          fail(secondErr || firstErr, 'Не удалось связать аккаунты');
+        }
+      });
+    });
   };
 
   return <div className="dk-modal-ov" onClick={onClose}>
-    <div className="dk-modal" style={{ maxWidth:440 }} onClick={e => e.stopPropagation()}>
+    <div className="dk-modal dk-link-modal" onClick={e => e.stopPropagation()}>
       <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
-      <div className="dk-modal-title">{isMerge ? 'Войти в аккаунт сайта' : 'Привязать email'}</div>
-      <div className="dk-modal-sub">{isMerge
-        ? 'Введите email и пароль аккаунта, который вы создали на сайте — балансы объединятся.'
-        : 'Задайте email и пароль, чтобы входить с компьютера с тем же балансом.'}</div>
+      <div className="dk-link-hero">
+        <span><Ic n="user" s={24} c="#5f9184"/></span>
+        <div>
+          <div className="dk-modal-title">Связать аккаунты</div>
+          <div className="dk-modal-sub">Введите email и пароль. Если аккаунт сайта уже есть, мы объединим его с Telegram. Если нет — создадим вход на сайт с этим же балансом.</div>
+        </div>
+      </div>
       {done
-        ? <div className="dk-refund" style={{ marginTop:20 }}>✓ Готово. Аккаунты связаны.</div>
+        ? <div className="dk-link-done"><Ic n="check" s={22} c="#5f9184"/> Готово. Аккаунты связаны.</div>
         : <>
-          <div className="dk-auth-fields" style={{ marginTop:18 }}>
+          <div className="dk-auth-fields dk-link-fields">
             <input className="dk-auth-in" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
             <input className="dk-auth-in" type="password" placeholder="Пароль (от 6 символов)" value={password} onChange={e => setPassword(e.target.value)}/>
           </div>
           {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
-          <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>{busy ? 'Сохраняем…' : (isMerge ? 'Связать аккаунты' : 'Привязать')}</button>
+          <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
         </>}
+    </div>
+  </div>;
+}
+
+function DeskTelegramLinkModal({ onClose }) {
+  const { Ic } = window.MiraCore;
+  const openBot = function() { window.open('https://t.me/hubicx_bot', '_blank', 'noopener,noreferrer'); };
+  return <div className="dk-modal-ov" onClick={onClose}>
+    <div className="dk-modal dk-link-modal" onClick={e => e.stopPropagation()}>
+      <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
+      <div className="dk-link-hero">
+        <span><Ic n="chat" s={24} c="#5f9184"/></span>
+        <div>
+          <div className="dk-modal-title">Привязать Telegram</div>
+          <div className="dk-modal-sub">Откройте Hubicx в Telegram и в профиле нажмите «Связать аккаунты». Введите email и пароль от сайта — баланс, история и подписка станут общими.</div>
+        </div>
+      </div>
+      <div className="dk-link-steps">
+        <div><b>1</b><span>Откройте бота Hubicx</span></div>
+        <div><b>2</b><span>Запустите Mini App и откройте профиль</span></div>
+        <div><b>3</b><span>Нажмите «Связать аккаунты»</span></div>
+      </div>
+      <button className="dk-cta" onClick={openBot}>Открыть Telegram</button>
     </div>
   </div>;
 }
@@ -1419,9 +1462,10 @@ function DeskLinkEmail({ mode, onClose, onLinked }) {
 /* ============================================================
    Профиль (dashboard)
    ============================================================ */
-function DeskProfile({ tokens, user, onTopup, onSettings, onUserUpdate }) {
+function DeskProfile({ tokens, user, onTopup, onUserUpdate }) {
   const { Ic, Star } = window.MiraCore;
-  const [linkMode, setLinkMode] = useState(null); // null | 'create' | 'merge'
+  const [linkMode, setLinkMode] = useState(null);
+  const [telegramHelp, setTelegramHelp] = useState(false);
   const [bonus, setBonus] = useState(null);
   const [bonusState, setBonusState] = useState('');
   const [bonusToast, setBonusToast] = useState(false);
@@ -1450,9 +1494,11 @@ function DeskProfile({ tokens, user, onTopup, onSettings, onUserUpdate }) {
   const photos = done.filter(function(i) { return i.task_type !== 'video'; }).length;
   const videos = done.filter(function(i) { return i.task_type === 'video'; }).length;
   const name = (user && (user.first_name || user.username)) || 'Пользователь';
-  const uname = (user && user.username) ? '@' + user.username : '@hubicx';
+  const uname = (user && user.username) ? '@' + user.username : (user && user.email ? user.email : '@hubicx');
   const initial = (name || 'H').trim().charAt(0).toUpperCase();
   const recent = done.slice(0, 4);
+  const activeSub = user && user.subscription && user.subscription.is_active;
+  const subTitle = activeSub ? user.subscription.title : 'Без подписки';
   const bonusTasks = (bonus && Array.isArray(bonus.tasks)) ? bonus.tasks : [];
   const bonusBalance = bonus ? (typeof bonus.bonus_credits === 'number' ? bonus.bonus_credits : (typeof bonus.total_tokens === 'number' ? bonus.total_tokens : null)) : null;
   const hasManualBonus = bonusTasks.some(function(t) { return t && !t.claimed && (t.claimable !== false || t.action_url); });
@@ -1491,13 +1537,18 @@ function DeskProfile({ tokens, user, onTopup, onSettings, onUserUpdate }) {
   return <div className="dk-prof">
     <div className="dk-prof-main">
       <div className="dk-prof-card">
-        <div className="dk-prof-ava">{initial}</div>
-        <div className="dk-prof-id">
-          <div className="dk-prof-name">{name} {user && user.subscription && user.subscription.is_active ? <span className="dk-pro">{user.subscription.title}</span> : null}</div>
-          <div className="dk-prof-handle">{uname}</div>
-          <div className="dk-prof-btns">
-            <button className="dk-btn-sec" onClick={onSettings}><Ic n="gear" s={16}/> Настройки</button>
+        <div className="dk-prof-top">
+          <div className="dk-prof-ava">{initial}</div>
+          <div className="dk-prof-id">
+            <div className="dk-prof-name">{name}</div>
+            <div className="dk-prof-handle">{uname}</div>
           </div>
+          <span className={'dk-prof-plan' + (activeSub ? ' on' : '')}>{subTitle}</span>
+        </div>
+        <div className="dk-prof-summary">
+          <div><span>Баланс</span><b><Star s={15} c="#c9c7f4"/> {tokens}</b></div>
+          <div><span>История</span><b>{done.length} генераций</b></div>
+          <div><span>Telegram</span><b style={{ color: hasTelegram || isTelegram ? '#5f9184' : 'var(--muted)' }}>{hasTelegram || isTelegram ? 'привязан' : 'не привязан'}</b></div>
         </div>
       </div>
 
@@ -1580,22 +1631,22 @@ function DeskProfile({ tokens, user, onTopup, onSettings, onUserUpdate }) {
         <div className="dk-side-h"><Ic n="user" s={17} c="var(--muted)"/> Аккаунт</div>
         {user && user.email && <div className="dk-kv"><span>Email</span><b>{user.email}</b></div>}
         {isTelegram && !hasPassword && <>
-          <div className="dk-side-note" style={{ marginTop:0, marginBottom:10, textAlign:'left' }}>Привяжите email, чтобы входить с компьютера с тем же балансом.</div>
-          <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setLinkMode('create')}><Ic n="plus" s={16}/> Привязать email для ПК</button>
-          <div className="dk-auth-foot" style={{ marginTop:10 }}>Уже регистрировались на сайте? <b onClick={() => setLinkMode('merge')}>Связать аккаунт</b></div>
+          <div className="dk-side-note" style={{ marginTop:0, marginBottom:10, textAlign:'left' }}>Свяжите Telegram с email-аккаунтом, чтобы один баланс работал в Mini App и на сайте.</div>
+          <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setLinkMode('link')}><Ic n="user" s={16}/> Связать аккаунты</button>
         </>}
         {isTelegram && hasPassword && <div className="dk-kv"><span>Вход с ПК</span><b style={{ color:'#5f9184' }}>включён</b></div>}
         {!isTelegram && <>
           <div className="dk-kv"><span>Telegram</span><b style={{ color: hasTelegram ? '#5f9184' : 'var(--muted)' }}>{hasTelegram ? 'привязан' : 'не привязан'}</b></div>
           {!hasTelegram && <>
-            <div className="dk-side-note" style={{ marginTop:8, marginBottom:10, textAlign:'left' }}>Откройте Hubicx в Telegram и выберите «Связать аккаунт сайта», чтобы подтянуть этот баланс в Mini App.</div>
-            <button className="dk-btn-sec" style={{ width:'100%' }} onClick={function() { window.open('https://t.me/hubicx_bot', '_blank', 'noopener,noreferrer'); }}><Ic n="tg" s={16}/> Открыть Telegram</button>
+            <div className="dk-side-note" style={{ marginTop:8, marginBottom:10, textAlign:'left' }}>Привязка Telegram завершается в Mini App, потому что Telegram должен подтвердить ваш аккаунт.</div>
+            <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setTelegramHelp(true)}><Ic n="chat" s={16}/> Привязать Telegram</button>
           </>}
           <button className="dk-btn-sec" style={{ width:'100%', marginTop:10 }} onClick={logout}>Выйти из аккаунта</button>
         </>}
       </div>
     </div>
-    {linkMode && <DeskLinkEmail mode={linkMode} onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
+    {linkMode && <DeskLinkEmail onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
+    {telegramHelp && <DeskTelegramLinkModal onClose={() => setTelegramHelp(false)}/>}
   </div>;
 }
 

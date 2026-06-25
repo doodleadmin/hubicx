@@ -189,7 +189,7 @@ function ChatSettingsSheet({ onClose }) {
     });
   }
 
-  return <div className="sheet-ov" onClick={onClose}>
+  return <div className="sheet-ov chat-settings-ov" onClick={onClose}>
     <div className="sheet agent-sheet" onClick={function(e) { e.stopPropagation(); }}>
       <div className="sheet-card">
         <div className="sheet-grab"></div>
@@ -232,4 +232,5 @@ function ChatSettingsSheet({ onClose }) {
   </div>;
 }
 
+window.ChatSettingsSheet = ChatSettingsSheet;
 window.ChatScreen = ChatScreen;

@@ -64,49 +64,57 @@ function uiToServer(p) {
   };
 }
 
-function MobileLinkAccountSheet({ mode, onClose, onLinked }) {
+function MobileLinkAccountSheet({ onClose, onLinked }) {
   const { Ic } = window.MiraCore;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
-  const isMerge = mode === 'merge';
 
   const submit = function() {
     var em = email.trim();
     if (!em || password.length < 6) { setErr('Email и пароль от 6 символов'); return; }
     setBusy(true); setErr('');
-    var p = isMerge ? window.HubicxApi.linkTelegram(em, password) : window.HubicxApi.linkEmail(em, password);
-    p.then(function(data) {
+    function finish(data) {
       var nextUser = data && data.user ? data.user : data;
       setBusy(false); setDone(true);
       if (onLinked) onLinked(nextUser);
-    }).catch(function(e) {
+    }
+    function showError(e, fallback) {
       setBusy(false);
-      setErr((e && e.message) || 'Не удалось связать аккаунты');
+      setErr((e && e.message) || fallback || 'Не удалось связать аккаунты');
+    }
+    window.HubicxApi.linkTelegram(em, password).then(finish).catch(function(firstErr) {
+      window.HubicxApi.linkEmail(em, password).then(finish).catch(function(secondErr) {
+        var msg = String((secondErr && secondErr.message) || '').toLowerCase();
+        if (msg.indexOf('существ') >= 0 || msg.indexOf('занят') >= 0 || msg.indexOf('already') >= 0) {
+          showError(firstErr, 'Email уже зарегистрирован. Проверьте пароль от аккаунта сайта.');
+        } else {
+          showError(secondErr || firstErr, 'Не удалось связать аккаунты');
+        }
+      });
     });
   };
 
   return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card profile-sheet-card">
+    <div className="sheet profile-sheet account-link-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card profile-sheet-card account-link-card">
         <button className="sheet-x" onClick={onClose}><Ic n="close" s={18}/></button>
-        <div className="sheet-title">{isMerge ? 'Связать аккаунт сайта' : 'Привязать email'}</div>
-        <div className="muted" style={{ fontSize:13.5, lineHeight:1.45, marginTop:-4 }}>
-          {isMerge
-            ? 'Введите email и пароль desktop-аккаунта. История, баланс и подписка будут доступны в Telegram и на сайте.'
-            : 'Задайте email и пароль, чтобы входить на сайте с тем же балансом.'}
+        <div className="account-link-icon"><Ic n="user" s={22} c="#5f9184"/></div>
+        <div className="sheet-title">Связать аккаунты</div>
+        <div className="muted account-link-copy">
+          Введите email и пароль. Если аккаунт сайта уже есть, мы объединим его с Telegram. Если нет — создадим вход на сайт с этим же балансом.
         </div>
         {done
-          ? <div className="card" style={{ marginTop:16, padding:16, textAlign:'center', fontWeight:850 }}>Готово. Аккаунты связаны.</div>
+          ? <div className="account-link-done"><Ic n="check" s={22} c="#5f9184"/> Готово. Аккаунты связаны.</div>
           : <>
-            <div className="profile-sheet-scroll" style={{ gap:10, marginTop:16 }}>
+            <div className="profile-sheet-scroll account-link-fields">
               <input className="text-in" type="email" autoComplete="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
               <input className="text-in" type="password" autoComplete="current-password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)}/>
             </div>
-            {err && <div style={{ color:'#c0473e', fontWeight:800, fontSize:13, marginTop:10 }}>{err}</div>}
-            <button className="sheet-cta profile-sheet-cta" disabled={busy} onClick={submit}>{busy ? 'Сохраняем...' : (isMerge ? 'Связать аккаунты' : 'Привязать')}</button>
+            {err && <div className="account-link-error">{err}</div>}
+            <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
           </>}
       </div>
     </div>
@@ -359,11 +367,10 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
         <div className="divider"></div>
         {isTelegram && !hasPassword && <>
           <div style={{ padding:'14px 18px 6px', color:'var(--muted)', fontSize:13, lineHeight:1.42 }}>
-            Привяжите email, чтобы входить на сайте с тем же балансом. Если аккаунт на сайте уже есть, свяжите его здесь.
+            Свяжите Telegram с email-аккаунтом, чтобы один баланс, история и подписка были доступны в Mini App и на сайте.
           </div>
           <div style={{ display:'grid', gap:10, padding:'8px 18px 16px' }}>
-            <button className="btn-primary" onClick={() => setLinkMode('create')}>Привязать email</button>
-            <button className="btn-secondary" onClick={() => setLinkMode('merge')}>Связать аккаунт сайта</button>
+            <button className="btn-primary" onClick={() => setLinkMode('link')}>Связать аккаунты</button>
           </div>
         </>}
         {isTelegram && hasPassword && <div className="row-link locked">
@@ -463,7 +470,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
       <button className="bonus-toast-main" onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Смотреть</button>
       <button className="bonus-toast-x" onClick={() => setBonusToast(false)}>×</button>
     </div>}
-    {linkMode && <MobileLinkAccountSheet mode={linkMode} onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
+    {linkMode && <MobileLinkAccountSheet onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
   </div>;
 }
 
