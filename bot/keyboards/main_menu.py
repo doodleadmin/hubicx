@@ -19,5 +19,6 @@ def main_menu_keyboard(language_code: str = "ru") -> InlineKeyboardMarkup:
     webapp_url = WEBAPP_URL
     return InlineKeyboardMarkup(inline_keyboard=[
         [app_button(t(language_code, "menu.open_hubicx"), webapp_url, icon_key="home")],
+        [InlineKeyboardButton(text="📄 Документация", url="https://hubicx.ru/pages/docs")],
         [InlineKeyboardButton(text=language_title, callback_data="main:language", **emoji_icon("language"))],
     ])
