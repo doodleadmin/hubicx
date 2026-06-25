@@ -64,7 +64,56 @@ function uiToServer(p) {
   };
 }
 
-function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
+function MobileLinkAccountSheet({ mode, onClose, onLinked }) {
+  const { Ic } = window.MiraCore;
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+  const isMerge = mode === 'merge';
+
+  const submit = function() {
+    var em = email.trim();
+    if (!em || password.length < 6) { setErr('Email и пароль от 6 символов'); return; }
+    setBusy(true); setErr('');
+    var p = isMerge ? window.HubicxApi.linkTelegram(em, password) : window.HubicxApi.linkEmail(em, password);
+    p.then(function(data) {
+      var nextUser = data && data.user ? data.user : data;
+      setBusy(false); setDone(true);
+      if (onLinked) onLinked(nextUser);
+    }).catch(function(e) {
+      setBusy(false);
+      setErr((e && e.message) || 'Не удалось связать аккаунты');
+    });
+  };
+
+  return <div className="sheet-ov" onClick={onClose}>
+    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
+      <div className="sheet-card profile-sheet-card">
+        <button className="sheet-x" onClick={onClose}><Ic n="close" s={18}/></button>
+        <div className="sheet-title">{isMerge ? 'Связать аккаунт сайта' : 'Привязать email'}</div>
+        <div className="muted" style={{ fontSize:13.5, lineHeight:1.45, marginTop:-4 }}>
+          {isMerge
+            ? 'Введите email и пароль desktop-аккаунта. История, баланс и подписка будут доступны в Telegram и на сайте.'
+            : 'Задайте email и пароль, чтобы входить на сайте с тем же балансом.'}
+        </div>
+        {done
+          ? <div className="card" style={{ marginTop:16, padding:16, textAlign:'center', fontWeight:850 }}>Готово. Аккаунты связаны.</div>
+          : <>
+            <div className="profile-sheet-scroll" style={{ gap:10, marginTop:16 }}>
+              <input className="text-in" type="email" autoComplete="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
+              <input className="text-in" type="password" autoComplete="current-password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)}/>
+            </div>
+            {err && <div style={{ color:'#c0473e', fontWeight:800, fontSize:13, marginTop:10 }}>{err}</div>}
+            <button className="sheet-cta profile-sheet-cta" disabled={busy} onClick={submit}>{busy ? 'Сохраняем...' : (isMerge ? 'Связать аккаунты' : 'Привязать')}</button>
+          </>}
+      </div>
+    </div>
+  </div>;
+}
+
+function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onUserUpdate }) {
   const { Ic, Star, TopNav } = window.MiraCore;
   theme = theme || ((window.HubicxTheme && window.HubicxTheme.theme) || 'light');
   onToggleTheme = onToggleTheme || (window.HubicxTheme && window.HubicxTheme.toggle) || function() {};
@@ -79,8 +128,11 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
   const [bonus, setBonus] = useState(null);
   const [bonusState, setBonusState] = useState('');
   const [bonusToast, setBonusToast] = useState(false);
+  const [linkMode, setLinkMode] = useState(null);
   const bonusRef = useRef(null);
   const saveTimerRef = useRef(null);
+  const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
+  const hasPassword = user && user.has_password;
 
   useEffect(function() {
     document.body.classList.toggle('hbx-modal-open', !!editor);
@@ -261,6 +313,34 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
         </div>
       </div>
 
+      <div className="card" style={{ overflow:'hidden', marginTop:14 }}>
+        <div className="row-link locked">
+          <IconChip bg="#e9f1ec"><Ic n="user" s={18} c="#5f9184"/></IconChip>
+          <span style={{ fontWeight:700, fontSize:15.5 }}>Аккаунт</span>
+          <span className="muted" style={{ marginLeft:'auto', fontSize:13, textAlign:'right' }}>
+            {user && user.email ? user.email : (isTelegram ? 'Telegram' : 'Email')}
+          </span>
+        </div>
+        <div className="divider"></div>
+        {isTelegram && !hasPassword && <>
+          <div style={{ padding:'14px 18px 6px', color:'var(--muted)', fontSize:13, lineHeight:1.42 }}>
+            Привяжите email, чтобы входить на сайте с тем же балансом. Если аккаунт на сайте уже есть, свяжите его здесь.
+          </div>
+          <div style={{ display:'grid', gap:10, padding:'8px 18px 16px' }}>
+            <button className="btn-primary" onClick={() => setLinkMode('create')}>Привязать email</button>
+            <button className="btn-secondary" onClick={() => setLinkMode('merge')}>Связать аккаунт сайта</button>
+          </div>
+        </>}
+        {isTelegram && hasPassword && <div className="row-link locked">
+          <IconChip bg="#edf7e9"><Ic n="check" s={18} c="#5f9184"/></IconChip>
+          <span style={{ fontWeight:700, fontSize:15.5 }}>Вход на сайте</span>
+          <span className="muted" style={{ marginLeft:'auto', fontSize:13 }}>включен</span>
+        </div>}
+        {!isTelegram && <div style={{ padding:'14px 18px 16px', color:'var(--muted)', fontSize:13, lineHeight:1.42 }}>
+          Telegram привязывается через Mini App: откройте бота и в профиле свяжите этот email.
+        </div>}
+      </div>
+
       <div style={{ marginTop:18, marginBottom:6 }}>
         <span className="label-sec">История генераций</span>
       </div>
@@ -348,6 +428,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme }) {
       <button className="bonus-toast-main" onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Смотреть</button>
       <button className="bonus-toast-x" onClick={() => setBonusToast(false)}>×</button>
     </div>}
+    {linkMode && <MobileLinkAccountSheet mode={linkMode} onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
   </div>;
 }
 

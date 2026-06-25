@@ -605,7 +605,7 @@ function App() {
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={(modelCode) => openCreate('video', null, modelCode ? { modelCode:modelCode } : null)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme}/>;
+    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser}/>;
   }
 
   const mainContent = <React.Fragment>
@@ -648,7 +648,7 @@ function App() {
     else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat} onSetAgent={setChatAgent}/>;
     else if (dtab === 'history') dbody = <DeskHistory/>;
     else if (dtab === 'fav') dbody = <DeskFavorites/>;
-    else dbody = <DeskProfile tokens={tokens} user={user} onTopup={() => setTopup(true)} onSettings={() => setSettingsOpen(true)}/>;
+    else dbody = <DeskProfile tokens={tokens} user={user} onTopup={() => setTopup(true)} onSettings={() => setSettingsOpen(true)} onUserUpdate={setUser}/>;
 
     return <React.Fragment>
       <DeskShell tab={dtab} onTab={goDtab} onProfile={() => goDtab('profile')}
@@ -665,7 +665,7 @@ function App() {
             <button className="dk-settings-x" onClick={() => setSettingsOpen(false)}>✕</button>
           </div>
           <div className="dk-settings-body">
-            <ProfileScreen tokens={tokens} onTopup={() => { setSettingsOpen(false); setTopup(true); }} onTab={() => setSettingsOpen(false)} theme={theme} onToggleTheme={toggleTheme}/>
+            <ProfileScreen tokens={tokens} onTopup={() => { setSettingsOpen(false); setTopup(true); }} onTab={() => setSettingsOpen(false)} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser}/>
           </div>
         </div>
       </div>}

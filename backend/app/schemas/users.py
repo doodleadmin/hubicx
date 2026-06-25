@@ -28,6 +28,8 @@ class UserOut(BaseModel):
     ref_code: str
     active_menu_chat_id: int | None = None
     active_menu_message_id: int | None = None
+    email: str | None = None
+    has_password: bool = False
     subscription: SubOut | None = None
 
 

@@ -37,6 +37,10 @@ class User(Base, TimestampMixin):
 
     referrer: Mapped["User | None"] = relationship(remote_side="User.id")
 
+    @property
+    def has_password(self) -> bool:
+        return bool(self.password_hash)
+
 
 class UserProfileSettings(Base, TimestampMixin):
     __tablename__ = "user_profile_settings"

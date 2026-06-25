@@ -1419,7 +1419,7 @@ function DeskLinkEmail({ mode, onClose, onLinked }) {
 /* ============================================================
    Профиль (dashboard)
    ============================================================ */
-function DeskProfile({ tokens, user, onTopup, onSettings }) {
+function DeskProfile({ tokens, user, onTopup, onSettings, onUserUpdate }) {
   const { Ic, Star } = window.MiraCore;
   const [linkMode, setLinkMode] = useState(null); // null | 'create' | 'merge'
   const [bonus, setBonus] = useState(null);
@@ -1428,6 +1428,7 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
   const bonusRef = useRef(null);
   const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
   const hasPassword = user && user.has_password;
+  const hasTelegram = user && Number(user.telegram_id || 0) > 0;
   const logout = function() { if (window.HubicxApi) window.HubicxApi.logout(); window.location.reload(); };
   const [history, setHistory] = useState([]);
   useEffect(function() {
@@ -1584,10 +1585,17 @@ function DeskProfile({ tokens, user, onTopup, onSettings }) {
           <div className="dk-auth-foot" style={{ marginTop:10 }}>Уже регистрировались на сайте? <b onClick={() => setLinkMode('merge')}>Связать аккаунт</b></div>
         </>}
         {isTelegram && hasPassword && <div className="dk-kv"><span>Вход с ПК</span><b style={{ color:'#5f9184' }}>включён</b></div>}
-        {!isTelegram && <button className="dk-btn-sec" style={{ width:'100%', marginTop:6 }} onClick={logout}>Выйти из аккаунта</button>}
+        {!isTelegram && <>
+          <div className="dk-kv"><span>Telegram</span><b style={{ color: hasTelegram ? '#5f9184' : 'var(--muted)' }}>{hasTelegram ? 'привязан' : 'не привязан'}</b></div>
+          {!hasTelegram && <>
+            <div className="dk-side-note" style={{ marginTop:8, marginBottom:10, textAlign:'left' }}>Откройте Hubicx в Telegram и выберите «Связать аккаунт сайта», чтобы подтянуть этот баланс в Mini App.</div>
+            <button className="dk-btn-sec" style={{ width:'100%' }} onClick={function() { window.open('https://t.me/hubicx_bot', '_blank', 'noopener,noreferrer'); }}><Ic n="tg" s={16}/> Открыть Telegram</button>
+          </>}
+          <button className="dk-btn-sec" style={{ width:'100%', marginTop:10 }} onClick={logout}>Выйти из аккаунта</button>
+        </>}
       </div>
     </div>
-    {linkMode && <DeskLinkEmail mode={linkMode} onClose={() => setLinkMode(null)} onLinked={() => {}}/>}
+    {linkMode && <DeskLinkEmail mode={linkMode} onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
   </div>;
 }
 
