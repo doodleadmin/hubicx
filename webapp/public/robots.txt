@@ -5,4 +5,4 @@ Disallow: /app/admin
 Disallow: /partners/
 Disallow: /api/
 
-Sitemap: https://app.hubicx.ru/api/sitemap.xml
+Sitemap: https://hubicx.ru/api/sitemap.xml

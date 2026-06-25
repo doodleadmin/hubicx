@@ -17,14 +17,14 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/app/assets/apple-touch-icon.png"/>
 <meta property="og:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
 <meta property="og:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram."/>
-<meta property="og:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
+<meta property="og:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
 <meta property="og:url" content="https://hubicx.ru/"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Hubicx"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
 <meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
-<meta name="twitter:image" content="https://app.hubicx.ru/app/assets/og-image.jpg"/>
+<meta name="twitter:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
 <script>window.__APP_BUILD__='20260623-bonus1';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
@@ -65,14 +65,14 @@
 (function() {
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';
-  var isAppHost = host === 'app.hubicx.ru';
+  var isAppHost = host === 'hubicx.ru';
   var tg = window.Telegram && window.Telegram.WebApp;
 
   window.HUBICX_APP_CONTEXT = isWebappHost ? 'telegram' : (isAppHost ? 'browser' : 'auto');
 
   if (tg) {
     // Only webapp.hubicx.ru is the Telegram Mini App product.
-    // app.hubicx.ru remains the standalone browser product even if Telegram SDK is present.
+    // hubicx.ru remains the standalone browser product even if Telegram SDK is present.
     window.HUBICX_TG_SHELL = isWebappHost;
     if (isWebappHost) {
       var platform = String(tg.platform || '').toLowerCase();

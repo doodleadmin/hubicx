@@ -1657,7 +1657,7 @@ function DeskTopup({ tokens, onClose }) {
       payload = { amount_rub: chosen.price_rub, credits: chosen.total_tokens || chosen.tokens, package_code: chosen.code };
     }
     setPayErr(''); setPaying(true);
-    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: 'https://app.hubicx.ru' }))
+    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: 'https://hubicx.ru' }))
       .then(function(data) {
         setPaying(false);
         if (data.payment_url) {

@@ -9,6 +9,8 @@ from backend.app.utils.errors import AppError
 app = FastAPI(title="Telegram AI Aggregator", version="0.1.0")
 cors_origins = list(dict.fromkeys([
     settings.webapp_url.rstrip("/"),
+    "https://hubicx.ru",
+    "https://www.hubicx.ru",
     "https://app.hubicx.ru",
     "https://webapp.hubicx.ru",
     "https://admin.hubicx.ru",

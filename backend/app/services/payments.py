@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import urlparse
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +13,21 @@ PAYMENT_PACKAGES = {300, 1000, 3000, 10000}
 _TOKEN_CATEGORY_CODES = {"topup_300", "topup_1000", "topup_3000", "topup_10000"}
 _TEMPLATE_CATEGORY_CODES = {"templates_mini", "templates_plus"}
 _FULL_CATEGORY_CODES = {"creator", "creator_pro", "studio"}
+
+
+def _payment_channel(return_url: str | None) -> str:
+    host = (urlparse(return_url or "").hostname or "").lower()
+    return "webapp" if host == "webapp.hubicx.ru" else "desktop"
+
+
+def _payment_return_urls(return_url: str | None, order_id: str) -> tuple[str, str]:
+    base = (return_url or settings.webapp_url).rstrip("/")
+    channel = _payment_channel(base)
+    path = "" if channel == "webapp" else "/app"
+    return (
+        f"{base}{path}?paid=success&order={order_id}",
+        f"{base}{path}?paid=fail&order={order_id}",
+    )
 
 
 def _commission_category(package_code: str | None) -> str | None:
@@ -78,6 +94,8 @@ async def create_payment(
 
         order_id = _generate_order_id()
         amount_kopecks = int(round(Decimal(str(final_amount)) * 100))
+        channel = _payment_channel(return_url)
+        success_url, fail_url = _payment_return_urls(return_url, order_id)
 
         description = f"Пополнение {final_credits} токенов Hubicx"
         if package_code:
@@ -89,9 +107,10 @@ async def create_payment(
                 order_id=order_id,
                 description=description,
                 notification_url=f"{settings.backend_url}/api/payments/notify",
-                success_url=f"{return_url or settings.webapp_url}/app?paid=success&order={order_id}",
-                fail_url=f"{return_url or settings.webapp_url}/app?paid=fail&order={order_id}",
+                success_url=success_url,
+                fail_url=fail_url,
                 customer_key=str(user.id),
+                channel=channel,
             )
         except TbankError as e:
             raise AppError("tbank_error", f"Ошибка платёжного шлюза: {e.message}", 502)

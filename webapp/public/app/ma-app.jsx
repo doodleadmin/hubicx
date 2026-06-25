@@ -785,7 +785,8 @@ function Topup({ tokens, onClose }) {
       setPaying(false);
       return;
     }
-    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: DESKTOP ? 'https://app.hubicx.ru' : '' })).then(function(data) {
+    var payReturnUrl = DESKTOP ? 'https://hubicx.ru' : (window.location && window.location.origin ? window.location.origin : 'https://webapp.hubicx.ru');
+    window.HubicxApi.createPayment(Object.assign({}, payload, { return_url: payReturnUrl })).then(function(data) {
       setPaying(false);
       if (data.payment_url) {
         var tg = window.Telegram && window.Telegram.WebApp;

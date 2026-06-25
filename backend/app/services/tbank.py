@@ -29,12 +29,22 @@ def _api_base() -> str:
     return TBANK_API_BASE
 
 
-def _terminal_key() -> str:
+def _terminal_key(channel: str = "desktop") -> str:
+    if channel == "webapp" and settings.tbank_webapp_terminal_key:
+        return settings.tbank_webapp_terminal_key
     return settings.tbank_terminal_key
 
 
-def _password() -> str:
+def _password(channel: str = "desktop") -> str:
+    if channel == "webapp" and settings.tbank_webapp_password:
+        return settings.tbank_webapp_password
     return settings.tbank_password
+
+
+def _channel_for_terminal_key(terminal_key: str | None) -> str:
+    if terminal_key and terminal_key == settings.tbank_webapp_terminal_key:
+        return "webapp"
+    return "desktop"
 
 
 def _generate_order_id() -> str:
@@ -46,7 +56,7 @@ def _generate_order_id() -> str:
     return f"hx{ts}"
 
 
-def _sign(params: dict[str, Any]) -> str:
+def _sign(params: dict[str, Any], channel: str = "desktop") -> str:
     """Генерирует Token (SHA-256 подпись) для запроса/уведомления.
 
     Алгоритм (из документации T-Bank):
@@ -70,7 +80,7 @@ def _sign(params: dict[str, Any]) -> str:
             flat[key] = str(raw)
 
     # 2. Добавляем Password
-    flat["Password"] = _password()
+    flat["Password"] = _password(channel)
 
     # 3-4. Сортируем и конкатенируем
     parts: list[str] = []
@@ -92,6 +102,7 @@ async def init_payment(
     fail_url: str = "",
     customer_key: str | None = None,
     receipt: dict | None = None,
+    channel: str = "desktop",
 ) -> dict[str, Any]:
     """Вызывает POST /v2/Init платёжной формы T-Bank.
 
@@ -109,7 +120,7 @@ async def init_payment(
         Ответ T-Bank с PaymentURL и PaymentId
     """
     body: dict[str, Any] = {
-        "TerminalKey": _terminal_key(),
+        "TerminalKey": _terminal_key(channel),
         "Amount": str(amount_kopecks),
         "OrderId": order_id,
         "Description": description,
@@ -126,7 +137,7 @@ async def init_payment(
     if receipt:
         body["Receipt"] = receipt
 
-    body["Token"] = _sign(body)
+    body["Token"] = _sign(body, channel)
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(f"{_api_base()}/Init", json=body)
@@ -154,7 +165,7 @@ def verify_notification(notification: dict[str, Any]) -> bool:
 
     # Строим подпись из тех же полей (без Token, Receipt, DATA и т.п.)
     verify_params = {k: v for k, v in notification.items() if k != "Token"}
-    actual = _sign(verify_params)
+    actual = _sign(verify_params, _channel_for_terminal_key(notification.get("TerminalKey")))
 
     return actual == expected
 

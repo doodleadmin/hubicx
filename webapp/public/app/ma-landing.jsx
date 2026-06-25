@@ -356,7 +356,7 @@ function DesktopMock() {
     <div className="dk-win reveal">
       <div className="dk-bar">
         <div className="dk-lights"><span style={{ background: '#f0a8a0' }}></span><span style={{ background: '#f0d28a' }}></span><span style={{ background: '#a8d8a0' }}></span></div>
-        <div className="dk-url"><Ic n="shield" s={13} c="#7faa9d" /> app.hubicx.ru</div>
+        <div className="dk-url"><Ic n="shield" s={13} c="#7faa9d" /> hubicx.ru</div>
         <div style={{ width: 54 }}></div>
       </div>
       <div className="dk-app">

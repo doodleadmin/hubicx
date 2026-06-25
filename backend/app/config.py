@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     yookassa_return_url: str = ""
     tbank_terminal_key: str = ""
     tbank_password: str = ""
+    tbank_webapp_terminal_key: str = ""
+    tbank_webapp_password: str = ""
     tbank_enabled: bool = False
     s3_endpoint: str = ""
     s3_access_key: str = ""
