@@ -26,6 +26,108 @@ const CHAT_EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸
 const CHAT_LANG_MAP = {'ru':'Русский','en':'English','es':'Español','pt':'Português'};
 const CHAT_LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Português':'pt'};
 
+function chatInlineParts(text, keyPrefix) {
+  var src = String(text == null ? '' : text);
+  var out = [];
+  var re = /(\*\*[^*]+?\*\*|`[^`]+?`)/g;
+  var last = 0;
+  var match;
+  var n = 0;
+  while ((match = re.exec(src))) {
+    if (match.index > last) out.push(src.slice(last, match.index));
+    var token = match[0];
+    if (token.slice(0, 2) === '**') {
+      out.push(<strong key={keyPrefix + '-b-' + n}>{token.slice(2, -2)}</strong>);
+    } else {
+      out.push(<code key={keyPrefix + '-c-' + n}>{token.slice(1, -1)}</code>);
+    }
+    last = match.index + token.length;
+    n += 1;
+  }
+  if (last < src.length) out.push(src.slice(last));
+  return out;
+}
+
+function ChatMessageText({ text }) {
+  var raw = String(text == null ? '' : text).replace(/\r\n/g, '\n').trimEnd();
+  if (!raw) return null;
+
+  var blocks = [];
+  var paragraph = [];
+  var list = null;
+
+  function flushParagraph() {
+    if (!paragraph.length) return;
+    var value = paragraph.join('\n');
+    blocks.push(<p key={'p-' + blocks.length} className="chat-md-p">{chatInlineParts(value, 'p-' + blocks.length)}</p>);
+    paragraph = [];
+  }
+
+  function flushList() {
+    if (!list) return;
+    var Tag = list.type;
+    blocks.push(<Tag key={'l-' + blocks.length} className="chat-md-list">
+      {list.items.map(function(item, i) {
+        return <li key={i}>{chatInlineParts(item, 'li-' + blocks.length + '-' + i)}</li>;
+      })}
+    </Tag>);
+    list = null;
+  }
+
+  raw.split('\n').forEach(function(line) {
+    var trimmed = line.trim();
+    var ordered = trimmed.match(/^(\d+)[.)]\s*(.+)$/);
+    var bullet = trimmed.match(/^[-*•]\s+(.+)$/);
+    var quote = trimmed.match(/^>\s?(.+)$/);
+
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      return;
+    }
+    if (ordered || bullet) {
+      flushParagraph();
+      var type = ordered ? 'ol' : 'ul';
+      if (list && list.type !== type) flushList();
+      if (!list) list = { type: type, items: [] };
+      list.items.push((ordered ? ordered[2] : bullet[1]).trim());
+      return;
+    }
+    if (quote) {
+      flushParagraph();
+      flushList();
+      blocks.push(<blockquote key={'q-' + blocks.length} className="chat-md-quote">{chatInlineParts(quote[1], 'q-' + blocks.length)}</blockquote>);
+      return;
+    }
+    if (list && /^\s{2,}\S/.test(line)) {
+      list.items[list.items.length - 1] += '\n' + trimmed;
+      return;
+    }
+    flushList();
+    paragraph.push(trimmed);
+  });
+  flushParagraph();
+  flushList();
+
+  return <div className="chat-md">{blocks}</div>;
+}
+
+function chatPlainPreview(text, maxLen) {
+  var value = String(text || '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^>\s*/gm, '')
+    .replace(/^\s*[-*•]\s+/gm, '')
+    .replace(/^\s*\d+[.)]\s*/gm, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  var limit = maxLen || 90;
+  return value.length > limit ? value.slice(0, limit - 1).trimEnd() + '…' : value;
+}
+
+window.ChatMessageText = ChatMessageText;
+window.chatPlainPreview = chatPlainPreview;
+
 function chatProfileFromServer(data) {
   var personality = {};
   try { personality = JSON.parse(data.hubicx_personality || '{}'); } catch(e) {}
@@ -102,7 +204,7 @@ function ChatScreen({ chat, onBack, onSend, onSetAgent }) {
       {msgs.map((m, i) => {
         if (m.streaming && !m.text) return null; // shown as typing dots below
         return <div key={i} className={'bubble ' + (m.role === 'user' ? 'me' : 'bot') + (m.isError ? ' err' : '')}>
-          {m.text}
+          <ChatMessageText text={m.text}/>
         </div>;
       })}
       {showTyping && <div className="bubble bot typing"><span/><span/><span/></div>}

@@ -1157,6 +1157,8 @@ function deskAgentByCode(code) {
 
 function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDeleteChat, onSetAgent }) {
   const { Ic } = window.MiraCore;
+  const ChatMessageText = window.ChatMessageText || function(props) { return <>{props.text}</>; };
+  const plainPreview = window.chatPlainPreview || function(text) { return String(text || '').replace(/\s+/g, ' ').trim(); };
   const [val, setVal] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const bodyRef = useRef(null);
@@ -1200,7 +1202,7 @@ function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDelete
         })}
       </div>}
       {chats.map(function(c) {
-        var lm = c.msgs && c.msgs.length ? c.msgs[c.msgs.length - 1].text : '';
+        var lm = c.msgs && c.msgs.length ? plainPreview(c.msgs[c.msgs.length - 1].text, 70) : '';
         var ag = deskAgentByCode(c.agent_mode);
         return <div key={c.id} className={'dk-chat-item' + (c.id === activeChat ? ' on' : '')} onClick={() => onOpenChat(c.id)}>
           <div className="dk-chat-av"><img src="assets/logo.jpg" alt=""/></div>
@@ -1223,7 +1225,9 @@ function DeskChat({ chats, activeChat, onOpenChat, onStartChat, onSend, onDelete
         <div className="dk-conv-body" ref={bodyRef}>
           {msgs.map(function(m, i) {
             if (m.streaming && !m.text) return null;
-            return <div key={i} className={'bubble ' + (m.role === 'user' ? 'me' : 'bot') + (m.isError ? ' err' : '')}>{m.text}</div>;
+            return <div key={i} className={'bubble ' + (m.role === 'user' ? 'me' : 'bot') + (m.isError ? ' err' : '')}>
+              <ChatMessageText text={m.text}/>
+            </div>;
           })}
           {streaming && !last.text && <div className="bubble bot typing"><span/><span/><span/></div>}
         </div>

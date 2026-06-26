@@ -908,14 +908,36 @@ html.theme-dark .switch.on i { background: #111318; }
 .chat-body::-webkit-scrollbar { display: none; }
 .bubble {
   max-width: 80%; padding: 11px 15px; border-radius: 18px; font-size: 15px;
-  line-height: 1.42; white-space: pre-wrap;
+  line-height: 1.48; white-space: normal; overflow-wrap: anywhere; word-break: normal;
 }
 .bubble.me { align-self: flex-end; background: var(--ink); color: #fff; border-bottom-right-radius: 6px; }
 .bubble.bot {
   align-self: flex-start; background: var(--card); border: 1px solid var(--line);
-  border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm);
+  border-bottom-left-radius: 6px; box-shadow: var(--shadow-sm); color: var(--ink);
 }
 .bubble.bot.err { background: #fef0ee; border-color: #f5c0ba; color: #a83428; }
+.chat-md { display: grid; gap: 9px; min-width: 0; }
+.chat-md-p { margin: 0; white-space: pre-line; }
+.chat-md-list { display: grid; gap: 7px; margin: 0; padding-left: 19px; }
+.chat-md-list li { padding-left: 2px; }
+.chat-md-quote {
+  margin: 0; padding-left: 11px; border-left: 3px solid var(--line);
+  color: var(--muted); white-space: pre-line;
+}
+.chat-md strong { font-weight: 900; color: inherit; }
+.chat-md code {
+  display: inline-block; padding: 1px 6px; border-radius: 7px;
+  background: rgba(0,0,0,.06); color: inherit; font-family: inherit; font-weight: 800;
+}
+.bubble.me .chat-md-quote { color: inherit; opacity: .82; border-color: rgba(255,255,255,.38); }
+.bubble.me .chat-md code { background: rgba(255,255,255,.16); }
+html.theme-dark .bubble.me { background: #f2f4f8; color: #111318; }
+html.theme-dark .bubble.bot { background: #12151b; border-color: #2a303a; color: #f2f4f8; }
+html.theme-dark .bubble.bot.err { background: rgba(168,52,40,.16); border-color: rgba(245,120,105,.32); color: #ffb5aa; }
+html.theme-dark .bubble.bot .chat-md-quote { border-color: #343a46; color: #aab2bf; }
+html.theme-dark .bubble.me .chat-md-quote { border-color: rgba(17,19,24,.28); }
+html.theme-dark .bubble.me .chat-md code { background: rgba(17,19,24,.09); }
+html.theme-dark .bubble.bot .chat-md code { background: rgba(255,255,255,.08); }
 .bubble.typing { display: flex; gap: 5px; align-items: center; padding: 14px 16px; }
 .bubble.typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); animation: tdot 1.2s infinite; }
 .bubble.typing span:nth-child(2) { animation-delay: .2s; }

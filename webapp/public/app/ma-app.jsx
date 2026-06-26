@@ -258,6 +258,13 @@ function serverMsgsToLocal(msgs) {
   });
 }
 
+function chatTitleFromText(text) {
+  var words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  var title = words.slice(0, 8).join(' ');
+  if (title.length > 60) title = title.slice(0, 60).replace(/\s+\S*$/, '') + '…';
+  return title || 'Новый чат';
+}
+
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
@@ -480,10 +487,10 @@ function App() {
   const startChat = (text, agentMode) => {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
     var mode = agentMode || 'general';
-    window.HubicxApi.agentCreateChat(mode, text).then(function(data) {
+    window.HubicxApi.agentCreateChat(mode, null).then(function(data) {
       var c = data.chat;
-      var serverMsgs = serverMsgsToLocal(c.messages);
-      setChats(cs => [{ id: c.id, title: c.title || 'Новый чат', agent_mode: c.agent_mode || mode, msgs: serverMsgs, loaded: true }, ...cs]);
+      var firstMsg = text ? [{ role: 'user', text: text }] : [];
+      setChats(cs => [{ id: c.id, title: chatTitleFromText(text), agent_mode: c.agent_mode || mode, msgs: firstMsg, loaded: true }, ...cs]);
       setActiveChat(c.id);
       if (text) doStream(c.id, text);
     }).catch(function(err) {
