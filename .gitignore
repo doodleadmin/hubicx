@@ -31,3 +31,5 @@ webapp/public/app/assets/templates/video/
 $b/
 *.bak-*
 desktop.html.bak*
+
+webapp/public/app/assets/templates/photo/camera-g7x/*.gif
