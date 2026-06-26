@@ -11,11 +11,13 @@ from backend.app.api.routes.pricing import serialize_model_price, serialize_pack
 from backend.app.db.models import AIModel, BalanceLedger, File, GenerationTask, ModelPricing, TokenPackage, Transaction, User
 from backend.app.db.session import get_session
 from backend.app.services.balance import admin_add_balance
+from backend.app.services.business import SUBSCRIPTION_PLANS_V2
 from backend.app.services.telegram_auth import get_current_user as telegram_current_user
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 logger = logging.getLogger(__name__)
+RESERVED_SUBSCRIPTION_CODES = {str(plan["code"]) for plan in SUBSCRIPTION_PLANS_V2}
 
 
 def require_admin(user: User) -> None:
@@ -24,7 +26,12 @@ def require_admin(user: User) -> None:
 
 
 def _admin_browser_token() -> str:
-    return settings.admin_panel_token
+    return settings.admin_panel_token or settings.admin_panel_password
+
+
+def _ensure_token_package_code_allowed(code: str) -> None:
+    if code in RESERVED_SUBSCRIPTION_CODES:
+        raise AppError("reserved_package_code", "Этот code зарезервирован для подписки", 422)
 
 
 async def _fallback_admin_user(session: AsyncSession) -> User:
@@ -243,20 +250,30 @@ async def list_models_admin(
 ) -> list[dict]:
     require_admin(user)
     result = await session.execute(select(AIModel).order_by(AIModel.category, AIModel.sort_order, AIModel.id))
-    return [
-        {
+    pricing_result = await session.execute(select(ModelPricing))
+    pricing_by_code = {p.model_code: p for p in pricing_result.scalars().all()}
+    rows = []
+    for m in result.scalars().all():
+        pricing = pricing_by_code.get(m.code)
+        effective_price = int(pricing.price_tokens) if pricing else int(m.price_credits)
+        rows.append(
+            {
             "id": m.id,
             "code": m.code,
             "title": m.title,
             "category": m.category,
             "provider": m.provider,
             "task_type": m.task_type,
-            "price_credits": m.price_credits,
+            "price_credits": effective_price,
+            "base_price_credits": int(m.price_credits),
+            "pricing_price_tokens": int(pricing.price_tokens) if pricing else None,
+            "pricing_enabled": bool(pricing.is_enabled) if pricing else None,
+            "pricing_source": "model_pricing" if pricing else "ai_models",
             "is_active": m.is_active,
             "form_schema": m.form_schema,
         }
-        for m in result.scalars().all()
-    ]
+        )
+    return rows
 
 
 @router.post("/models/{code}/toggle")
@@ -279,6 +296,9 @@ async def update_model_price(code: str, price_credits: int, user: User = Depends
     if not model:
         raise AppError("model_not_found", "Модель не найдена", 404)
     model.price_credits = price_credits
+    price = await session.scalar(select(ModelPricing).where(ModelPricing.model_code == model.code))
+    if price:
+        price.price_tokens = price_credits
     await session.commit()
     return {"ok": True, "code": code, "price_credits": price_credits}
 
@@ -375,6 +395,7 @@ async def create_token_package(payload: dict = Body(...), user: User = Depends(c
     price_rub = int(payload.get("price_rub") or 0)
     if not code or not title or tokens <= 0 or price_rub < 0:
         raise AppError("validation_error", "Некорректный пакет")
+    _ensure_token_package_code_allowed(code)
     pkg = TokenPackage(
         code=code,
         title=title,
@@ -399,9 +420,17 @@ async def update_token_package(package_id: int, payload: dict = Body(...), user:
     pkg = await session.get(TokenPackage, package_id)
     if not pkg:
         raise AppError("package_not_found", "Пакет не найден", 404)
-    for field in ("code", "title"):
-        if field in payload:
-            setattr(pkg, field, str(payload[field]).strip())
+    if "code" in payload:
+        code = str(payload["code"]).strip()
+        if not code:
+            raise AppError("validation_error", "Некорректный code")
+        _ensure_token_package_code_allowed(code)
+        pkg.code = code
+    if "title" in payload:
+        title = str(payload["title"]).strip()
+        if not title:
+            raise AppError("validation_error", "Некорректное название")
+        pkg.title = title
     for field in ("tokens", "price_rub", "bonus_tokens", "sort_order", "base_tokens", "total_tokens"):
         if field in payload:
             setattr(pkg, field, int(payload[field]))

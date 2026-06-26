@@ -50,9 +50,9 @@
   function miniUsers(items){return items.map(u=>`<p style="font-size:13px;margin-bottom:8px"><b>${esc(u.username?'@'+u.username:u.telegram_id)}</b> <span class="ad-muted">${esc(u.balance_credits)} cr</span></p>`).join('')||'<p class="ad-muted">Нет пользователей</p>';}
   function usersView(){let items=state.data.users?.items||[]; const q=state.filters.users.toLowerCase(); if(q) items=items.filter(u=>String(u.telegram_id).includes(q)||String(u.username||'').toLowerCase().includes(q)||String(u.first_name||'').toLowerCase().includes(q)); return layout(`<div class="ad-toolbar"><div class="ad-fld"><span style="color:var(--faint)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="8" r="6"/><path d="M12.5 12.5L17 17"/></svg></span><input data-filter="users" placeholder="Поиск: telegram_id / username" value="${esc(state.filters.users)}"/></div></div>${table(['ID','Telegram','Username','Баланс','Admin','Действия'],items.map(u=>`<tr><td>${u.id}</td><td>${u.telegram_id}</td><td>${esc(u.username||u.first_name||'')}</td><td><b>${u.balance_credits}</b></td><td>${badge(u.is_admin)}</td><td><div class="ad-row-act"><button class="ad-mini" data-action="balance" data-user="${u.id}" data-name="${esc(u.username||u.telegram_id)}" title="Баланс">$</button><button class="ad-mini" data-action="ledger" data-user="${u.id}" title="Ledger">L</button></div></td></tr>`))}`);}
   function tasksView(){const items=state.data.tasks?.items||[]; return layout(`<div class="ad-toolbar"><select class="ad-select" data-filter="tasksStatus"><option value="">Все статусы</option>${['created','processing','completed','failed','refunded'].map(s=>`<option ${state.filters.tasksStatus===s?'selected':''}>${s}</option>`).join('')}</select><div class="ad-fld"><input data-filter="tasksUser" placeholder="user_id" value="${esc(state.filters.tasksUser)}"/></div><button class="ad-btn ad-btn-pri" data-action="applyTasks">Применить</button></div>${table(['ID','User','Модель','Тип','Статус','Цена','Ошибка','Создано'],items.map(t=>`<tr data-action="task" data-id="${t.id}" style="cursor:pointer"><td>#${t.id}</td><td>${esc(t.telegram_id||t.user_id)}</td><td>${esc(t.model_code||t.model_title||'')}</td><td>${esc(t.task_type)}</td><td>${badge(t.status)}</td><td>${esc(t.cost_credits)}</td><td>${esc(t.error_message||'')}</td><td>${esc(t.created_at||'')}</td></tr>`))}`);}
-  function modelsView(){const items=state.data.models||[]; return layout(`${table(['Code','Название','Категория','Provider','Цена','Active','Действия'],items.map(m=>`<tr><td><b>${esc(m.code)}</b></td><td>${esc(m.title)}</td><td>${esc(m.category)}</td><td>${esc(m.provider)}</td><td>${esc(m.price_credits)}</td><td>${badge(m.is_active)}</td><td><div class="ad-row-act"><button class="ad-mini" data-action="modelPrice" data-code="${esc(m.code)}" data-price="${esc(m.price_credits)}" title="Цена">$</button><button class="ad-mini" data-action="toggleModel" data-code="${esc(m.code)}" data-active="${m.is_active?'false':'true'}">${m.is_active?'⏻':'▶'}</button></div></td></tr>`))}`);}
-  function pricingView(){const items=state.data.pricing||[]; return layout(`${table(['Модель','Название','Категория','Цена','Enabled','Featured','Заметка'],items.map(p=>`<tr><td><b>${esc(p.model_code)}</b></td><td>${esc(p.display_name)}</td><td>${esc(p.category)}</td><td>${esc(p.price_tokens)}</td><td>${badge(p.is_enabled)}</td><td>${badge(p.is_featured)}</td><td>${esc(p.admin_note||'')}</td></tr>`))}`);}
-  function packagesView(){const items=state.data.packages||[]; return layout(`${table(['Code','Название','Tokens','Цена ₽','Бонус','Active'],items.map(p=>`<tr><td><b>${esc(p.code)}</b></td><td>${esc(p.title)}</td><td>${esc(p.tokens||p.total_tokens||'')}</td><td>${esc(p.price_rub)}</td><td>${esc(p.bonus_tokens||0)}</td><td>${badge(p.is_active)}</td></tr>`))}`);}
+  function modelsView(){const items=state.data.models||[]; return layout(`${table(['Code','Название','Категория','Provider','Цена','Источник','Active','Pricing','Действия'],items.map(m=>`<tr><td><b>${esc(m.code)}</b></td><td>${esc(m.title)}</td><td>${esc(m.category)}</td><td>${esc(m.provider)}</td><td><b>${esc(m.price_credits)}</b></td><td>${esc(m.pricing_source||'')}</td><td>${badge(m.is_active)}</td><td>${m.pricing_enabled==null?'<span class="ad-muted">fallback</span>':badge(m.pricing_enabled)}</td><td><div class="ad-row-act"><button class="ad-mini" data-action="modelPrice" data-code="${esc(m.code)}" data-price="${esc(m.price_credits)}" title="Цена">$</button><button class="ad-mini" data-action="toggleModel" data-code="${esc(m.code)}" data-active="${m.is_active?'false':'true'}" title="${m.is_active?'Выключить':'Включить'}">${m.is_active?'⏻':'▶'}</button></div></td></tr>`))}`);}
+  function pricingView(){const items=state.data.pricing||[]; return layout(`<div class="ad-toolbar"><button class="ad-btn ad-btn-ghost" data-action="refreshPricing">Обновить цены</button></div>${table(['Модель','Название','Категория','Цена','Enabled','Featured','Заметка','Действия'],items.map(p=>`<tr><td><b>${esc(p.model_code)}</b></td><td>${esc(p.display_name)}</td><td>${esc(p.category)}</td><td><b>${esc(p.price_tokens)}</b></td><td>${badge(p.is_enabled)}</td><td>${badge(p.is_featured)}</td><td>${esc(p.admin_note||'')}</td><td><div class="ad-row-act"><button class="ad-mini" data-action="editPricing" data-code="${esc(p.model_code)}" data-title="${esc(p.display_name)}" data-category="${esc(p.category)}" data-price="${esc(p.price_tokens)}" data-note="${esc(p.admin_note||'')}" title="Ред.">✎</button><button class="ad-mini" data-action="togglePricing" data-code="${esc(p.model_code)}" data-enabled="${p.is_enabled?'false':'true'}" title="${p.is_enabled?'Выключить':'Включить'}">${p.is_enabled?'⏻':'▶'}</button><button class="ad-mini" data-action="toggleFeatured" data-code="${esc(p.model_code)}" data-featured="${p.is_featured?'false':'true'}" title="Featured">★</button></div></td></tr>`))}`);}
+  function packagesView(){const items=state.data.packages||[]; return layout(`<div class="ad-toolbar"><button class="ad-btn ad-btn-pri" data-action="newPackage">+ Новый пакет</button></div>${table(['Code','Название','Tokens','Цена ₽','Бонус','Active','Действия'],items.map(p=>`<tr><td><b>${esc(p.code)}</b></td><td>${esc(p.title)}</td><td>${esc(p.tokens||p.total_tokens||'')}</td><td><b>${esc(p.price_rub)}</b></td><td>${esc(p.bonus_tokens||0)}</td><td>${badge(p.is_active)}</td><td><div class="ad-row-act"><button class="ad-mini" data-action="editPackage" data-id="${p.id}" data-code="${esc(p.code)}" data-title="${esc(p.title)}" data-tokens="${esc(p.tokens||p.total_tokens||0)}" data-price="${esc(p.price_rub)}" data-bonus="${esc(p.bonus_tokens||0)}" data-active="${p.is_active?'true':'false'}" title="Ред.">✎</button><button class="ad-mini" data-action="togglePackage" data-id="${p.id}" data-active="${p.is_active?'false':'true'}" title="${p.is_active?'Выключить':'Включить'}">${p.is_active?'⏻':'▶'}</button></div></td></tr>`))}`);}
   function transactionsView(){const items=state.data.transactions?.items||[]; return layout(`${table(['ID','User','Тип','Сумма','Статус','Комментарий','Дата'],items.map(t=>`<tr><td>${t.id}</td><td>${t.user_id}</td><td>${esc(t.type)}</td><td>${esc(t.amount_credits)}</td><td>${badge(t.status)}</td><td>${esc(t.comment||'')}</td><td>${esc(t.created_at||'')}</td></tr>`))}`);}
   function filesView(){const items=state.data.files?.items||[]; return layout(`${table(['ID','User','Type','Purpose','MIME','Size','URL'],items.map(f=>`<tr><td>${f.id}</td><td>${f.user_id}</td><td>${esc(f.file_type)}</td><td>${esc(f.purpose)}</td><td>${esc(f.mime_type||'')}</td><td>${esc(f.size_bytes||'')}</td><td><a href="${esc(f.storage_url)}" target="_blank" style="color:var(--blue)">open</a></td></tr>`))}`);}
 
@@ -99,22 +99,63 @@
     if(a==='balance'){ const amount=prompt('Сумма изменения баланса (+/-):','1000'); if(!amount) return; const reason=prompt('Причина:','Admin adjustment')||'Admin adjustment'; await request(`/admin/users/${el.dataset.user}/balance-adjust`,{method:'POST',body:JSON.stringify({amount:Number(amount),reason})}); toast('Баланс обновлён'); return loadTab('users'); }
     if(a==='ledger'){ const r=await request(`/admin/users/${el.dataset.user}/balance-ledger?limit=30`); return modal('Balance ledger', table(['Операция','Сумма','До','После','Причина','Дата'],r.items.map(x=>`<tr><td>${esc(x.operation_type)}</td><td>${esc(x.amount)}</td><td>${esc(x.balance_before)}</td><td>${esc(x.balance_after)}</td><td>${esc(x.reason||'')}</td><td>${esc(x.created_at||'')}</td></tr>`))); }
     if(a==='task'){ const r=await request(`/admin/generation-tasks/${el.dataset.id}`); return modal(`Задача #${r.id}`, `<div class="ad-pre">${esc(JSON.stringify(r,null,2))}</div>`); }
-    if(a==='modelPrice'){ const price=prompt(`Новая цена для ${el.dataset.code}:`, el.dataset.price||'0'); if(price===null) return; await request(`/admin/models/${encodeURIComponent(el.dataset.code)}/price?price_credits=${encodeURIComponent(price)}`,{method:'POST',body:'{}'}); toast('Цена обновлена'); return loadTab('models'); }
+    if(a==='modelPrice'){ const price=prompt(`Новая цена для ${el.dataset.code}:`, el.dataset.price||'0'); if(price===null) return; await request(`/admin/model-pricing/${encodeURIComponent(el.dataset.code)}`,{method:'PATCH',body:JSON.stringify({price_tokens:Number(price)})}); toast('Цена обновлена'); return loadTab('models'); }
     if(a==='toggleModel'){ await request(`/admin/models/${encodeURIComponent(el.dataset.code)}/toggle?is_active=${encodeURIComponent(el.dataset.active)}`,{method:'POST',body:'{}'}); toast('Статус модели обновлён'); return loadTab('models'); }
+    if(a==='refreshPricing') return loadTab('pricing');
+    if(a==='editPricing'){
+      modal('Редактировать цену модели', `<form id="pricingForm" style="display:flex;flex-direction:column;gap:14px">
+        <label class="ad-field"><label>Модель</label><input class="ad-input" value="${esc(el.dataset.code)}" disabled/></label>
+        <label class="ad-field"><label>Название</label><input class="ad-input" name="display_name" value="${esc(el.dataset.title||'')}"/></label>
+        <label class="ad-field"><label>Категория</label><select class="ad-select" name="category">${['image','video','text'].map(c=>`<option value="${c}" ${el.dataset.category===c?'selected':''}>${c}</option>`).join('')}</select></label>
+        <label class="ad-field"><label>Цена в токенах</label><input class="ad-input" name="price_tokens" type="number" min="0" value="${esc(el.dataset.price||0)}"/></label>
+        <label class="ad-field"><label>Заметка</label><input class="ad-input" name="admin_note" value="${esc(el.dataset.note||'')}"/></label>
+        <button class="ad-btn ad-btn-pri" type="submit">Сохранить</button>
+      </form>`);
+      document.getElementById('pricingForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); try{await request('/admin/model-pricing/'+encodeURIComponent(el.dataset.code),{method:'PATCH',body:JSON.stringify({display_name:fd.get('display_name'),category:fd.get('category'),price_tokens:Number(fd.get('price_tokens')),admin_note:fd.get('admin_note')})}); document.getElementById('modal')?.remove(); toast('Цена модели обновлена'); loadTab('pricing');}catch(e){alert(e.message);}};
+      return;
+    }
+    if(a==='togglePricing'){ await request('/admin/model-pricing/'+encodeURIComponent(el.dataset.code),{method:'PATCH',body:JSON.stringify({is_enabled:el.dataset.enabled==='true'})}); toast('Доступность цены обновлена'); return loadTab('pricing'); }
+    if(a==='toggleFeatured'){ await request('/admin/model-pricing/'+encodeURIComponent(el.dataset.code),{method:'PATCH',body:JSON.stringify({is_featured:el.dataset.featured==='true'})}); toast('Featured обновлён'); return loadTab('pricing'); }
+    if(a==='newPackage'){
+      modal('Новый пакет токенов', `<form id="packageForm" style="display:flex;flex-direction:column;gap:14px">
+        <label class="ad-field"><label>Code</label><input class="ad-input" name="code" placeholder="topup_500" required/></label>
+        <label class="ad-field"><label>Название</label><input class="ad-input" name="title" placeholder="500 токенов" required/></label>
+        <label class="ad-field"><label>Токены</label><input class="ad-input" name="tokens" type="number" min="1" required/></label>
+        <label class="ad-field"><label>Цена ₽</label><input class="ad-input" name="price_rub" type="number" min="0" required/></label>
+        <label class="ad-field"><label>Бонус</label><input class="ad-input" name="bonus_tokens" type="number" min="0" value="0"/></label>
+        <button class="ad-btn ad-btn-pri" type="submit">Создать</button>
+      </form>`);
+      document.getElementById('packageForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); try{await request('/admin/token-packages',{method:'POST',body:JSON.stringify({code:fd.get('code'),title:fd.get('title'),tokens:Number(fd.get('tokens')),price_rub:Number(fd.get('price_rub')),bonus_tokens:Number(fd.get('bonus_tokens')||0),base_tokens:Number(fd.get('tokens')),total_tokens:Number(fd.get('tokens'))+Number(fd.get('bonus_tokens')||0),is_active:true})}); document.getElementById('modal')?.remove(); toast('Пакет создан'); loadTab('packages');}catch(e){alert(e.message);}};
+      return;
+    }
+    if(a==='editPackage'){
+      modal('Редактировать пакет', `<form id="editPackageForm" style="display:flex;flex-direction:column;gap:14px">
+        <label class="ad-field"><label>Code</label><input class="ad-input" name="code" value="${esc(el.dataset.code)}" required/></label>
+        <label class="ad-field"><label>Название</label><input class="ad-input" name="title" value="${esc(el.dataset.title)}" required/></label>
+        <label class="ad-field"><label>Токены</label><input class="ad-input" name="tokens" type="number" min="1" value="${esc(el.dataset.tokens||0)}"/></label>
+        <label class="ad-field"><label>Цена ₽</label><input class="ad-input" name="price_rub" type="number" min="0" value="${esc(el.dataset.price||0)}"/></label>
+        <label class="ad-field"><label>Бонус</label><input class="ad-input" name="bonus_tokens" type="number" min="0" value="${esc(el.dataset.bonus||0)}"/></label>
+        <button class="ad-btn ad-btn-pri" type="submit">Сохранить</button>
+      </form>`);
+      document.getElementById('editPackageForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const tokens=Number(fd.get('tokens')); const bonus=Number(fd.get('bonus_tokens')||0); try{await request('/admin/token-packages/'+encodeURIComponent(el.dataset.id),{method:'PATCH',body:JSON.stringify({code:fd.get('code'),title:fd.get('title'),tokens:tokens,price_rub:Number(fd.get('price_rub')),bonus_tokens:bonus,base_tokens:tokens,total_tokens:tokens+bonus})}); document.getElementById('modal')?.remove(); toast('Пакет обновлён'); loadTab('packages');}catch(e){alert(e.message);}};
+      return;
+    }
+    if(a==='togglePackage'){ await request('/admin/token-packages/'+encodeURIComponent(el.dataset.id),{method:'PATCH',body:JSON.stringify({is_active:el.dataset.active==='true'})}); toast('Пакет обновлён'); return loadTab('packages'); }
 
     // ── Partner actions ──
     if(a==='newPartner'){
-      return modal('Новый партнёр', `<form id="partnerForm" style="display:flex;flex-direction:column;gap:14px">
+      modal('Новый партнёр', `<form id="partnerForm" style="display:flex;flex-direction:column;gap:14px">
         <label class="ad-field"><label>Код (уникальный)</label><input class="ad-input" name="code" placeholder="blogger123" required/></label>
         <label class="ad-field"><label>Имя</label><input class="ad-input" name="name" placeholder="Иван Петров" required/></label>
         <label class="ad-field"><label>Telegram (без @)</label><input class="ad-input" name="telegram" placeholder="blogger"/></label>
         <button class="ad-btn ad-btn-pri" type="submit">Создать</button>
       </form>`);
       document.getElementById('partnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const code=fd.get('code'), name=fd.get('name'), tg=fd.get('telegram')||''; try{await request('/admin/referral/partners',{method:'POST',body:JSON.stringify({code,name,status:'active',contact_info:{telegram:'@'+tg}})}); document.getElementById('modal')?.remove(); toast('Партнёр создан'); loadTab('partners');}catch(e){alert(e.message);}};
+      return;
     }
     if(a==='editPartner'){
       const id=el.dataset.id, code=el.dataset.code, name=el.dataset.name, status=el.dataset.status; let contact={}; try{contact=JSON.parse(el.dataset.contact)}catch(e){}
-      return modal('Редактировать партнёра', `<form id="editPartnerForm" style="display:flex;flex-direction:column;gap:14px">
+      modal('Редактировать партнёра', `<form id="editPartnerForm" style="display:flex;flex-direction:column;gap:14px">
         <label class="ad-field"><label>Код</label><input class="ad-input" name="code" value="${esc(code)}" required/></label>
         <label class="ad-field"><label>Имя</label><input class="ad-input" name="name" value="${esc(name)}" required/></label>
         <label class="ad-field"><label>Статус</label><select class="ad-select" name="status"><option value="active" ${status==='active'?'selected':''}>active</option><option value="paused" ${status==='paused'?'selected':''}>paused</option><option value="blocked" ${status==='blocked'?'selected':''}>blocked</option></select></label>
@@ -122,6 +163,7 @@
         <button class="ad-btn ad-btn-pri" type="submit">Сохранить</button>
       </form>`);
       document.getElementById('editPartnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const body={code:fd.get('code'),name:fd.get('name'),status:fd.get('status'),contact_info:{telegram:'@'+fd.get('telegram')}}; try{await request('/admin/referral/partners/'+id,{method:'PUT',body:JSON.stringify(body)}); document.getElementById('modal')?.remove(); toast('Партнёр обновлён'); loadTab('partners');}catch(e){alert(e.message);}};
+      return;
     }
     if(a==='togglePartner'){
       const id=el.dataset.id, newStatus=el.dataset.status;
@@ -135,13 +177,14 @@
       const rates = state.data.partnerRates || [];
       const rateByCat = {};
       rates.forEach(r => { if(!r.partner_id) rateByCat[r.category] = r.rate_percent; });
-      return modal('Ставки комиссий (по умолчанию)', `<form id="ratesForm" style="display:flex;flex-direction:column;gap:14px">
+      modal('Ставки комиссий (по умолчанию)', `<form id="ratesForm" style="display:flex;flex-direction:column;gap:14px">
         <label class="ad-field"><label>Пополнение токенов (%)</label><input class="ad-input" name="token_topup" type="number" min="0" max="100" value="${rateByCat.token_topup||0}"/></label>
         <label class="ad-field"><label>Подписка на шаблоны (%)</label><input class="ad-input" name="template_subscription" type="number" min="0" max="100" value="${rateByCat.template_subscription||0}"/></label>
         <label class="ad-field"><label>Полные тарифы (%)</label><input class="ad-input" name="full_subscription" type="number" min="0" max="100" value="${rateByCat.full_subscription||0}"/></label>
         <button class="ad-btn ad-btn-pri" type="submit">Сохранить</button>
       </form>`);
       document.getElementById('ratesForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const cats={token_topup:'token_topup',template_subscription:'template_subscription',full_subscription:'full_subscription'}; try{for(const [key,cat] of Object.entries(cats)){const v=parseFloat(fd.get(key))||0; await request('/admin/referral/rates',{method:'PUT',body:JSON.stringify({category:cat,rate_percent:v})});} document.getElementById('modal')?.remove(); toast('Ставки обновлены'); loadTab('partners');}catch(e){alert(e.message);}};
+      return;
     }
   }
   function handleInput(e){const k=e.target.dataset.filter; if(!k) return; state.filters[k]=e.target.value; if(k==='users'||k==='partnerSearch') render();}

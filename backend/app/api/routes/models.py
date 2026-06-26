@@ -1,11 +1,11 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.api.deps import current_user
-from backend.app.db.models import AIModel
+from backend.app.db.models import AIModel, ModelPricing
 from backend.app.db.session import get_session
 from backend.app.schemas.models import AIModelOut
 from backend.app.services.input_validation import validate_inputs_against_schema
@@ -16,24 +16,57 @@ router = APIRouter(prefix="/models", tags=["models"])
 
 
 @router.get("", response_model=list[AIModelOut])
-async def list_models(category: str | None = Query(default=None), session: AsyncSession = Depends(get_session)) -> list[AIModel]:
-    stmt = select(AIModel).where(AIModel.is_active.is_(True)).order_by(AIModel.sort_order, AIModel.id)
+async def list_models(category: str | None = Query(default=None), session: AsyncSession = Depends(get_session)) -> list[dict[str, Any]]:
+    stmt = (
+        select(AIModel, ModelPricing)
+        .outerjoin(ModelPricing, ModelPricing.model_code == AIModel.code)
+        .where(AIModel.is_active.is_(True))
+        .where(or_(ModelPricing.id.is_(None), ModelPricing.is_enabled.is_(True)))
+        .order_by(AIModel.sort_order, AIModel.id)
+    )
     if category:
         stmt = stmt.where(AIModel.category == category)
     result = await session.execute(stmt)
-    return list(result.scalars().all())
+    return [_serialize_public_model(model, pricing) for model, pricing in result.all()]
 
 
 MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
 
 
 @router.get("/{code}", response_model=AIModelOut)
-async def get_model(code: str, session: AsyncSession = Depends(get_session)) -> AIModel:
+async def get_model(code: str, session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
     actual_code = MODEL_ALIASES.get(code, code)
-    model = await session.scalar(select(AIModel).where(AIModel.code == actual_code))
-    if not model:
+    row = await session.execute(
+        select(AIModel, ModelPricing)
+        .outerjoin(ModelPricing, ModelPricing.model_code == AIModel.code)
+        .where(AIModel.code == actual_code)
+    )
+    found = row.first()
+    if not found:
         raise AppError("model_not_found", "Модель не найдена", 404)
-    return model
+    model, pricing = found
+    if not model.is_active or (pricing and not pricing.is_enabled):
+        raise AppError("model_not_found", "Модель не найдена", 404)
+    return _serialize_public_model(model, pricing)
+
+
+def _serialize_public_model(model: AIModel, pricing: ModelPricing | None = None) -> dict[str, Any]:
+    price_credits = int(pricing.price_tokens) if pricing else int(model.price_credits)
+    return {
+        "id": model.id,
+        "code": model.code,
+        "title": model.title,
+        "description": model.description,
+        "category": model.category,
+        "provider": model.provider,
+        "task_type": model.task_type,
+        "input_type": model.input_type,
+        "price_credits": price_credits,
+        "default_params": model.default_params,
+        "form_schema": model.form_schema,
+        "is_active": bool(model.is_active and (not pricing or pricing.is_enabled)),
+        "sort_order": model.sort_order,
+    }
 
 
 @router.post("/{code}/price-preview")
