@@ -4,7 +4,7 @@ SUPPORTED_LANGUAGES = {"ru", "en", "es", "pt"}
 BOT_TEXTS = {
     "ru": {
         "start.caption": "🤖 Hubicx — AI-хаб в Telegram\n\n📷 Генерация изображений\n🎬 Генерация видео\n💬 Чат с ИИ\n✍️ Тексты и промты\n\nNano Banana, Seedance, Kling, Veo, Grok и другие AI-модели — в одном удобном боте.",
-        "language.choose": "Выбор языка\n\nВыберите язык интерфейса:",
+        "language.choose": "🫡 Приветствую в Hubicx!\n\nПродолжая, вы соглашаетесь с условиями использования сервиса.\nДокумент оферты: https://hubicx.ru/pages/docs\n\nПожалуйста, выберите язык:",
         "language.changed": "Язык изменён",
         "menu.main": "Главное меню",
         "menu.open_hubicx": "Открыть Hubicx",
@@ -51,7 +51,7 @@ BOT_TEXTS = {
     },
     "en": {
         "start.caption": "🤖 Hubicx — AI hub in Telegram\n\n📷 Image generation\n🎬 Video generation\n💬 AI chat\n✍️ Texts and prompts\n\nNano Banana, Seedance, Kling, Veo, Grok and other AI models — all in one convenient bot.",
-        "language.choose": "Language\n\nChoose interface language:",
+        "language.choose": "🫡 Welcome to Hubicx!\n\nBy continuing, you agree to the service terms of use.\nOffer document: https://hubicx.ru/pages/docs\n\nPlease choose your language:",
         "language.changed": "Language changed",
         "menu.main": "Main menu",
         "menu.open_hubicx": "Open Hubicx",
@@ -98,7 +98,7 @@ BOT_TEXTS = {
     },
     "es": {
         "start.caption": "🤖 Hubicx — hub de IA en Telegram\n\n📷 Generación de imágenes\n🎬 Generación de video\n💬 Chat con IA\n✍️ Textos y prompts\n\nNano Banana, Seedance, Kling, Veo, Grok y otros modelos de IA — todo en un bot cómodo.",
-        "language.choose": "Idioma\n\nElige el idioma de la interfaz:",
+        "language.choose": "🫡 ¡Bienvenido a Hubicx!\n\nAl continuar, aceptas las condiciones de uso del servicio.\nDocumento de oferta: https://hubicx.ru/pages/docs\n\nElige tu idioma:",
         "language.changed": "Idioma cambiado",
         "menu.main": "Menú principal",
         "menu.open_hubicx": "Abrir Hubicx",
@@ -145,7 +145,7 @@ BOT_TEXTS = {
     },
     "pt": {
         "start.caption": "🤖 Hubicx — hub de IA no Telegram\n\n📷 Geração de imagens\n🎬 Geração de vídeo\n💬 Chat com IA\n✍️ Textos e prompts\n\nNano Banana, Seedance, Kling, Veo, Grok e outros modelos de IA — tudo em um bot prático.",
-        "language.choose": "Idioma\n\nEscolha o idioma da interface:",
+        "language.choose": "🫡 Bem-vindo ao Hubicx!\n\nAo continuar, você aceita os termos de uso do serviço.\nDocumento da oferta: https://hubicx.ru/pages/docs\n\nEscolha seu idioma:",
         "language.changed": "Idioma alterado",
         "menu.main": "Menu principal",
         "menu.open_hubicx": "Abrir Hubicx",
