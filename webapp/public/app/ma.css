@@ -117,6 +117,82 @@ body {
 .m-notif-s { font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
 .m-notif-time { font-size:11.5px; color:var(--muted); font-weight:700; white-space:nowrap; }
 
+/* ── Telegram/payment return page ── */
+.tg-return-page {
+  position:relative; width:100%; min-height:100dvh; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; padding:28px 18px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(127,170,157,.22), transparent 32%),
+    radial-gradient(circle at 88% 88%, rgba(182,181,230,.24), transparent 34%),
+    var(--bg);
+}
+.tg-return-bg {
+  position:absolute; inset:auto -20% -18% -20%; height:44%;
+  background:linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.52));
+  pointer-events:none;
+}
+.tg-return-card {
+  position:relative; z-index:1; width:min(100%, 430px); border-radius:30px;
+  padding:20px 18px 18px; background:rgba(255,255,255,.9); border:1px solid rgba(233,232,227,.9);
+  box-shadow:0 24px 70px rgba(40,40,30,.13); text-align:center;
+  backdrop-filter: blur(18px);
+}
+.tg-return-brand { display:flex; align-items:center; justify-content:center; gap:10px; color:var(--ink); font-weight:950; font-size:16px; }
+.tg-return-brand img { width:34px; height:34px; border-radius:11px; object-fit:cover; box-shadow:var(--shadow-sm); }
+.tg-return-visual {
+  position:relative; width:132px; height:132px; margin:18px auto 12px;
+  display:flex; align-items:center; justify-content:center;
+}
+.tg-return-orbit {
+  position:absolute; inset:0; border-radius:36px;
+  background:linear-gradient(135deg, rgba(127,170,157,.22), rgba(182,181,230,.20));
+  transform:rotate(8deg);
+}
+.tg-return-mark {
+  position:relative; width:86px; height:86px; border-radius:28px;
+  display:flex; align-items:center; justify-content:center; font-size:48px; font-weight:950;
+  background:var(--card); color:var(--ink); box-shadow:0 14px 34px rgba(40,40,30,.12);
+}
+.tg-return-card.ok .tg-return-mark { color:#5f9184; }
+.tg-return-card.fail .tg-return-mark { color:#c0473e; }
+.tg-return-pill {
+  display:inline-flex; align-items:center; justify-content:center; min-height:30px; padding:0 12px;
+  border-radius:999px; background:#eef7f2; color:#5f9184; font-size:12px; font-weight:950;
+}
+.tg-return-card.fail .tg-return-pill { background:#fff0ec; color:#c0473e; }
+.tg-return-card.plain .tg-return-pill { background:var(--nav-bg); color:var(--muted); }
+.tg-return-card h1 {
+  margin-top:12px; font-size:30px; line-height:1.04; font-weight:950; letter-spacing:0;
+}
+.tg-return-card p {
+  margin:10px auto 0; max-width:350px; color:var(--muted); font-size:15px; line-height:1.46; font-weight:650;
+}
+.tg-return-note {
+  margin-top:16px; padding:13px 14px; border-radius:18px; text-align:left;
+  background:var(--nav-bg); border:1px solid var(--line);
+}
+.tg-return-note b { display:block; font-size:13.5px; font-weight:950; color:var(--ink); }
+.tg-return-note span { display:block; margin-top:4px; font-size:12.5px; line-height:1.38; color:var(--muted); font-weight:650; }
+.tg-return-actions { display:grid; gap:10px; margin-top:18px; }
+.tg-return-main,
+.tg-return-secondary {
+  width:100%; height:56px; border-radius:18px; font-family:inherit; font-size:15.5px; font-weight:950; cursor:pointer;
+}
+.tg-return-main { border:0; background:var(--accent); color:var(--accent-ink); box-shadow:0 12px 28px rgba(210,210,80,.38); }
+.tg-return-secondary { border:1.5px solid var(--line); background:var(--card); color:var(--ink); }
+html.theme-dark .tg-return-page {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(127,170,157,.18), transparent 32%),
+    radial-gradient(circle at 88% 88%, rgba(182,181,230,.16), transparent 34%),
+    var(--bg);
+}
+html.theme-dark .tg-return-card { background:rgba(25,28,35,.92); border-color:var(--line); }
+html.theme-dark .tg-return-bg { background:linear-gradient(180deg, rgba(17,19,24,0), rgba(17,19,24,.58)); }
+html.theme-dark .tg-return-mark,
+html.theme-dark .tg-return-secondary { background:var(--card); }
+html.theme-dark .tg-return-note,
+html.theme-dark .tg-return-card.plain .tg-return-pill { background:#12151b; }
+
 /* ── scrollable screen body ── */
 .screen {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;

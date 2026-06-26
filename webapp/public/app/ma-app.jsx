@@ -570,13 +570,7 @@ function App() {
     </div>;
   }
   if (isMiniAppHost && !hasAuth) {
-    return <div className={DESKTOP ? 'dk-auth' : 'phone'} style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:24,textAlign:'center'}}>
-      <div className={DESKTOP ? 'dk-auth-card' : 'card'} style={{maxWidth:420}}>
-        <div style={{fontSize:28,fontWeight:900,marginBottom:10}}>Откройте Hubicx в Telegram</div>
-        <div className="muted" style={{fontSize:15,lineHeight:1.45}}>Этот адрес предназначен только для Telegram Mini App. Откройте приложение кнопкой в боте.</div>
-        <button className={DESKTOP ? 'dk-btn-main' : 'btn primary'} style={{marginTop:18,width:'100%'}} onClick={() => { window.location.href = 'https://t.me/hubicx_bot'; }}>Открыть бота</button>
-      </div>
-    </div>;
+    return <MiniAppReturnPage result={paymentResult}/>;
   }
   if (!hasAuth && !isTelegramShell) {
     return window.HBX && window.HBX.LandingPage
@@ -667,6 +661,46 @@ function App() {
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
     {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     <MobileOnboarding key="mob-onb" onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
+  </div>;
+}
+
+function MiniAppReturnPage({ result }) {
+  var ok = result === 'success';
+  var fail = result === 'fail';
+  var isResult = ok || fail;
+  var title = ok ? 'Оплата прошла' : fail ? 'Оплата не завершена' : 'Откройте Hubicx в Telegram';
+  var text = ok
+    ? 'Мы получили возврат от банка. Откройте Mini App в Telegram — баланс и тариф обновятся после банковского уведомления.'
+    : fail
+      ? 'Платёж не был подтверждён. Вернитесь в Mini App, чтобы выбрать тариф заново или попробовать другую карту.'
+      : 'Этот адрес работает как Telegram Mini App. Откройте Hubicx через бота, чтобы войти в свой аккаунт.';
+  var pill = ok ? 'Успешная оплата' : fail ? 'Платёж отменён' : 'Telegram Mini App';
+  var openBot = function() { window.location.href = 'https://t.me/hubicx_bot'; };
+  var openSite = function() { window.location.href = 'https://hubicx.ru'; };
+
+  return <div className="tg-return-page">
+    <div className="tg-return-bg"></div>
+    <div className={'tg-return-card ' + (ok ? 'ok' : fail ? 'fail' : 'plain')}>
+      <div className="tg-return-brand">
+        <img src="/app/assets/logo.jpg" alt="Hubicx"/>
+        <span>Hubicx</span>
+      </div>
+      <div className="tg-return-visual">
+        <div className="tg-return-orbit"></div>
+        <div className="tg-return-mark">{ok ? '✓' : fail ? '!' : '↗'}</div>
+      </div>
+      <div className="tg-return-pill">{pill}</div>
+      <h1>{title}</h1>
+      <p>{text}</p>
+      {isResult && <div className="tg-return-note">
+        <b>{ok ? 'Что дальше' : 'Подсказка'}</b>
+        <span>{ok ? 'Если токены не появились сразу, откройте профиль через 20-60 секунд.' : 'Списание не происходит, если банк не подтвердил платёж.'}</span>
+      </div>}
+      <div className="tg-return-actions">
+        <button className="tg-return-main" onClick={openBot}>Открыть Hubicx в Telegram</button>
+        <button className="tg-return-secondary" onClick={openSite}>На сайт Hubicx</button>
+      </div>
+    </div>
   </div>;
 }
 
