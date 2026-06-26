@@ -71,7 +71,7 @@ async def partner_links(
             {
                 "type": "webapp",
                 "label": "Mini App",
-                "url": f"https://webhubicx.ru/?ref={ref_code}",
+                "url": f"https://webapp.hubicx.ru/?ref={ref_code}",
             },
             {
                 "type": "desktop",
@@ -183,13 +183,19 @@ async def partner_payouts(
     paid_items = result.scalars().all()
 
     return {
+        "pending_balance": pending_balance,
         "pending_balance_rub": pending_balance,
+        "total_paid": total_paid,
         "total_paid_rub": total_paid,
+        "processing": 0,
         "payouts": [
             {
                 "id": c.id,
+                "amount_rub": float(c.commission_rub),
                 "commission_rub": float(c.commission_rub),
                 "category": c.category,
+                "status": c.status,
+                "created_at": c.created_at.isoformat() if c.created_at else None,
                 "updated_at": c.updated_at.isoformat() if c.updated_at else None,
             }
             for c in paid_items

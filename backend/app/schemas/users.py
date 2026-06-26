@@ -26,6 +26,7 @@ class UserOut(BaseModel):
     bonus_credits: int = 0
     is_admin: bool
     ref_code: str
+    referred_by_partner_id: int | None = None
     active_menu_chat_id: int | None = None
     active_menu_message_id: int | None = None
     email: str | None = None

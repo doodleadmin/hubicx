@@ -315,6 +315,12 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                         is_active=True,
                     )
                     session.add(new_sub)
+
+            category = _commission_category(payment.package_code)
+            if category and payment.referral_partner_id:
+                from backend.app.services.referral import calculate_commission
+
+                await calculate_commission(session, payment, category)
         elif status in ("REFUNDED", "REVERSED") and payment.status not in ("refunded", "reversed"):
             from backend.app.services.balance import apply_balance_operation
 
@@ -341,6 +347,14 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                 if sub:
                     sub.is_active = False
                     sub.expires_at = datetime.now(timezone.utc)
+            commission = await session.scalar(
+                select(ReferralCommission).where(
+                    ReferralCommission.payment_id == payment.id,
+                    ReferralCommission.status == "pending",
+                ).with_for_update()
+            )
+            if commission:
+                commission.status = "canceled"
         else:
             payment.status = status.lower()
 

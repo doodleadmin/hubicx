@@ -83,7 +83,7 @@ function PrStatCard({ label, value, sub }) {
 }
 
 function PrTag({ status }) {
-  var cls = status === 'paid' || status === 'active' ? 'ok' : (status === 'cancelled' || status === 'blocked' ? 'wait' : 'new');
+  var cls = status === 'paid' || status === 'active' ? 'ok' : (status === 'cancelled' || status === 'canceled' || status === 'blocked' ? 'wait' : 'new');
   return <span className={'pa-tag ' + cls}><span className="dt"></span>{status || 'new'}</span>;
 }
 

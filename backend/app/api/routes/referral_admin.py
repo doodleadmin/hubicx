@@ -15,6 +15,7 @@ from backend.app.db.models import (
 )
 from backend.app.db.session import get_session
 from backend.app.api.routes.admin import current_admin_user
+from backend.app.services.referral import get_partner_stats
 
 router = APIRouter(prefix="/admin/referral", tags=["admin-referral"])
 
@@ -29,17 +30,23 @@ async def list_partners(
     stmt = select(ReferralPartner).order_by(ReferralPartner.created_at.desc())
     result = await session.execute(stmt)
     partners = result.scalars().all()
-    return [
-        {
+    rows = []
+    for p in partners:
+        stats = await get_partner_stats(session, p.id)
+        rows.append({
             "id": p.id,
             "code": p.code,
             "name": p.name,
             "status": p.status,
-                "contacts": p.contact_info,
+            "contacts": p.contact_info,
+            "contact_info": p.contact_info,
+            "total_clicks": stats.get("total_clicks", 0),
+            "total_conversions": stats.get("total_conversions", 0),
+            "total_commission": stats.get("total_commission", 0),
+            "unpaid_commission": stats.get("unpaid_commission", 0),
             "created_at": p.created_at.isoformat() if p.created_at else None,
-        }
-        for p in partners
-    ]
+        })
+    return rows
 
 
 @router.post("/partners")
@@ -59,7 +66,7 @@ async def create_partner(
         code=payload["code"],
         name=payload.get("name", payload["code"]),
         status=payload.get("status", "active"),
-        contact_info=payload.get("contacts"),
+        contact_info=payload.get("contact_info", payload.get("contacts")),
     )
     session.add(partner)
     await session.commit()
@@ -84,12 +91,20 @@ async def update_partner(
         from backend.app.utils.errors import AppError
         raise AppError("partner_not_found", "Партнёр не найден", 404)
 
+    if "code" in payload and payload["code"] != partner.code:
+        existing = await session.execute(
+            select(ReferralPartner).where(ReferralPartner.code == payload["code"])
+        )
+        if existing.scalar_one_or_none():
+            from backend.app.utils.errors import AppError
+            raise AppError("partner_code_exists", "Код партнёра уже занят", 409)
+        partner.code = payload["code"]
     if "name" in payload:
         partner.name = payload["name"]
     if "status" in payload:
         partner.status = payload["status"]
-    if "contacts" in payload:
-        partner.contact_info = payload["contacts"]
+    if "contact_info" in payload or "contacts" in payload:
+        partner.contact_info = payload.get("contact_info", payload.get("contacts"))
 
     await session.commit()
     return {"ok": True, "id": partner.id}

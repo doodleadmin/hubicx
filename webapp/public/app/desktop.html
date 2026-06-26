@@ -102,6 +102,13 @@
   if (ref) {
     try { localStorage.setItem('hbx_ref_code', ref); } catch(e) {}
     try { localStorage.setItem('hbx_ref_ts', Date.now()); } catch(e) {}
+    try {
+      fetch('https://api.hubicx.ru/api/referral/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref_code: ref, source_url: location.href })
+      }).catch(function(){});
+    } catch(e) {}
   }
 })();
 </script>
@@ -112,7 +119,7 @@
 <script src="/app/assets/vendor/react-dom.production.min.js"></script>
 <script>window.babel = { cache: false };</script>
 <script src="/app/assets/vendor/babel.min.js"></script>
-<script src="/app/ma-api.jsx?v=20260622-auth-hubicx1"></script>
+<script src="/app/ma-api.jsx?v=20260627-referral1"></script>
 <script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
 <script type="text/babel" src="/app/ma-core.jsx?v=20260624-onboarding2"></script>
 <script type="text/babel" src="/app/ma-chat.jsx?v=20260626-profile-linkui1"></script>

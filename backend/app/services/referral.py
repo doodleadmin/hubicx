@@ -1,7 +1,7 @@
 """
 Referral system business logic: partners, clicks, conversions, commissions.
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Sequence
 
 from sqlalchemy import select, func, and_
@@ -24,13 +24,26 @@ async def get_partner_by_code(session: AsyncSession, code: str) -> ReferralPartn
     return result.scalar_one_or_none()
 
 
+async def get_active_partner_by_code(session: AsyncSession, code: str) -> ReferralPartner | None:
+    stmt = select(ReferralPartner).where(
+        ReferralPartner.code == code,
+        ReferralPartner.status == "active",
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def track_click(
     session: AsyncSession,
     partner_code: str,
     source_url: str | None = None,
     ip_address: str | None = None,
     user_agent: str | None = None,
-) -> ReferralClick:
+) -> ReferralClick | None:
+    partner = await get_active_partner_by_code(session, partner_code)
+    if not partner:
+        return None
+
     click = ReferralClick(
         partner_code=partner_code,
         source_url=source_url,
@@ -51,7 +64,7 @@ async def track_conversion(
     """Assign a partner to a new user."""
     partner = None
     if partner_code:
-        partner = await get_partner_by_code(session, partner_code)
+        partner = await get_active_partner_by_code(session, partner_code)
 
     if not partner:
         return None
@@ -59,6 +72,17 @@ async def track_conversion(
     user = await session.get(User, user_id)
     if not user:
         return None
+
+    if user.referred_by_partner_id:
+        return await session.get(ReferralPartner, user.referred_by_partner_id)
+
+    existing = await session.scalar(
+        select(ReferralConversion).where(ReferralConversion.referred_user_id == user_id)
+    )
+    if existing:
+        user.referred_by_partner_id = existing.partner_id
+        await session.flush()
+        return await session.get(ReferralPartner, existing.partner_id)
 
     user.referred_by_partner_id = partner.id
 
@@ -118,6 +142,12 @@ async def calculate_commission(
     if not payment.referral_partner_id:
         return None
 
+    existing = await session.scalar(
+        select(ReferralCommission).where(ReferralCommission.payment_id == payment.id)
+    )
+    if existing:
+        return existing
+
     rate = await get_commission_rate(session, payment.referral_partner_id, category)
     if rate <= 0:
         return None
@@ -127,6 +157,7 @@ async def calculate_commission(
     comm = ReferralCommission(
         partner_id=payment.referral_partner_id,
         payment_id=payment.id,
+        referred_user_id=payment.user_id,
         category=category,
         amount_rub=payment.amount_rub,
         rate_percent=rate,
@@ -182,7 +213,7 @@ async def get_partner_stats(
     pending_payout = float(pending_res.scalar() or 0)
 
     # Daily stats for last N days
-    since = datetime.utcnow() - datetime.timedelta(days=days)
+    since = datetime.utcnow() - timedelta(days=days)
 
     clicks_daily_stmt = (
         select(func.date(ReferralClick.created_at), func.count(ReferralClick.id))
@@ -195,16 +226,62 @@ async def get_partner_stats(
         .group_by(func.date(ReferralClick.created_at))
         .order_by(func.date(ReferralClick.created_at))
     )
-    clicks_daily = []
+    daily: dict[str, dict] = {}
     for row in (await session.execute(clicks_daily_stmt)).all():
-        clicks_daily.append({"date": str(row[0]), "count": row[1]})
+        key = str(row[0])
+        daily.setdefault(key, {"date": key, "clicks": 0, "conversions": 0, "payments": 0, "commission": 0})
+        daily[key]["clicks"] = row[1]
+
+    conv_daily_stmt = (
+        select(func.date(ReferralConversion.created_at), func.count(ReferralConversion.id))
+        .where(
+            and_(
+                ReferralConversion.partner_id == partner_id,
+                ReferralConversion.created_at >= since,
+            )
+        )
+        .group_by(func.date(ReferralConversion.created_at))
+    )
+    for row in (await session.execute(conv_daily_stmt)).all():
+        key = str(row[0])
+        daily.setdefault(key, {"date": key, "clicks": 0, "conversions": 0, "payments": 0, "commission": 0})
+        daily[key]["conversions"] = row[1]
+
+    payments_count_stmt = select(func.count(ReferralCommission.id)).where(ReferralCommission.partner_id == partner_id)
+    payments_count = (await session.execute(payments_count_stmt)).scalar() or 0
+
+    comm_daily_stmt = (
+        select(
+            func.date(ReferralCommission.created_at),
+            func.count(ReferralCommission.id),
+            func.coalesce(func.sum(ReferralCommission.commission_rub), 0),
+        )
+        .where(
+            and_(
+                ReferralCommission.partner_id == partner_id,
+                ReferralCommission.created_at >= since,
+            )
+        )
+        .group_by(func.date(ReferralCommission.created_at))
+    )
+    for row in (await session.execute(comm_daily_stmt)).all():
+        key = str(row[0])
+        daily.setdefault(key, {"date": key, "clicks": 0, "conversions": 0, "payments": 0, "commission": 0})
+        daily[key]["payments"] = row[1]
+        daily[key]["commission"] = float(row[2] or 0)
+
+    daily_rows = [daily[key] for key in sorted(daily)]
 
     return {
         "partner_code": partner.code,
         "partner_name": partner.name,
         "total_clicks": total_clicks,
         "total_conversions": total_conversions,
+        "total_payments": payments_count,
+        "total_commission": total_commissions,
         "total_commissions_rub": total_commissions,
+        "unpaid_commission": pending_payout,
         "pending_payout_rub": pending_payout,
-        "clicks_daily": clicks_daily,
+        "daily": daily_rows,
+        "clicks_daily": daily_rows,
     }
