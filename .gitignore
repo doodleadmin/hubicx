@@ -26,3 +26,8 @@ webapp/public/app/assets/video/
 *.mov
 *.MP4
 webapp/public/app/assets/templates/video/
+
+# Temp/junk files created by Windows SSH copy-paste
+$b/
+*.bak-*
+desktop.html.bak*
