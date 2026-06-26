@@ -170,6 +170,20 @@ def verify_notification(notification: dict[str, Any]) -> bool:
     return actual == expected
 
 
+def notification_log_context(notification: dict[str, Any]) -> dict[str, Any]:
+    """Return non-sensitive fields that help diagnose webhook failures."""
+    terminal_key = str(notification.get("TerminalKey") or "")
+    return {
+        "terminal_channel": _channel_for_terminal_key(terminal_key),
+        "terminal_suffix": terminal_key[-4:] if terminal_key else "",
+        "order_id": str(notification.get("OrderId") or "")[:64],
+        "payment_id": str(notification.get("PaymentId") or "")[:64],
+        "status": str(notification.get("Status") or "")[:32],
+        "success": notification.get("Success"),
+        "has_token": bool(notification.get("Token")),
+    }
+
+
 class TbankError(Exception):
     """Ошибка API T-Bank."""
 

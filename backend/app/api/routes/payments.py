@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,12 +8,11 @@ from backend.app.api.deps import current_user
 from backend.app.db.models import TokenPackage, User
 from backend.app.db.session import get_session
 from backend.app.schemas.payments import PaymentCreate, PaymentOut, OrderPreviewRequest
-from backend.app.services.payments import create_payment, process_webhook
+from backend.app.services.payments import MIN_CUSTOM_TOPUP_RUB, create_payment, process_webhook
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/payments", tags=["payments"])
-
-MIN_CUSTOM_TOPUP_RUB = 99
+logger = logging.getLogger(__name__)
 
 
 @router.post("/init", response_model=PaymentOut)
@@ -49,7 +50,14 @@ async def payment_notify(request: Request, session: AsyncSession = Depends(get_s
     except Exception:
         body = {}
 
-    await process_webhook(session, body)
+    try:
+        await process_webhook(session, body)
+    except AppError as exc:
+        if exc.code == "bad_signature":
+            from backend.app.services.tbank import notification_log_context
+
+            logger.warning("Payment notify rejected: %s", notification_log_context(body))
+        raise
     return {"ok": True}
 
 

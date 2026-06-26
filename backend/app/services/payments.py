@@ -1,3 +1,5 @@
+import logging
+from datetime import datetime, timezone
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -6,13 +8,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings
 from backend.app.db.models import Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
+from backend.app.services.business import SUBSCRIPTION_PLANS_V2
 from backend.app.utils.errors import AppError
 
 PAYMENT_PACKAGES = {300, 1000, 3000, 10000}
+MIN_CUSTOM_TOPUP_RUB = 99
 
 _TOKEN_CATEGORY_CODES = {"topup_300", "topup_1000", "topup_3000", "topup_10000"}
 _TEMPLATE_CATEGORY_CODES = {"templates_mini", "templates_plus"}
 _FULL_CATEGORY_CODES = {"creator", "creator_pro", "studio"}
+_SUBSCRIPTION_PLANS_BY_CODE = {str(plan["code"]): plan for plan in SUBSCRIPTION_PLANS_V2}
+
+logger = logging.getLogger(__name__)
 
 
 def _payment_channel(return_url: str | None) -> str:
@@ -44,6 +51,59 @@ def _commission_category(package_code: str | None) -> str | None:
     return None
 
 
+def _subscription_plan(package_code: str | None) -> dict | None:
+    if not package_code:
+        return None
+    return _SUBSCRIPTION_PLANS_BY_CODE.get(str(package_code).lower())
+
+
+def _subscription_kind(package_code: str) -> str:
+    return "template" if package_code in _TEMPLATE_CATEGORY_CODES else "full"
+
+
+async def _resolve_payment_catalog_item(
+    session: AsyncSession,
+    amount_rub: float | int | None,
+    credits: int,
+    package_code: str | None,
+) -> tuple[int, float, str | None]:
+    """Resolve payable item from server-side catalog.
+
+    The client may choose a package code or a custom top-up amount, but it must
+    not be the source of truth for subscription prices or token amounts.
+    """
+    if package_code:
+        code = str(package_code).strip().lower()
+        pkg = await session.scalar(
+            select(TokenPackage).where(TokenPackage.code == code, TokenPackage.is_active.is_(True))
+        )
+        if pkg:
+            return int(pkg.total_tokens or pkg.tokens), float(pkg.price_rub), pkg.title
+
+        plan = _subscription_plan(code)
+        if plan:
+            return int(plan["tokens_per_month"]), float(plan["price_rub"]), str(plan["title"])
+
+        raise AppError("package_not_found", f"Пакет {package_code} не найден", 404)
+
+    if amount_rub is None:
+        raise AppError("invalid_payment_package", "Укажите пакет или сумму пополнения", 422)
+
+    amount_decimal = Decimal(str(amount_rub))
+    if amount_decimal != amount_decimal.to_integral_value():
+        raise AppError("invalid_amount", "Сумма пополнения должна быть целым числом рублей", 422)
+    amount = int(amount_decimal)
+    if amount < MIN_CUSTOM_TOPUP_RUB:
+        raise AppError(
+            "amount_too_low",
+            f"Минимальная сумма пополнения: {MIN_CUSTOM_TOPUP_RUB} ₽",
+            422,
+        )
+
+    # Custom top-up: 1 RUB = 1 token. Credits from the client are ignored.
+    return amount, float(amount), "Своя сумма"
+
+
 async def create_mock_payment(session: AsyncSession, user: User, credits: int) -> Payment:
     if credits not in PAYMENT_PACKAGES:
         raise AppError("invalid_payment_package", "Недоступный пакет кредитов")
@@ -67,26 +127,13 @@ async def create_payment(
     Если T-Bank включён — вызывает Init и возвращает PaymentURL.
     Иначе — ручной/mock режим.
     """
-    final_credits = int(credits)
-    final_amount = float(amount_rub or 0)
-
-    if package_code:
-        pkg = await session.scalar(
-            select(TokenPackage).where(TokenPackage.code == package_code, TokenPackage.is_active.is_(True))
-        )
-        if not pkg:
-            # Check if it's a subscription code (not in TokenPackage)
-            sub_codes = ['templates_mini', 'templates_plus', 'creator', 'creator_pro', 'studio']
-            if package_code in sub_codes:
-                final_credits = int(credits)
-                final_amount = float(amount_rub or 0)
-            else:
-                raise AppError("package_not_found", f"Пакет {package_code} не найден", 404)
-        else:
-            final_credits = int(pkg.total_tokens or pkg.tokens)
-            final_amount = float(pkg.price_rub)
-    elif final_credits not in PAYMENT_PACKAGES:
-        raise AppError("invalid_payment_package", "Недоступный пакет кредитов")
+    package_code = str(package_code).strip().lower() if package_code else None
+    final_credits, final_amount, item_title = await _resolve_payment_catalog_item(
+        session=session,
+        amount_rub=amount_rub,
+        credits=credits,
+        package_code=package_code,
+    )
 
     # --- T-Bank реальный платёж ---
     if settings.tbank_enabled:
@@ -99,7 +146,7 @@ async def create_payment(
 
         description = f"Пополнение {final_credits} токенов Hubicx"
         if package_code:
-            description = f"{pkg.title if pkg else package_code} — Hubicx"
+            description = f"{item_title or package_code} — Hubicx"
 
         try:
             tbank_resp = await init_payment(
@@ -193,7 +240,14 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         if tbank_payment_id and '|' not in (payment.external_payment_id or ''):
             payment.external_payment_id = f"{order_id}|{tbank_payment_id}"
 
-        if status == "CONFIRMED" and payment.status == "confirmed":
+        if status == "CONFIRMED" and payment.status in ("confirmed", "refunded", "reversed"):
+            if payment.status in ("refunded", "reversed"):
+                logger.warning(
+                    "Ignoring late CONFIRMED for terminal payment order_id=%s payment_id=%s current_status=%s",
+                    order_id,
+                    payment.id,
+                    payment.status,
+                )
             await session.commit()
             return
 
@@ -202,6 +256,7 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
             from backend.app.services.balance import apply_balance_operation
 
             payment.status = "confirmed"
+            payment.paid_at = datetime.now(timezone.utc)
             await apply_balance_operation(
                 session,
                 user_id=payment.user_id,
@@ -217,7 +272,10 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
             # --- Активация подписки ---
             pkg = payment.package_code
             if pkg and pkg in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
-                sub_kind = "template" if pkg in _TEMPLATE_CATEGORY_CODES else "full"
+                plan = _subscription_plan(pkg)
+                if not plan:
+                    raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
+                sub_kind = _subscription_kind(pkg)
                 # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
                 # падать на uq_user_subscriptions_user_code.
                 existing_sub = await session.scalar(
@@ -235,15 +293,9 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                 )
                 if old_sub and old_sub is not existing_sub:
                     old_sub.is_active = False
-                # Map package_code → title/tokens
-                sub_info = {
-                    "templates_mini":  ("Шаблоны Mini", 800, 790),
-                    "templates_plus": ("Шаблоны Plus", 3500, 2590),
-                    "creator":        ("Creator", 1800, 1490),
-                    "creator_pro":    ("Creator Pro", 6500, 3990),
-                    "studio":         ("Studio", 18000, 9900),
-                }
-                title, tokens, price = sub_info.get(pkg, (pkg, int(payment.credits), 0))
+                title = str(plan["title"])
+                tokens = int(plan["tokens_per_month"])
+                price = int(plan["price_rub"])
                 if existing_sub:
                     existing_sub.title = title
                     existing_sub.kind = sub_kind
@@ -266,15 +318,29 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         elif status in ("REFUNDED", "REVERSED") and payment.status not in ("refunded", "reversed"):
             from backend.app.services.balance import apply_balance_operation
 
+            should_reverse_balance = payment.status == "confirmed"
             payment.status = status.lower()
-            await apply_balance_operation(
-                session,
-                user_id=payment.user_id,
-                amount=-int(payment.credits),
-                operation_type="payment_refund",
-                reason=f"Возврат Т-Банк, заказ {order_id}",
-                payment_id=payment.id,
-            )
+            if should_reverse_balance:
+                await apply_balance_operation(
+                    session,
+                    user_id=payment.user_id,
+                    amount=-int(payment.credits),
+                    operation_type="payment_refund",
+                    reason=f"Возврат Т-Банк, заказ {order_id}",
+                    payment_id=payment.id,
+                )
+            if payment.package_code and payment.package_code in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
+                sub = await session.scalar(
+                    select(UserSubscription).where(
+                        UserSubscription.user_id == payment.user_id,
+                        UserSubscription.code == payment.package_code,
+                        UserSubscription.payment_id == payment.id,
+                        UserSubscription.is_active.is_(True),
+                    ).with_for_update()
+                )
+                if sub:
+                    sub.is_active = False
+                    sub.expires_at = datetime.now(timezone.utc)
         else:
             payment.status = status.lower()
 

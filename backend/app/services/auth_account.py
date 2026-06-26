@@ -161,7 +161,7 @@ async def link_telegram_to_email_account(session: AsyncSession, tg_user: User, e
     email_account = await authenticate_email_user(session, email, password)
     if email_account.id == tg_user.id:
         return email_account
-    if email_account.telegram_id and email_account.telegram_id != tg_user.telegram_id:
+    if email_account.telegram_id and email_account.telegram_id > 0 and email_account.telegram_id != tg_user.telegram_id:
         raise AppError("already_linked", "К этому email уже привязан другой Telegram", 409)
     # Keep the email account as the surviving record; move telegram identity onto it.
     tg_id = tg_user.telegram_id

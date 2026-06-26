@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 
 class PaymentCreate(BaseModel):
-    credits: int
+    credits: int = 0
     amount_rub: float | None = None
     package_code: str | None = None
     return_url: str | None = None
