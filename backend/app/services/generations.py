@@ -6,7 +6,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.app.db.models import AIModel, GenerationTask, Template, User
+from backend.app.db.models import AIModel, BalanceLedger, GenerationTask, Template, User
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
 from backend.app.services.business import is_bonus_eligible_model
 from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
@@ -205,8 +205,30 @@ async def history(session: AsyncSession, user: User, limit: int = 20) -> list[Ge
 
 
 async def mark_failed_and_refund(session: AsyncSession, task: GenerationTask, error: str) -> None:
-    task.status = "refunded"
-    task.error_message = error
-    task.completed_at = datetime.now(timezone.utc)
-    await refund_generation(session, task.user_id, task.id, task.cost_credits)
+    locked_task = await session.scalar(
+        select(GenerationTask).where(GenerationTask.id == task.id).with_for_update()
+    )
+    if not locked_task:
+        raise AppError("task_not_found", "Задача не найдена", 404)
+    if locked_task.status == "refunded":
+        return
+    existing_refund = await session.scalar(
+        select(BalanceLedger)
+        .where(
+            BalanceLedger.user_id == locked_task.user_id,
+            BalanceLedger.task_id == locked_task.id,
+            BalanceLedger.operation_type == "generation_refund",
+        )
+        .order_by(BalanceLedger.id.desc())
+    )
+    if existing_refund:
+        locked_task.status = "refunded"
+        locked_task.error_message = locked_task.error_message or error
+        locked_task.completed_at = locked_task.completed_at or datetime.now(timezone.utc)
+        await session.commit()
+        return
+    locked_task.status = "refunded"
+    locked_task.error_message = error
+    locked_task.completed_at = datetime.now(timezone.utc)
+    await refund_generation(session, locked_task.user_id, locked_task.id, locked_task.cost_credits)
     await session.commit()

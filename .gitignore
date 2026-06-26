@@ -7,3 +7,9 @@ __pycache__/
 webapp/node_modules/
 webapp/.next/
 webapp/out/
+
+.codex/
+design-export/
+new_design/
+*.bak-*
+webapp/public/app/assets/templates/video/**/cover_orig.mp4

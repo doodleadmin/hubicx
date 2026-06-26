@@ -14,6 +14,7 @@ from backend.app.db.models import (
     User,
 )
 from backend.app.db.session import get_session
+from backend.app.api.deps import current_user
 from backend.app.api.routes.admin import current_admin_user
 
 router = APIRouter(prefix="/admin/referral", tags=["admin-referral"])
@@ -207,7 +208,7 @@ async def global_stats(
 @router.post("/track")
 async def track_referral(
     payload: dict = Body(...),
-    user: User = Depends(current_admin_user),
+    user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Track referral conversion when a new user comes from a partner link."""

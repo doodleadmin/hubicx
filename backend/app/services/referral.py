@@ -60,6 +60,16 @@ async def track_conversion(
     if not user:
         return None
 
+    if user.referred_by_partner_id:
+        return await session.get(ReferralPartner, user.referred_by_partner_id)
+
+    existing_conversion = await session.scalar(
+        select(ReferralConversion).where(ReferralConversion.referred_user_id == user_id)
+    )
+    if existing_conversion:
+        user.referred_by_partner_id = existing_conversion.partner_id
+        return await session.get(ReferralPartner, existing_conversion.partner_id)
+
     user.referred_by_partner_id = partner.id
 
     conv = ReferralConversion(
@@ -118,6 +128,12 @@ async def calculate_commission(
     if not payment.referral_partner_id:
         return None
 
+    existing = await session.scalar(
+        select(ReferralCommission).where(ReferralCommission.payment_id == payment.id)
+    )
+    if existing:
+        return existing
+
     rate = await get_commission_rate(session, payment.referral_partner_id, category)
     if rate <= 0:
         return None
@@ -127,6 +143,7 @@ async def calculate_commission(
     comm = ReferralCommission(
         partner_id=payment.referral_partner_id,
         payment_id=payment.id,
+        referred_user_id=payment.user_id,
         category=category,
         amount_rub=payment.amount_rub,
         rate_percent=rate,

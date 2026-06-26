@@ -24,7 +24,7 @@ def require_admin(user: User) -> None:
 
 
 def _admin_browser_token() -> str:
-    return settings.admin_panel_token or settings.admin_panel_password
+    return settings.admin_panel_token
 
 
 async def _fallback_admin_user(session: AsyncSession) -> User:

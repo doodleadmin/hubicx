@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings
-from backend.app.db.models import Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
+from backend.app.db.models import BalanceLedger, Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
 from backend.app.services.business import SUBSCRIPTION_PLANS_V2
 from backend.app.utils.errors import AppError
 
@@ -59,6 +59,104 @@ def _subscription_plan(package_code: str | None) -> dict | None:
 
 def _subscription_kind(package_code: str) -> str:
     return "template" if package_code in _TEMPLATE_CATEGORY_CODES else "full"
+
+
+async def _has_payment_ledger(session: AsyncSession, payment_id: int, operation_type: str) -> bool:
+    existing = await session.scalar(
+        select(BalanceLedger.id).where(
+            BalanceLedger.payment_id == payment_id,
+            BalanceLedger.operation_type == operation_type,
+        )
+    )
+    return existing is not None
+
+
+async def _apply_payment_commission(session: AsyncSession, payment: Payment) -> None:
+    category = _commission_category(payment.package_code)
+    if not category or not payment.referral_partner_id:
+        return
+    try:
+        from backend.app.services.referral import calculate_commission
+
+        await calculate_commission(session, payment, category)
+    except Exception:
+        logger.exception("Failed to calculate referral commission for payment_id=%s", payment.id)
+
+
+async def _cancel_payment_commissions(session: AsyncSession, payment_id: int) -> None:
+    result = await session.execute(
+        select(ReferralCommission).where(
+            ReferralCommission.payment_id == payment_id,
+            ReferralCommission.status == "pending",
+        )
+    )
+    for commission in result.scalars().all():
+        commission.status = "canceled"
+
+
+async def _activate_subscription(session: AsyncSession, payment: Payment) -> None:
+    pkg = payment.package_code
+    if not pkg or pkg not in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
+        return
+    plan = _subscription_plan(pkg)
+    if not plan:
+        raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
+    sub_kind = _subscription_kind(pkg)
+    existing_sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == payment.user_id,
+            UserSubscription.code == pkg,
+        ).with_for_update()
+    )
+    old_sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == payment.user_id,
+            UserSubscription.kind == sub_kind,
+            UserSubscription.is_active.is_(True),
+        ).with_for_update()
+    )
+    if old_sub and old_sub is not existing_sub:
+        old_sub.is_active = False
+    title = str(plan["title"])
+    tokens = int(plan["tokens_per_month"])
+    price = int(plan["price_rub"])
+    if existing_sub:
+        existing_sub.title = title
+        existing_sub.kind = sub_kind
+        existing_sub.tokens_per_month = tokens
+        existing_sub.price_rub = price
+        existing_sub.payment_id = payment.id
+        existing_sub.is_active = True
+        existing_sub.expires_at = None
+    else:
+        session.add(
+            UserSubscription(
+                user_id=payment.user_id,
+                code=pkg,
+                title=title,
+                kind=sub_kind,
+                tokens_per_month=tokens,
+                price_rub=price,
+                payment_id=payment.id,
+                is_active=True,
+            )
+        )
+
+
+async def _cancel_subscription_for_payment(session: AsyncSession, payment: Payment) -> None:
+    if not payment.package_code:
+        return
+    sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == payment.user_id,
+            UserSubscription.code == payment.package_code,
+            UserSubscription.payment_id == payment.id,
+            UserSubscription.is_active.is_(True),
+        ).with_for_update()
+    )
+    if sub:
+        sub.is_active = False
+        sub.expires_at = datetime.now(timezone.utc)
 
 
 async def _resolve_payment_catalog_item(
@@ -193,17 +291,6 @@ async def create_payment(
     await session.commit()
     await session.refresh(payment)
 
-    # Calculate referral commission if applicable
-    category = _commission_category(package_code)
-    if category and payment.referral_partner_id:
-        try:
-            from backend.app.services.referral import calculate_commission as calc_ref_commission
-            await calc_ref_commission(session, payment, category)
-            await session.commit()
-            await session.refresh(payment)
-        except Exception:
-            pass
-
     return payment, None
 
 
@@ -240,6 +327,17 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         if tbank_payment_id and '|' not in (payment.external_payment_id or ''):
             payment.external_payment_id = f"{order_id}|{tbank_payment_id}"
 
+        if payment.status in ("confirmed", "refunded", "reversed") and status not in ("CONFIRMED", "REFUNDED", "REVERSED"):
+            logger.info(
+                "Ignoring non-terminal T-Bank status for terminal payment order_id=%s payment_id=%s status=%s current_status=%s",
+                order_id,
+                payment.id,
+                status,
+                payment.status,
+            )
+            await session.commit()
+            return
+
         if status == "CONFIRMED" and payment.status in ("confirmed", "refunded", "reversed"):
             if payment.status in ("refunded", "reversed"):
                 logger.warning(
@@ -251,76 +349,39 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
             await session.commit()
             return
 
-        # Начисляем токены при успешной оплате (ПРОВЕРЯЕМ ДО смены статуса!)
         if status == "CONFIRMED":
             from backend.app.services.balance import apply_balance_operation
 
             payment.status = "confirmed"
-            payment.paid_at = datetime.now(timezone.utc)
-            await apply_balance_operation(
-                session,
-                user_id=payment.user_id,
-                amount=int(payment.credits),
-                operation_type="payment_topup",
-                reason=f"Пополнение через Т-Банк, заказ {order_id}",
-                payment_id=payment.id,
-            )
-            session.add(
-                Transaction(user_id=payment.user_id, type="purchase", amount_credits=int(payment.credits), status="completed", payment_id=payment.id)
-            )
-
-            # --- Активация подписки ---
-            pkg = payment.package_code
-            if pkg and pkg in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
-                plan = _subscription_plan(pkg)
-                if not plan:
-                    raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
-                sub_kind = _subscription_kind(pkg)
-                # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
-                # падать на uq_user_subscriptions_user_code.
-                existing_sub = await session.scalar(
-                    select(UserSubscription).where(
-                        UserSubscription.user_id == payment.user_id,
-                        UserSubscription.code == pkg,
-                    ).with_for_update()
+            payment.paid_at = payment.paid_at or datetime.now(timezone.utc)
+            if not await _has_payment_ledger(session, payment.id, "payment_topup"):
+                await apply_balance_operation(
+                    session,
+                    user_id=payment.user_id,
+                    amount=int(payment.credits),
+                    operation_type="payment_topup",
+                    reason=f"Пополнение через Т-Банк, заказ {order_id}",
+                    payment_id=payment.id,
                 )
-                old_sub = await session.scalar(
-                    select(UserSubscription).where(
-                        UserSubscription.user_id == payment.user_id,
-                        UserSubscription.kind == sub_kind,
-                        UserSubscription.is_active.is_(True),
-                    ).with_for_update()
-                )
-                if old_sub and old_sub is not existing_sub:
-                    old_sub.is_active = False
-                title = str(plan["title"])
-                tokens = int(plan["tokens_per_month"])
-                price = int(plan["price_rub"])
-                if existing_sub:
-                    existing_sub.title = title
-                    existing_sub.kind = sub_kind
-                    existing_sub.tokens_per_month = tokens
-                    existing_sub.price_rub = price
-                    existing_sub.payment_id = payment.id
-                    existing_sub.is_active = True
-                else:
-                    new_sub = UserSubscription(
+                session.add(
+                    Transaction(
                         user_id=payment.user_id,
-                        code=pkg,
-                        title=title,
-                        kind=sub_kind,
-                        tokens_per_month=tokens,
-                        price_rub=price,
+                        type="purchase",
+                        amount_credits=int(payment.credits),
+                        status="completed",
                         payment_id=payment.id,
-                        is_active=True,
                     )
-                    session.add(new_sub)
+                )
+            await _activate_subscription(session, payment)
+            await _apply_payment_commission(session, payment)
         elif status in ("REFUNDED", "REVERSED") and payment.status not in ("refunded", "reversed"):
             from backend.app.services.balance import apply_balance_operation
 
-            should_reverse_balance = payment.status == "confirmed"
+            was_confirmed = payment.status == "confirmed"
+            has_topup = await _has_payment_ledger(session, payment.id, "payment_topup")
+            has_refund = await _has_payment_ledger(session, payment.id, "payment_refund")
             payment.status = status.lower()
-            if should_reverse_balance:
+            if (was_confirmed or has_topup) and not has_refund:
                 await apply_balance_operation(
                     session,
                     user_id=payment.user_id,
@@ -328,19 +389,10 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                     operation_type="payment_refund",
                     reason=f"Возврат Т-Банк, заказ {order_id}",
                     payment_id=payment.id,
+                    allow_negative=True,
                 )
-            if payment.package_code and payment.package_code in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
-                sub = await session.scalar(
-                    select(UserSubscription).where(
-                        UserSubscription.user_id == payment.user_id,
-                        UserSubscription.code == payment.package_code,
-                        UserSubscription.payment_id == payment.id,
-                        UserSubscription.is_active.is_(True),
-                    ).with_for_update()
-                )
-                if sub:
-                    sub.is_active = False
-                    sub.expires_at = datetime.now(timezone.utc)
+            await _cancel_subscription_for_payment(session, payment)
+            await _cancel_payment_commissions(session, payment.id)
         else:
             payment.status = status.lower()
 

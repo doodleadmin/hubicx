@@ -71,7 +71,7 @@ async def partner_links(
             {
                 "type": "webapp",
                 "label": "Mini App",
-                "url": f"https://webhubicx.ru/?ref={ref_code}",
+                "url": f"https://webapp.hubicx.ru/?ref={ref_code}",
             },
             {
                 "type": "desktop",

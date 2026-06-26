@@ -16,13 +16,14 @@ async def apply_balance_operation(
     payment_id: int | None = None,
     admin_user_id: int | None = None,
     metadata: dict | None = None,
+    allow_negative: bool = False,
 ) -> tuple[int, int]:
     user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
     if not user:
         raise AppError("user_not_found", "Пользователь не найден", 404)
     before = int(user.balance_credits or 0)
     after = before + int(amount)
-    if after < 0:
+    if after < 0 and not allow_negative:
         raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
     user.balance_credits = after
     session.add(
