@@ -3,6 +3,7 @@
 const { useState: uS, useEffect: uE, useRef: uR } = React;
 const DESKTOP = !!window.DESKTOP_MODE;
 const THEME_KEY = 'hbx_theme_v1';
+document.documentElement.classList.toggle('desktop', DESKTOP);
 function getInitialTheme() {
   try {
     var saved = localStorage.getItem(THEME_KEY);
