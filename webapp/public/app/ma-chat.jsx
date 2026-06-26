@@ -190,43 +190,63 @@ function ChatSettingsSheet({ onClose }) {
   }
 
   return <div className="sheet-ov chat-settings-ov" onClick={onClose}>
-    <div className="sheet agent-sheet" onClick={function(e) { e.stopPropagation(); }}>
-      <div className="sheet-card">
+    <div className="sheet agent-sheet chat-settings-sheet" onClick={function(e) { e.stopPropagation(); }}>
+      <div className="sheet-card chat-settings-card">
         <div className="sheet-grab"></div>
-        <div className="sheet-title">Настройки общения в чате</div>
-        <div className="muted" style={{ fontSize:13, marginTop:4 }}>Настройте стиль, язык и характер Hubicx для следующих сообщений.</div>
-
-        <div className="chat-settings-section">LLM-модель</div>
-        <div className="chat-settings-grid">
-          {CHAT_OPTS.llm.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.llm === o ? ' on' : '')} onClick={() => setField('llm', o)}>
-            <span>{o}</span>
-          </button>; })}
+        <div className="chat-settings-head">
+          <div className="chat-settings-mark">AI</div>
+          <div className="chat-settings-copy">
+            <div className="sheet-title">Настройки общения</div>
+            <div className="chat-settings-sub">Стиль, язык и характер Hubicx для следующих сообщений.</div>
+          </div>
+          <button className="chat-settings-close" onClick={onClose} aria-label="Закрыть">×</button>
         </div>
 
-        <div className="chat-settings-section">Стиль общения</div>
-        <div className="chat-settings-grid">
-          {CHAT_OPTS.style.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.style === o ? ' on' : '')} onClick={() => setField('style', o)}>
-            <span>{o}</span>
-          </button>; })}
+        <div className="chat-settings-body">
+          <div className="chat-settings-group">
+            <div className="chat-settings-section">LLM-модель</div>
+            <div className="chat-settings-grid chat-settings-grid-models">
+              {CHAT_OPTS.llm.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.llm === o ? ' on' : '')} onClick={() => setField('llm', o)}>
+                <span>{o}</span>
+              </button>; })}
+            </div>
+          </div>
+
+          <div className="chat-settings-group">
+            <div className="chat-settings-section">Стиль общения</div>
+            <div className="chat-settings-grid">
+              {CHAT_OPTS.style.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.style === o ? ' on' : '')} onClick={() => setField('style', o)}>
+                <span>{o}</span>
+              </button>; })}
+            </div>
+          </div>
+
+          <div className="chat-settings-group">
+            <div className="chat-settings-section">Язык Hubicx</div>
+            <div className="chat-settings-grid chat-settings-grid-lang">
+              {CHAT_OPTS.hubicxLang.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.hubicxLang === o || (!p.hubicxLang && p.lang === o) ? ' on' : '')} onClick={() => setField('hubicxLang', o)}>
+                <span>{o}</span>
+              </button>; })}
+            </div>
+          </div>
+
+          <div className="chat-settings-group chat-settings-group-emoji">
+            <div className="chat-settings-section">Любимый эмодзи</div>
+            <div className="emoji-grid chat-settings-emoji-grid">
+              {CHAT_EMOJIS.map(function(e) { return <div key={e} className={'emoji-cell' + (p.emoji === e ? ' on' : '')} onClick={() => setField('emoji', e)}>{e}</div>; })}
+            </div>
+          </div>
+
+          <div className="chat-settings-group chat-settings-group-text">
+            <div className="chat-settings-section">Информация для чата</div>
+            <textarea className="text-in chat-settings-text" placeholder="Например: спокойный, внимательный, любит короткие ответы..." value={p.traits || ''} onChange={e => setField('traits', e.target.value)} />
+          </div>
         </div>
 
-        <div className="chat-settings-section">Язык Hubicx</div>
-        <div className="chat-settings-grid">
-          {CHAT_OPTS.hubicxLang.map(function(o) { return <button key={o} className={'chat-setting-choice' + (p.hubicxLang === o || (!p.hubicxLang && p.lang === o) ? ' on' : '')} onClick={() => setField('hubicxLang', o)}>
-            <span>{o}</span>
-          </button>; })}
+        <div className="chat-settings-foot">
+          <div className={'chat-settings-saved' + (saved ? ' on' : '')}>{saved || 'Сохраняется автоматически'}</div>
+          <button className="sheet-cta chat-settings-done" onClick={onClose}>Готово</button>
         </div>
-
-        <div className="chat-settings-section">Любимый эмодзи</div>
-        <div className="emoji-grid" style={{ marginTop:10 }}>
-          {CHAT_EMOJIS.map(function(e) { return <div key={e} className={'emoji-cell' + (p.emoji === e ? ' on' : '')} onClick={() => setField('emoji', e)}>{e}</div>; })}
-        </div>
-
-        <div className="chat-settings-section">Информация для чата</div>
-        <textarea className="text-in" style={{ minHeight:86, resize:'vertical', marginTop:10 }} placeholder="Например: спокойный, внимательный, любит короткие ответы…" value={p.traits || ''} onChange={e => setField('traits', e.target.value)} />
-
-        {saved && <div className="muted" style={{ fontSize:13, marginTop:10 }}>{saved}</div>}
-        <button className="sheet-cta" style={{ marginTop:14 }} onClick={onClose}>Готово</button>
       </div>
     </div>
   </div>;
