@@ -3,48 +3,224 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
-<title>Hubicx</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<base href="/app/"/>
+<title>Hubicx — AI-хаб для фото, видео и чата в Telegram</title>
+<meta name="description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели — без VPN, прямо в Telegram и в браузере. 50 токенов в подарок."/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://hubicx.ru/"/>
+<link rel="icon" type="image/x-icon" href="/app/assets/favicon.ico"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/app/assets/favicon-32x32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="/app/assets/favicon-16x16.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/app/assets/apple-touch-icon.png"/>
+<meta property="og:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta property="og:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram."/>
+<meta property="og:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
+<meta property="og:url" content="https://hubicx.ru/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Hubicx"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
+<meta name="twitter:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
+<script>window.__APP_BUILD__='20260623-bonus1';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
-<link rel="stylesheet" href="ma.css"/>
+<link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/polaroid-party/cover.webp" fetchpriority="high"/>
+<link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/roses/cover.webp" fetchpriority="high"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/tv-broadcast/cover.mp4" fetchpriority="high"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/catastrophic-love/cover.mp4" fetchpriority="high"/>
+<link rel="stylesheet" href="/app/loader.css?v=20260619-catlove1"/>
+  <link rel="stylesheet" href="/app/ma.css?v=20260626-payment-return1"/>
+  <link rel="stylesheet" href="/app/ma-desktop.css?v=20260626-profile-linkui1"/>
 </head>
 <body>
 <div id="root"></div>
 
+<!-- Loading overlay (hidden when React renders) -->
+<div class="wj-loader" id="wjLoader">
+  <div class="wj-aurora1"></div>
+  <div class="wj-aurora2"></div>
+  <div class="wj-vignette"></div>
+  <div class="wj-stage">
+    <div class="wj-glow"></div>
+    <canvas class="wj-canvas" id="wjCanvas"></canvas>
+  </div>
+  <div class="wj-texts">
+    <div class="wj-phrases">
+      <div class="wj-phrase">Собираем модули</div>
+      <div class="wj-phrase">Загружаем нейросети</div>
+      <div class="wj-phrase">Почти готово</div>
+    </div>
+    <div class="wj-track"><div class="wj-bar"></div></div>
+  </div>
+</div>
+
 <!-- Telegram Mini App SDK -->
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js?62"></script>
 
 <script>
 (function() {
+  var host = String((window.location && window.location.hostname) || '').toLowerCase();
+  var isWebappHost = host === 'webapp.hubicx.ru';
+  var isAppHost = host === 'hubicx.ru';
   var tg = window.Telegram && window.Telegram.WebApp;
-  // Telegram desktop platforms
-  var TG_PC = ['tdesktop', 'macos', 'linux', 'web', 'weba'];
+
+  window.HUBICX_APP_CONTEXT = isWebappHost ? 'telegram' : (isAppHost ? 'browser' : 'auto');
 
   if (tg) {
-    tg.ready();
-    if (TG_PC.indexOf(tg.platform) !== -1) {
-      // Telegram на ПК → сразу открываем desktop-версию
-      window.location.replace('desktop.html');
-      return;
+    // Only webapp.hubicx.ru is the Telegram Mini App product.
+    // hubicx.ru remains the standalone browser product even if Telegram SDK is present.
+    window.HUBICX_TG_SHELL = isWebappHost;
+    if (isWebappHost) {
+      var platform = String(tg.platform || '').toLowerCase();
+      var tgDesktop = ['tdesktop', 'macos'].indexOf(platform) !== -1;
+      if (tgDesktop) window.DESKTOP_MODE = true;
     }
-    // Мобильный Telegram → fullscreen + 100px safe area сверху
-    if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
-    document.body.classList.add('tg-fs');
+    function px(v) { return (Number(v) || 0) + 'px'; }
+    function postEvent(name, data) {
+      try {
+        if (window.Telegram && window.Telegram.WebView && typeof window.Telegram.WebView.postEvent === 'function') {
+          window.Telegram.WebView.postEvent(name, false, data || {});
+        }
+      } catch (e) {}
+    }
+    function markFullscreen() {
+      var on = !!tg.isFullscreen;
+      document.documentElement.classList.toggle('hbx-tg-fullscreen', on);
+      document.body.classList.toggle('tg-fullscreen', on);
+      document.body.classList.toggle('hbx-tg-fullscreen', on);
+    }
+    function syncViewport() {
+      try {
+        var h = tg.viewportHeight || tg.viewportStableHeight || window.innerHeight;
+        var sh = tg.viewportStableHeight || h;
+        if (h) document.documentElement.style.setProperty('--hbx-tg-vh', h + 'px');
+        if (sh) document.documentElement.style.setProperty('--hbx-tg-stable-vh', sh + 'px');
+        if (h) document.documentElement.style.setProperty('--app-height', h + 'px');
+        var sa = tg.safeAreaInset || {};
+        var csa = tg.contentSafeAreaInset || {};
+        document.documentElement.style.setProperty('--hbx-tg-safe-top', px(Math.max(sa.top || 0, csa.top || 0)));
+        document.documentElement.style.setProperty('--hbx-tg-safe-bottom', px(Math.max(sa.bottom || 0, csa.bottom || 0)));
+        document.documentElement.style.setProperty('--hbx-tg-safe-left', px(Math.max(sa.left || 0, csa.left || 0)));
+        document.documentElement.style.setProperty('--hbx-tg-safe-right', px(Math.max(sa.right || 0, csa.right || 0)));
+        markFullscreen();
+      } catch (e) {}
+    }
+    if (isWebappHost) {
+      // tg.ready() may return a Promise (Bot API 8.0+) or undefined (older).
+      // If it's a thenable — wait; otherwise call expand immediately.
+      try {
+        var r = tg.ready();
+        if (r && typeof r.then === 'function') {
+          r.then(function() {
+            try { if (typeof tg.expand === 'function') tg.expand(); } catch (e) {}
+            try { if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes(); } catch (e) {}
+          });
+        } else {
+          try { if (typeof tg.expand === 'function') tg.expand(); } catch (e) {}
+          try { if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes(); } catch (e) {}
+        }
+      } catch (e) {
+        try { if (typeof tg.expand === 'function') tg.expand(); } catch (e) {}
+        try { if (typeof tg.disableVerticalSwipes === 'function') tg.disableVerticalSwipes(); } catch (e) {}
+      }
+    }
+    function requestFs(source) {
+      var versionOk = tg.isVersionAtLeast ? tg.isVersionAtLeast('8.0') : false;
+      var hasMethod = typeof tg.requestFullscreen === 'function';
+      var alreadyFs = !!tg.isFullscreen;
+
+      window.__HUBICX_TG_DEBUG__ = Object.assign({}, window.__HUBICX_TG_DEBUG__ || {}, {
+        lastFullscreenAttempt: {
+          source: source,
+          version: tg.version,
+          platform: tg.platform,
+          isVersionAtLeast80: versionOk,
+          hasRequestFullscreen: hasMethod,
+          isFullscreen: alreadyFs,
+          isExpanded: !!tg.isExpanded,
+          viewportHeight: tg.viewportHeight,
+          viewportStableHeight: tg.viewportStableHeight
+        }
+      });
+
+      if (!alreadyFs) {
+        if (versionOk && hasMethod) {
+          try { tg.requestFullscreen(); } catch (e) {}
+        } else {
+          // Fallback for older / mobile Telegram clients via internal postEvent
+          postEvent('web_app_request_fullscreen');
+        }
+      }
+      syncViewport();
+    }
+    try { if (isWebappHost && typeof tg.setHeaderColor === 'function') tg.setHeaderColor('#111318'); } catch (e) {}
+    try { if (isWebappHost && typeof tg.setBackgroundColor === 'function') tg.setBackgroundColor('#111318'); } catch (e) {}
+    try { if (isWebappHost && typeof tg.setBottomBarColor === 'function') tg.setBottomBarColor('#111318'); } catch (e) {}
+    try { if (typeof tg.onEvent === 'function') {
+      tg.onEvent('viewportChanged', syncViewport);
+      tg.onEvent('safeAreaChanged', syncViewport);
+      tg.onEvent('contentSafeAreaChanged', syncViewport);
+      tg.onEvent('fullscreenChanged', syncViewport);
+      tg.onEvent('fullscreenFailed', function(event) {
+        window.__HUBICX_TG_DEBUG__ = Object.assign({}, window.__HUBICX_TG_DEBUG__ || {}, { fullscreenFailed: event || true });
+        syncViewport();
+      });
+      tg.onEvent('activated', function() { requestFs('activated'); });
+    } } catch (e) {}
+    if (isWebappHost) document.body.classList.add('tg-fs');
+    syncViewport();
+    if (isWebappHost) {
+      // On mobile, requestFullscreen requires a user gesture.
+      // Bind persistent handlers that keep trying on ANY touch/click until fullscreen.
+      var fsOnUserAction = function(e) {
+        if (tg && !tg.isFullscreen) requestFs('user-action');
+      };
+      document.body.addEventListener('pointerdown', fsOnUserAction, { passive: true });
+      document.body.addEventListener('click', fsOnUserAction);
+      // Also try on window.load (works automatically on Desktop)
+      window.addEventListener('load', function() { requestFs('window-load'); }, { once: true });
+    }
+  }
+
+  if (isAppHost && window.matchMedia && window.matchMedia('(min-width: 900px)').matches) {
+    window.DESKTOP_MODE = true;
   }
 
 })();
 </script>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-<script src="ma-api.jsx"></script>
-<script type="text/babel" src="ma-core.jsx"></script>
-<script type="text/babel" src="ma-chat.jsx"></script>
-<script type="text/babel" src="ma-agent.jsx"></script>
-<script type="text/babel" src="ma-generation.jsx"></script>
-<script type="text/babel" src="ma-create.jsx"></script>
-<script type="text/babel" src="ma-profile.jsx"></script>
-<script type="text/babel" src="ma-app.jsx"></script>
+<!-- Referral tracking: save ?ref=CODE from URL -->
+<script>
+(function() {
+  var q = new URLSearchParams(window.location.search);
+  var ref = q.get('ref');
+  if (ref) {
+    try { localStorage.setItem('hbx_ref_code', ref); } catch(e) {}
+    try { localStorage.setItem('hbx_ref_ts', Date.now()); } catch(e) {}
+  }
+})();
+</script>
+
+  <script src="/app/loader.js?v=20260619-catlove1"></script>
+
+<script src="/app/assets/vendor/react.production.min.js"></script>
+<script src="/app/assets/vendor/react-dom.production.min.js"></script>
+<script>window.babel = { cache: false };</script>
+<script src="/app/assets/vendor/babel.min.js"></script>
+  <script src="/app/ma-api.jsx?v=20260622-auth-hubicx1"></script>
+  <script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
+  <script type="text/babel" src="/app/ma-core.jsx?v=20260624-onboarding2"></script>
+  <script type="text/babel" src="/app/ma-chat.jsx?v=20260626-profile-linkui1"></script>
+  <script type="text/babel" src="/app/ma-agent.jsx?v=20260624-onboarding2"></script>
+  <script type="text/babel" src="/app/ma-generation.jsx?v=20260624-onboarding2"></script>
+  <script type="text/babel" src="/app/ma-create.jsx?v=20260624-profile-icons1"></script>
+  <script type="text/babel" src="/app/ma-profile.jsx?v=20260626-profile-linkui1"></script>
+  <script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260626-profile-linkui1"></script>
+  <script type="text/babel" src="/app/ma-landing.jsx?v=20260623-bonus1"></script>
+  <script type="text/babel" src="/app/ma-app.jsx?v=20260626-payment-return1"></script>
 </body>
 </html>

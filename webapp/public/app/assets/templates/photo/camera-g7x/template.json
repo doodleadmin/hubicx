@@ -1,0 +1,18 @@
+{
+  "code": "camera-g7x",
+  "title": "Камера G7X",
+  "type": "photo",
+  "category": "Эффекты",
+  "inputLabel": "Любое фото",
+  "requiresImage": true,
+  "requiredInputs": [
+    {
+      "name": "image_url",
+      "type": "image",
+      "label": "Любое фото"
+    }
+  ],
+  "cover": "cover.gif",
+  "examples": ["example-1.gif"],
+  "prompt": "Use the uploaded image as the main reference. Preserve the exact person, face, facial features, body shape, figure, proportions, pose, clothing, background, framing, and overall composition as accurately as possible. Keep the subject fully recognizable as the same person. Do not change the person, do not replace the face or body, and do not redesign the scene. Apply only the visual style described below.\n\nApply a photorealistic Canon PowerShot G7X Mark III signature look to the uploaded image. Create a 1-inch sensor creamy bokeh feel, f/1.8–2.8 24–100mm lens look, and a built-in flash pop directly on the skin for a flattering glow and specular highlights. Make the background slightly underexposed, dark, and softly blurred, around -1.3 to -2 EV. Give the skin soft warm tones with golden-hour peach undertones, translucent pores, and a subtle natural oil sheen. Use low-contrast natural SOOC-style grading, creamy colors with no harsh saturation, subtle low film grain, and a dreamy haze glow around the subject. Create shallow depth-of-field portrait perfection with a trendy 2025 vlog / Instagram aesthetic. Keep the result hyper-real but with organic imperfections and a professional human photo vibe."
+}

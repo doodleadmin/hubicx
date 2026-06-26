@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /api/sitemap.xml
+Allow: /
+Disallow: /app/admin
+Disallow: /partners/
+Disallow: /api/
+
+Sitemap: https://hubicx.ru/api/sitemap.xml

@@ -19,7 +19,7 @@ class User(Base, TimestampMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, index=True, nullable=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     username: Mapped[str | None] = mapped_column(String(255))
@@ -27,9 +27,11 @@ class User(Base, TimestampMixin):
     language_code: Mapped[str] = mapped_column(String(8), default="ru")
     language_selected: Mapped[bool] = mapped_column(Boolean, default=False)
     balance_credits: Mapped[int] = mapped_column(Integer, default=0)
+    bonus_credits: Mapped[int] = mapped_column(Integer, default=0)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     ref_code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     referrer_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    referred_by_partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), nullable=True)
     active_menu_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     active_menu_message_id: Mapped[int | None] = mapped_column(BigInteger)
 
@@ -51,6 +53,20 @@ class UserProfileSettings(Base, TimestampMixin):
     about_user: Mapped[str | None] = mapped_column(Text)
     communication_style: Mapped[str | None] = mapped_column(Text)
     persona_emoji: Mapped[str | None] = mapped_column(String(32))
+
+    user: Mapped[User] = relationship()
+
+
+class UserBonusTask(Base, TimestampMixin):
+    __tablename__ = "user_bonus_tasks"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_bonus_tasks_user_code"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    code: Mapped[str] = mapped_column(String(64), index=True)
+    tokens: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
 
     user: Mapped[User] = relationship()
 
@@ -187,6 +203,25 @@ class BalanceLedger(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class UserSubscription(Base):
+    __tablename__ = "user_subscriptions"
+    __table_args__ = (UniqueConstraint("user_id", "code", name="uq_user_subscriptions_user_code"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    code: Mapped[str] = mapped_column(String(64), index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    kind: Mapped[str] = mapped_column(String(32))       # "template" / "full"
+    tokens_per_month: Mapped[int] = mapped_column(Integer, default=0)
+    price_rub: Mapped[int] = mapped_column(Integer, default=0)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped[User] = relationship()
+
+
 class Payment(Base):
     __tablename__ = "payments"
 
@@ -196,8 +231,10 @@ class Payment(Base):
     amount_rub: Mapped[float | None] = mapped_column(Numeric(10, 2))
     amount_usd: Mapped[float | None] = mapped_column(Numeric(10, 2))
     credits: Mapped[int] = mapped_column(Integer)
+    package_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="created")
     external_payment_id: Mapped[str | None] = mapped_column(String(255))
+    referral_partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -227,6 +264,66 @@ class ReferralReward(Base):
     reward_credits: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(32), default="created")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReferralPartner(Base, TimestampMixin):
+    __tablename__ = "referral_partners"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    contact_info: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
+
+class ReferralCommissionRate(Base, TimestampMixin):
+    __tablename__ = "referral_commission_rates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), index=True, nullable=True)
+    category: Mapped[str] = mapped_column(String(64), index=True)
+    rate_percent: Mapped[float] = mapped_column(Numeric(5, 2))
+
+    partner: Mapped["ReferralPartner | None"] = relationship()
+
+
+class ReferralClick(Base):
+    __tablename__ = "referral_clicks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_code: Mapped[str] = mapped_column(String(64), index=True)
+    source_url: Mapped[str | None] = mapped_column(Text)
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReferralConversion(Base):
+    __tablename__ = "referral_conversions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("referral_partners.id"), index=True)
+    referred_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    click_id: Mapped[int | None] = mapped_column(ForeignKey("referral_clicks.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    partner: Mapped["ReferralPartner"] = relationship()
+
+
+class ReferralCommission(Base, TimestampMixin):
+    __tablename__ = "referral_commissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("referral_partners.id"), index=True)
+    payment_id: Mapped[int] = mapped_column(ForeignKey("payments.id"), index=True)
+    referred_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    category: Mapped[str] = mapped_column(String(64))
+    amount_rub: Mapped[float] = mapped_column(Numeric(10, 2))
+    rate_percent: Mapped[float] = mapped_column(Numeric(5, 2))
+    commission_rub: Mapped[float] = mapped_column(Numeric(10, 2))
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+
+    partner: Mapped["ReferralPartner"] = relationship()
 
 
 class AgentChat(Base, TimestampMixin):

@@ -4,7 +4,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 from aiogram import BaseMiddleware, Bot, Dispatcher
-from aiogram.types import Message, TelegramObject
+from aiogram.types import MenuButtonWebApp, Message, TelegramObject, WebAppInfo
 
 from bot.config import BACKEND_URL, BOT_TOKEN, WEBAPP_URL
 from bot.handlers import admin, balance, history, language, menu, photo, start, templates, text, video
@@ -26,6 +26,12 @@ async def main() -> None:
     logger.info("BOT WEBAPP_URL=%s", WEBAPP_URL)
     logger.info("BOT BACKEND_URL=%s", BACKEND_URL)
     bot = Bot(BOT_TOKEN)
+    if WEBAPP_URL.startswith("https://"):
+        try:
+            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть Hubicx", web_app=WebAppInfo(url=WEBAPP_URL)))
+            logger.info("BOT menu button configured url=%s", WEBAPP_URL)
+        except Exception:
+            logger.exception("Failed to configure BOT menu button")
     dp = Dispatcher()
     dp.message.middleware(IncomingTextLoggingMiddleware())
     for router in (start.router, language.router, photo.router, video.router, templates.router, text.router, balance.router, history.router, admin.router, menu.router):

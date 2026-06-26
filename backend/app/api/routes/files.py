@@ -8,18 +8,16 @@ from backend.app.api.deps import current_user
 from backend.app.db.models import File, User
 from backend.app.db.session import get_session
 from backend.app.schemas.generations import FileUploadOut
-from backend.app.services.rate_limit import check_rate_limit
 from backend.app.services.storage import storage_configured, storage_service
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/files", tags=["files"])
 logger = logging.getLogger(__name__)
 
-UPLOAD_RATE_LIMIT = 30  # max uploads
-UPLOAD_RATE_WINDOW = 60  # per 60 seconds
 MAX_FILE_SIZE = 20 * 1024 * 1024
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/tiff",
+    "image/heic", "image/heif",
     "video/mp4", "video/webm", "video/quicktime",
     "audio/mpeg", "audio/wav", "audio/ogg",
 }
@@ -31,7 +29,6 @@ async def upload_file(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> FileUploadOut:
-    await check_rate_limit(f"upload:{user.id}", UPLOAD_RATE_LIMIT, UPLOAD_RATE_WINDOW)
     if not storage_configured():
         raise AppError("storage_not_configured", "Хранилище файлов не настроено", 500)
 
@@ -72,6 +69,8 @@ def _extension_from_content_type(content_type: str) -> str:
         "image/gif": ".gif",
         "image/bmp": ".bmp",
         "image/tiff": ".tiff",
+        "image/heic": ".heic",
+        "image/heif": ".heif",
         "video/mp4": ".mp4",
         "video/webm": ".webm",
         "video/quicktime": ".mov",

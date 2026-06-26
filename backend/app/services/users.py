@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings
 from backend.app.db.models import ReferralReward, Transaction, User
+from backend.app.services.balance import award_bonus_tokens
+from backend.app.services.business import SIGNUP_BONUS_TOKENS
 from backend.app.utils.security import make_ref_code
 
 
@@ -31,6 +33,7 @@ async def get_or_create_user(session: AsyncSession, tg_user: dict, ref_code: str
         is_admin=int(tg_user["id"]) in settings.admin_id_set,
         ref_code=make_ref_code(),
         referrer_id=referrer_id,
+        bonus_credits=0,
     )
     session.add(user)
     try:
@@ -41,6 +44,17 @@ async def get_or_create_user(session: AsyncSession, tg_user: dict, ref_code: str
         if user is None:
             raise
     await session.refresh(user)
+    if user and SIGNUP_BONUS_TOKENS > 0:
+        await award_bonus_tokens(
+            session,
+            user.id,
+            "signup",
+            SIGNUP_BONUS_TOKENS,
+            "Signup bonus",
+            {"kind": "automatic"},
+        )
+        await session.commit()
+        await session.refresh(user)
     return user
 
 

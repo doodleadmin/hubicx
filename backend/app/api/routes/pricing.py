@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.config import settings
 from backend.app.db.models import ModelPricing, TokenPackage
 from backend.app.db.session import get_session
+from backend.app.services.business import BONUS_TASKS_V2, BONUS_TOTAL_TOKENS, SUBSCRIPTION_PLANS_V2
+from backend.app.services.payments import MIN_CUSTOM_TOPUP_RUB
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
@@ -50,13 +52,20 @@ async def public_pricing(session: AsyncSession = Depends(get_session)) -> dict:
         select(TokenPackage).where(TokenPackage.is_active.is_(True)).order_by(TokenPackage.sort_order, TokenPackage.id)
     )
     prices_result = await session.execute(select(ModelPricing).order_by(ModelPricing.category, ModelPricing.model_code))
-    payments_enabled = bool(settings.yookassa_shop_id and settings.yookassa_secret_key)
+    payments_enabled = bool(settings.tbank_enabled)
     return {
         "token_packages": [serialize_package(pkg) for pkg in packages_result.scalars().all()],
+        "subscription_plans": SUBSCRIPTION_PLANS_V2,
+        "bonus_program": {
+            "title": "50 токенов сразу + бонусы за задания после проверки",
+            "total_tokens": BONUS_TOTAL_TOKENS,
+            "note": "Бонусные токены доступны для базовых фото-моделей и простых сценариев.",
+            "tasks": BONUS_TASKS_V2,
+        },
         "custom_topup": {
             "enabled": True,
             "payments_enabled": payments_enabled,
-            "min_amount_rub": 99,
+            "min_amount_rub": MIN_CUSTOM_TOPUP_RUB,
             "rub_to_token_rate": 1,
             "bonus_tokens": 0,
         },

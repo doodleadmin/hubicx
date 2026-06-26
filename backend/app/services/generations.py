@@ -8,12 +8,39 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.db.models import AIModel, GenerationTask, Template, User
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
+from backend.app.services.business import is_bonus_eligible_model
 from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
 from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
 
 MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
+FREE_TEMPLATE_FALLBACK_MODEL_CODE = "nano_banana_2"
+TEMPLATE_FALLBACK_MODEL_CODES = {"nano_banana_pro"}
 logger = logging.getLogger(__name__)
+
+
+def _is_photo_template(template: Template, model: AIModel | None) -> bool:
+    template_type = (template.template_type or "").lower()
+    task_type = ((model.task_type if model else None) or "").lower()
+    category = ((model.category if model else None) or "").lower()
+
+    values = {template_type, task_type, category}
+    if any("video" in value for value in values):
+        return False
+    return bool(values & {"image", "photo"})
+
+
+async def _user_has_template_subscription(session, user_id: int) -> bool:
+    from backend.app.db.models import UserSubscription
+    from sqlalchemy import select as sa_select
+    sub = await session.scalar(
+        sa_select(UserSubscription).where(
+            UserSubscription.user_id == user_id,
+            UserSubscription.kind == "template",
+            UserSubscription.is_active.is_(True),
+        )
+    )
+    return sub is not None
 
 
 def _provider_prompt_preview(provider_input: dict[str, Any]) -> str | None:
@@ -45,11 +72,6 @@ async def create_generation_task(
         provider = model.provider
         task_type = model.task_type
 
-        # The webapp sends the prompt as a top-level field; schema validation expects it
-        # inside `inputs`. Merge it in so prompt-only generation works from any client.
-        if prompt and (not inputs or "prompt" not in inputs):
-            inputs = {**(inputs or {}), "prompt": prompt}
-
         if inputs and model.form_schema and model.form_schema.get("fields"):
             validated_inputs, provider_input = validate_inputs_against_schema(model.form_schema, inputs, model.default_params)
             resolved_inputs = await resolve_input_files(session, user.id, validated_inputs, model.form_schema)
@@ -79,14 +101,51 @@ async def create_generation_task(
             raise AppError("model_inactive", "Шаблон временно отключен")
         model = await session.get(AIModel, template.base_model_id) if template.base_model_id else None
         price = template.price_credits
+
+        fallback_metadata = None
+        if (
+            model
+            and model.code in TEMPLATE_FALLBACK_MODEL_CODES
+            and _is_photo_template(template, model)
+            and not await _user_has_template_subscription(session, user.id)
+        ):
+            fallback_model = await session.scalar(
+                select(AIModel).where(
+                    AIModel.code == FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                    AIModel.is_active.is_(True),
+                )
+            )
+            if fallback_model:
+                fallback_metadata = {
+                    "from": model.code,
+                    "to": fallback_model.code,
+                    "reason": "no_subscription",
+                }
+                model = fallback_model
+                price = await calculate_generation_cost_from_db(session, model, {})
+            else:
+                logger.info(
+                    "TEMPLATE_MODEL_FALLBACK_SKIPPED template_code=%s from_model=%s to_model=%s reason=fallback_inactive_or_missing",
+                    template.code,
+                    model.code,
+                    FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                )
+
         provider = model.provider if model else "fal"
         task_type = model.task_type if model else template.template_type
         validated_inputs = {}
         provider_input = {}
         task_params = {**((model.default_params if model else {}) or {}), **(template.default_params or {}), **(params or {})}
+        if fallback_metadata:
+            task_params["_template_model_fallback"] = fallback_metadata
 
-    if not await has_enough_balance(session, user.id, price):
-        raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
+    allow_bonus = is_bonus_eligible_model(model.code if model else None, task_type)
+    if provider_input and provider_input.get("template_pipeline"):
+        allow_bonus = False
+    if not await has_enough_balance(session, user.id, price, allow_bonus=allow_bonus):
+        if allow_bonus:
+            raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
+        raise AppError("not_enough_paid_balance", "Для этой модели нужны платные токены")
 
     resolved_file_url = input_file_url
     if not resolved_file_url and provider_input:
@@ -116,7 +175,7 @@ async def create_generation_task(
     )
     session.add(task)
     await session.flush()
-    await charge_for_generation(session, user.id, task.id, price)
+    await charge_for_generation(session, user.id, task.id, price, allow_bonus=allow_bonus)
     task.status = "queued"
     await session.commit()
     await session.refresh(task)

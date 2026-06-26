@@ -7,3 +7,22 @@ __pycache__/
 webapp/node_modules/
 webapp/.next/
 webapp/out/
+
+# Celery beat schedule
+celerybeat-schedule
+celerybeat.pid
+
+# Backup files / snapshots
+backups/
+_backups/
+*.bak
+.env.bak*
+
+# Deployment artifacts
+Dockerfile.webapp
+
+# Large media files (serve from CDN)
+webapp/public/app/assets/video/
+*.mov
+*.MP4
+webapp/public/app/assets/templates/video/

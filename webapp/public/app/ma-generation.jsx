@@ -1,56 +1,36 @@
 /* ============ Generation screen ============ */
 function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTemplate, onTab }) {
-  const { Ic, Star, TopNav, TEMPLATES } = window.MiraCore;
-  const [history, setHistory] = useState([]);
-  const [histLoaded, setHistLoaded] = useState(false);
-  const [viewTask, setViewTask] = useState(null);
-
-  useEffect(function() {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setHistLoaded(true); return; }
-    window.HubicxApi.history().then(function(items) {
-      if (Array.isArray(items)) setHistory(items);
-      setHistLoaded(true);
-    }).catch(function() { setHistLoaded(true); });
-  }, []);
-
-  // Live-refresh while any task is still in progress (e.g. a minimized generation)
-  var hasPending = history.some(function(item) {
-    return item.status === 'queued' || item.status === 'created' || item.status === 'processing';
-  });
-  useEffect(function() {
-    if (!hasPending || !window.HubicxApi || !window.HubicxApi.hasAuth()) return;
-    var timer = setInterval(function() {
-      window.HubicxApi.history().then(function(items) {
-        if (Array.isArray(items)) setHistory(items);
-      }).catch(function() {});
-    }, 5000);
-    return function() { clearInterval(timer); };
-  }, [hasPending]);
-
-  if (viewTask) {
-    const isVideo = viewTask.task_type === 'video' || /\.(mp4|webm|mov)$/i.test(viewTask.output_file_url || '');
-    return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <TopNav active="gen" onTab={onTab}/>
-      <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
-          <div style={{ cursor:'pointer', padding:'4px 6px' }} onClick={() => setViewTask(null)}>
-            <Ic n="back" s={22}/>
+  const { Ic, Star, TopNav, TEMPLATES, TemplateMedia, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
+  const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var favSet = new Set(favTplKeys);
+  var toggleFavTpl = function(t) {
+    var key = tplKey(t);
+    if (!key) return;
+    var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
+    setFavTplKeys(next); writeFavTemplateKeys(next);
+  };
+  var videoTpls = TEMPLATES.filter(function(t) { return t.type === 'video'; });
+  var photoTpls = TEMPLATES.filter(function(t) { return t.type !== 'video'; });
+  function renderTplRail(list, emptyText) {
+    return <div className="tpl-rail">
+      {list.length === 0
+        ? <div className="card" style={{ padding:'16px', textAlign:'center', width:'100%' }}>
+            <div className="muted" style={{ fontSize:13 }}>{emptyText}</div>
+            <div className="muted" style={{ fontSize:11.5, marginTop:4 }}>Нажмите ★ на шаблоне, чтобы добавить в избранное</div>
           </div>
-          <div style={{ fontWeight:800, fontSize:17, flex:1 }}>{viewTask.title || 'Результат'}</div>
-        </div>
-        {isVideo
-          ? <video src={viewTask.output_file_url} controls playsInline
-              style={{ width:'100%', maxHeight:340, borderRadius:18, objectFit:'cover', background:'#000' }}/>
-          : <img src={viewTask.output_file_url} alt="Результат"
-              style={{ width:'100%', maxHeight:400, borderRadius:18, objectFit:'cover' }}/>}
-        {viewTask.prompt && <div className="muted" style={{ fontSize:13, marginTop:10 }}>{viewTask.prompt}</div>}
-        <div style={{ marginTop:16, display:'flex', gap:10 }}>
-          <button className="btn-secondary" style={{ flex:1 }} onClick={function() {
-            if (window.HubicxApi) window.HubicxApi.sendToChat(viewTask.id).catch(function() {});
-          }}>📤 В Telegram</button>
-          <button className="btn-primary" style={{ flex:1 }} onClick={() => setViewTask(null)}>Назад</button>
-        </div>
-      </div>
+        : list.map(function(t, i) {
+          var isFav = favSet.has(tplKey(t));
+          return <div className="thumb tpl-card" key={tplKey(t) || i} onClick={() => onTemplate(t)} style={{ position:'relative' }}>
+            <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
+            <button className={'mob-tpl-fav' + (isFav ? ' on' : '')} title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+              onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); }}
+              style={{ position:'absolute', top:6, right:6, background:'rgba(0,0,0,.5)', border:'none', borderRadius:8, padding:'4px 6px', display:'flex', cursor:'pointer', zIndex:2 }}>
+              <Ic n="star" s={18} c={isFav ? '#f5c542' : '#ffffff'}/>
+            </button>
+            <div className="shade"></div>
+            <div className="lbl">{t.t}</div>
+          </div>;
+        })}
     </div>;
   }
 
@@ -59,7 +39,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
     <div className="screen scr-enter">
       <div style={{ height:8 }}/>
 
-      <div className="bal-card rise" style={{ '--d':'.04s' }}>
+      <div className="bal-card rise" data-onb="mob-balance" style={{ '--d':'.04s' }}>
         <div>
           <div className="bk">Мои токены</div>
           <div className="bn"><Star s={20} c="#c9c7f4"/> {tokens}</div>
@@ -67,7 +47,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         <button className="bb" onClick={onTopup}>Пополнить</button>
       </div>
 
-      <div className="card" style={{ marginTop:14, overflow:'hidden' }}>
+      <div className="card" data-onb="mob-create-card" style={{ marginTop:14, overflow:'hidden' }}>
         <div className="row-link" onClick={onCreatePhoto}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#e6efe9', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="image" s={21} c="#5f9184"/>
@@ -91,70 +71,75 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
         </div>
       </div>
 
-      {/* History */}
-      {histLoaded && history.length > 0 && <>
-        <div className="sec-h rise" style={{ '--d':'.10s', marginTop:22 }}>
-          <h2>История генераций</h2>
-        </div>
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {history.slice(0, 8).map(function(item) {
-            var isCompleted = item.status === 'completed';
-            var isFailed = item.status === 'refunded';
-            return <div key={item.id} className="chat-plate" style={{ alignItems:'center' }}
-              onClick={() => isCompleted && item.output_file_url && setViewTask(item)}>
-              <div style={{ width:46, height:46, borderRadius:12, overflow:'hidden', flex:'0 0 auto',
-                background:'var(--faint)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                {isCompleted && item.output_file_url
-                  ? <img src={item.output_file_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                  : <Ic n={isFailed ? 'close' : 'sparkle'} s={20} c={isFailed ? '#c0473e' : 'var(--muted)'}/>}
-              </div>
-              <div style={{ minWidth:0, flex:1 }}>
-                <div style={{ fontWeight:700, fontSize:14.5, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                  {item.title || item.prompt || 'Генерация'}
-                </div>
-                <div className="muted" style={{ fontSize:12.5 }}>
-                  {isFailed ? '✗ Ошибка · возврат токенов'
-                    : isCompleted ? '✓ Готово · ' + item.cost_credits + ' ★'
-                    : '⏳ ' + (item.status === 'queued' ? 'В очереди' : 'Генерация…')}
-                </div>
-              </div>
-              {isCompleted && item.output_file_url && <span className="chev"><Ic n="chev" s={18}/></span>}
-            </div>;
-          })}
-        </div>
-      </>}
-
-      {/* Empty state — no generations yet */}
-      {histLoaded && history.length === 0 && <>
-        <div className="sec-h rise" style={{ '--d':'.10s', marginTop:22 }}>
-          <h2>История генераций</h2>
-        </div>
-        <div className="card rise" style={{ '--d':'.12s', display:'flex', flexDirection:'column',
-          alignItems:'center', gap:8, padding:'28px 20px', textAlign:'center' }}>
-          <div style={{ fontSize:34 }}>✨</div>
-          <div style={{ fontWeight:700, fontSize:15 }}>Здесь появятся ваши работы</div>
-          <div className="muted" style={{ fontSize:13, maxWidth:230 }}>
-            Создайте первое фото или видео — результат сохранится в истории
-          </div>
-        </div>
-      </>}
-
       <div className="sec-h rise" style={{ '--d':'.12s', marginTop:22 }}>
-        <h2>Шаблоны</h2>
-        <span className="all">Показать все</span>
+        <h2>Видео шаблоны</h2>
+        <span className="all" onClick={() => onTab && onTab('templates')}>Показать все</span>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-        {TEMPLATES.map(function(t, i) {
-          return <div className="thumb" key={i} style={{ aspectRatio:'0.82', cursor:'pointer' }}
-            onClick={() => onTemplate(t)}>
-            <img src={t.img} alt=""/>
-            <div className="shade"></div>
-            <div className="lbl">{t.t}</div>
-          </div>;
-        })}
+      {renderTplRail(videoTpls, 'Нет видео-шаблонов')}
+      <div className="sec-h rise" style={{ '--d':'.16s', marginTop:22 }}>
+        <h2>Фото шаблоны</h2>
       </div>
+      {renderTplRail(photoTpls, 'Нет фото-шаблонов')}
       <div style={{ height:8 }}/>
     </div>
   </div>;
 }
 window.GenerationScreen = GenerationScreen;
+
+function TemplatesScreen({ onBack, onTemplate }) {
+  const { Ic, TopNav, TEMPLATES, TemplateMedia, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
+  const [filter, setFilter] = useState('all');
+  const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var favSet = new Set(favTplKeys);
+  var toggleFavTpl = function(t) {
+    var key = tplKey(t);
+    if (!key) return;
+    var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
+    setFavTplKeys(next); writeFavTemplateKeys(next);
+  };
+  var list = TEMPLATES.filter(function(t) {
+    if (filter === 'all') return true;
+    if (filter === 'video') return t.type === 'video';
+    return t.type !== 'video';
+  });
+
+  return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+    <div className="cr-head">
+      <div className="cr-back" onClick={onBack}><Ic n="back" s={20}/></div>
+      <div className="cr-title">Шаблоны</div>
+    </div>
+    <div className="screen scr-enter" style={{ paddingTop:14 }}>
+      <div className="tpl-filter" data-onb="mob-template-filter">
+        <div className="seg">
+          {[['all','Все'],['photo','Фото'],['video','Видео']].map(function(f) {
+            return <button key={f[0]} className={filter === f[0] ? 'on' : ''} onClick={() => setFilter(f[0])}>{f[1]}</button>;
+          })}
+        </div>
+      </div>
+      {list.length > 0
+        ? <div className="tpl-page-grid">
+            {list.map(function(t, i) {
+              var isFav = favSet.has(tplKey(t));
+              return <div className="thumb" key={i} onClick={() => onTemplate(t)}
+                style={{ aspectRatio:'0.82', cursor:'pointer', position:'relative' }}>
+                <TemplateMedia t={t} loading="lazy" decoding="async"/>
+                <button className="mob-tpl-fav" title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+                  onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); }}
+                  style={{ position:'absolute', top:6, right:6, background:isFav ? 'rgba(0,0,0,.5)' : 'rgba(0,0,0,.35)', border:'none', borderRadius:8, padding:'4px 6px', display:'flex', cursor:'pointer', zIndex:2 }}>
+                  <Ic n="star" s={18} c={isFav ? '#f5c542' : '#fff'}/>
+                </button>
+                <div className="shade"></div>
+                <div className="lbl">{t.t}</div>
+              </div>;
+            })}
+          </div>
+        : <div className="card" style={{ padding:'24px 18px', textAlign:'center', marginTop:14 }}>
+            <div style={{ fontSize:30 }}>📂</div>
+            <div style={{ fontWeight:800, fontSize:15, marginTop:6 }}>Нет шаблонов</div>
+            <div className="muted" style={{ fontSize:13, marginTop:4 }}>Для этого фильтра пока нет шаблонов</div>
+          </div>}
+      <div style={{ height:8 }}/>
+    </div>
+  </div>;
+}
+window.TemplatesScreen = TemplatesScreen;

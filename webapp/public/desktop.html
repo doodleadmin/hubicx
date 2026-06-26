@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<meta http-equiv="Expires" content="0"/>
+<base href="/app/"/>
+<title>Hubicx — AI-хаб для фото, видео и чата в Telegram</title>
+<meta name="description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели — без VPN, прямо в Telegram и в браузере. 20 токенов в подарок."/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://hubicx.ru/"/>
+<link rel="icon" type="image/x-icon" href="/app/assets/favicon.ico"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/app/assets/favicon-32x32.png"/>
+<link rel="icon" type="image/png" sizes="16x16" href="/app/assets/favicon-16x16.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/app/assets/apple-touch-icon.png"/>
+<meta property="og:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta property="og:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram."/>
+<meta property="og:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
+<meta property="og:url" content="https://hubicx.ru/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Hubicx"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
+<meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
+<meta name="twitter:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
+<script>window.__APP_BUILD__='20260620-pricing2';</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+<link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/polaroid-party/cover.webp" fetchpriority="high"/>
+<link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/roses/cover.webp" fetchpriority="high"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/tv-broadcast/cover.mp4" fetchpriority="high"/>
+<link rel="preload" as="video" type="video/mp4" href="/app/assets/templates/video/catastrophic-love/cover.mp4" fetchpriority="high"/>
+<link rel="stylesheet" href="/app/loader.css?v=20260619-catlove1"/>
+<link rel="stylesheet" href="/app/ma.css?v=20260620-pricing2"/>
+<link rel="stylesheet" href="/app/ma-desktop.css?v=20260620-pricing2"/>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Loading overlay (desktop + Telegram desktop) -->
+<div class="wj-loader" id="wjLoader">
+  <div class="wj-aurora1"></div>
+  <div class="wj-aurora2"></div>
+  <div class="wj-vignette"></div>
+  <div class="wj-stage">
+    <div class="wj-glow"></div>
+    <canvas class="wj-canvas" id="wjCanvas"></canvas>
+  </div>
+  <div class="wj-texts">
+    <div class="wj-phrases">
+      <div class="wj-phrase">Готовим шаблоны</div>
+      <div class="wj-phrase">Оживляем нейросеть</div>
+      <div class="wj-phrase">Почти готово</div>
+    </div>
+    <div class="wj-track"><div class="wj-bar"></div></div>
+  </div>
+</div>
+
+<!-- Desktop mode flag — must be set before any JSX loads -->
+<script>window.DESKTOP_MODE = true;</script>
+
+<!-- Telegram Mini App SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<script>
+(function() {
+  var host = String((window.location && window.location.hostname) || '').toLowerCase();
+  window.HUBICX_APP_CONTEXT = host === 'webapp.hubicx.ru' ? 'telegram' : 'browser';
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) {
+    tg.ready();
+    if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
+  }
+})();
+</script>
+
+<!-- Referral tracking: save ?ref=CODE from URL -->
+<script>
+(function() {
+  var q = new URLSearchParams(window.location.search);
+  var ref = q.get('ref');
+  if (ref) {
+    try { localStorage.setItem('hbx_ref_code', ref); } catch(e) {}
+    try { localStorage.setItem('hbx_ref_ts', Date.now()); } catch(e) {}
+  }
+})();
+</script>
+
+<script src="/app/loader.js?v=20260619-catlove1"></script>
+
+<script src="/app/assets/vendor/react.production.min.js"></script>
+<script src="/app/assets/vendor/react-dom.production.min.js"></script>
+<script>window.babel = { cache: false };</script>
+<script src="/app/assets/vendor/babel.min.js"></script>
+<script src="/app/ma-api.jsx?v=20260620-pricing2"></script>
+<script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
+<script type="text/babel" src="/app/ma-core.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-chat.jsx?v=20260619-catlove1"></script>
+<script type="text/babel" src="/app/ma-agent.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-generation.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-create.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-profile.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260620-pricing2"></script>
+<script type="text/babel" src="/app/ma-landing.jsx?v=20260619-catlove1"></script>
+<script type="text/babel" src="/app/ma-app.jsx?v=20260620-pricing2"></script>
+</body>
+</html>

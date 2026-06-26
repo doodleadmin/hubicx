@@ -2,16 +2,17 @@ from pydantic import BaseModel
 
 
 class PaymentCreate(BaseModel):
-    amount_rub: int
-    credits: int
+    credits: int = 0
+    amount_rub: float | None = None
     package_code: str | None = None
+    return_url: str | None = None
 
 
 class PaymentOut(BaseModel):
     payment_id: int
     status: str
-    payment_url: str | None = None
-    message: str | None = None
+    payment_url: str | None
+    message: str
 
 
 class OrderPreviewRequest(BaseModel):

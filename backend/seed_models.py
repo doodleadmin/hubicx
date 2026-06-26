@@ -455,11 +455,65 @@ set_model(
     ),
 )
 
-set_model("gpt_image_2", is_active=False, form_schema=schema(AI_MODELS_CATALOG[[m["code"] for m in AI_MODELS_CATALOG].index("gpt_image_2")].get("form_schema", {}).get("fields", []), schema_source=source("unavailable", notes="OpenRouter reported model openai/gpt-image-2 is not available during audit."), price_rules={"base": 40, "min": 1, "round": "ceil"}))
+set_model(
+    "gpt_image_2",
+    title="GPT Image 2",
+    category="photo",
+    provider="fal",
+    provider_model_id="openai/gpt-image-2",
+    task_type="image",
+    input_type="text",
+    price_credits=90,
+    is_active=True,
+    sort_order=22,
+    default_params={"num_images": 1, "quality": "high", "output_format": "png", "sync_mode": False},
+    description="GPT Image 2 через Fal — качественная генерация изображений.",
+    form_schema=schema(
+        [
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите изображение"),
+            field("image_size", "Соотношение сторон", "select", default="auto", options=IMAGE_SIZE_BASIC + ["auto"]),
+            field("quality", "Качество", "select", default="high", options=["auto", "low", "medium", "high"], advanced=False),
+            field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
+            field("output_format", "Формат файла", "select", default="png", options=["png", "jpeg", "webp"], advanced=True),
+        ],
+        schema_source=source("verified", f"{FAL_DOCS_BASE}/openai/gpt-image-2/api", "Fal GPT Image 2 input schema."),
+        price_rules={"base": 90, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+    ),
+)
+set_model(
+    "gpt_image_2_edit",
+    title="GPT Image 2 Edit",
+    category="photo",
+    provider="fal",
+    provider_model_id="openai/gpt-image-2/edit",
+    task_type="image",
+    input_type="image",
+    price_credits=110,
+    is_active=True,
+    sort_order=23,
+    default_params={"num_images": 1, "quality": "high", "output_format": "png", "sync_mode": False},
+    description="GPT Image 2 Edit через Fal — редактирование изображений по промпту.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=4, maps_to="image_urls", label_key="reference_photos", helper_text="Загрузите 1–4 изображения"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите, что нужно изменить"),
+            field("image_size", "Соотношение сторон", "select", default="auto", options=IMAGE_SIZE_BASIC + ["auto"]),
+            field("quality", "Качество", "select", default="high", options=["auto", "low", "medium", "high"], advanced=False),
+            field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
+            field("output_format", "Формат файла", "select", default="png", options=["png", "jpeg", "webp"], advanced=True),
+        ],
+        submit_label="Редактировать",
+        schema_source=source("verified", f"{FAL_DOCS_BASE}/openai/gpt-image-2/edit/api", "Fal GPT Image 2 Edit input schema."),
+        price_rules={"base": 110, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+    ),
+)
 set_model("grok_image", is_active=False, form_schema=schema(AI_MODELS_CATALOG[[m["code"] for m in AI_MODELS_CATALOG].index("grok_image")].get("form_schema", {}).get("fields", []), schema_source=source("unverified", notes="xAI image schema docs were not reachable during audit; model hidden until provider contract is confirmed."), price_rules={"base": 35, "min": 1, "round": "ceil"}))
 
 VIDEO_ASPECT = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
+GROK_VIDEO_ASPECT = ["16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"]
+GROK_VIDEO_ASPECT_I2V = ["auto", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"]
 SEEDANCE_DURATION = ["auto", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+GROK_DURATION = [4, 6]
 
 set_model(
     "seedance_2_t2v",
@@ -522,6 +576,66 @@ set_model(
 )
 
 set_model(
+    "seedance_2_reference",
+    title="Seedance 2 Reference to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/reference-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=225,
+    is_active=True,
+    sort_order=24,
+    default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
+    description="Reference-to-video через топовый Seedance 2.0 для нескольких референсов.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=9, maps_to="image_urls", helper_text="Загрузите 1–9 изображений-референсов"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео и используйте @Image1, @Image2..."),
+            field("aspect_ratio", "Соотношение сторон", "select", default="9:16", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p", "1080p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать видео по референсам",
+        result_type="video",
+        helper_text="Reference-to-video. Top tier: 480p/720p/1080p, до 9 изображений.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/reference-to-video", "Fal Seedance 2.0 reference-to-video input schema."),
+        price_rules={"base": 225, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": {"auto": 1, "4": 0.8, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "seedance_2_reference_fast",
+    title="Seedance 2 Fast Reference to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/fast/reference-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=180,
+    is_active=True,
+    sort_order=25,
+    default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
+    description="Быстрый reference-to-video через Seedance 2.0 Fast для нескольких референсов.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=9, maps_to="image_urls", helper_text="Загрузите 1–9 изображений-референсов"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео и используйте @Image1, @Image2..."),
+            field("aspect_ratio", "Соотношение сторон", "select", default="9:16", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать видео по референсам",
+        result_type="video",
+        helper_text="Reference-to-video. Fast tier: 480p/720p, до 9 изображений.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/fast/reference-to-video", "Fal Seedance 2.0 Fast reference-to-video input schema."),
+        price_rules={"base": 180, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": {"auto": 1, "4": 0.8, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
     "seedance_2_i2v",
     title="Seedance 2 Image to Video",
     category="video",
@@ -580,6 +694,65 @@ set_model(
 )
 
 set_model(
+    "kling_30_i2v",
+    title="Kling 3.0 Image to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="fal-ai/kling-video/v3/standard/image-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=260,
+    is_active=True,
+    sort_order=41,
+    default_params={"duration": "10", "generate_audio": False, "sync_mode": False},
+    description="Kling 3.0 Standard image-to-video через Fal.",
+    form_schema=schema(
+        [
+            field("image_url", "Стартовое изображение", "file", provider_key="start_image_url", required=True, accept="image/*", max_size_mb=30, helper_text="JPEG/PNG/WebP до 30MB"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите движение камеры и объекта"),
+            field("duration", "Длительность", "select", default="10", options=["3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"], advanced=False),
+            field("resolution", "Разрешение", "select", provider_key="__ui_resolution", default="720p", options=["720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=False, advanced=True),
+            field("template_pipeline", "Template pipeline", "hidden", required=False, advanced=True),
+        ],
+        submit_label="Оживить через Kling 3.0",
+        result_type="video",
+        helper_text="Kling 3.0 image-to-video. По документации Fal endpoint работает в 720p без отдельного параметра resolution.",
+        schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/image-to-video", "Fal Kling 3.0 Standard image-to-video input schema.", verified_at="2026-06-20"),
+        price_rules={"base": 260, "multipliers": [{"field": "duration", "values": {"3": 0.4, "4": 0.5, "5": 0.6, "6": 0.7, "7": 0.8, "8": 0.9, "9": 1, "10": 1, "11": 1.1, "12": 1.2, "13": 1.3, "14": 1.4, "15": 1.5}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "kling_30_motion_control",
+    title="Kling 3.0 Motion Control",
+    category="video",
+    provider="fal",
+    provider_model_id="fal-ai/kling-video/v3/standard/motion-control",
+    task_type="video",
+    input_type="image",
+    price_credits=260,
+    is_active=True,
+    sort_order=42,
+    default_params={"keep_original_sound": True, "character_orientation": "image", "sync_mode": False},
+    description="Kling 3.0 Motion Control через Fal: перенос движения из видео на персонажа.",
+    form_schema=schema(
+        [
+            field("image_url", "Фото персонажа", "file", required=True, accept="image/*", max_size_mb=30, helper_text="Фото персонажа"),
+            field("video_url", "Видео движения", "file", required=True, accept="video/*", max_size_mb=80, helper_text="Видео с движением"),
+            field("prompt", "Промт", "textarea", required=False, placeholder="Опишите желаемую сцену"),
+            field("character_orientation", "Ориентация персонажа", "select", default="image", options=["image", "video"], advanced=False),
+            field("keep_original_sound", "Сохранить звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать Motion Control",
+        result_type="video",
+        helper_text="Нужно фото персонажа и видео-референс движения.",
+        schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/motion-control", "Fal Kling 3.0 Standard Motion Control input schema.", verified_at="2026-06-20"),
+        price_rules={"base": 260, "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
     "veo_31_t2v",
     title="Veo 3.1 Text to Video",
     category="video",
@@ -588,10 +761,10 @@ set_model(
     task_type="video",
     input_type="text",
     price_credits=900,
-    is_active=False,
+    is_active=True,
     sort_order=80,
     default_params={"aspect_ratio": "16:9", "duration": "8s", "resolution": "720p", "generate_audio": True, "auto_fix": True, "safety_tolerance": "4", "sync_mode": False},
-    description="Veo 3.1 text-to-video. Скрыто до ручного включения из-за высокой стоимости.",
+    description="Veo 3.1 text-to-video через Fal. Высокое качество и высокая стоимость.",
     form_schema=schema(
         [
             field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео"),
@@ -606,7 +779,7 @@ set_model(
         ],
         submit_label="Сгенерировать Veo",
         result_type="video",
-        helper_text="Высокая стоимость. Модель скрыта до отдельного включения.",
+        helper_text="Высокая стоимость. Для теста используйте 720p и короткую длительность.",
         schema_source=fal_schema_source("fal-ai/veo3.1", "Fal Veo 3.1 text-to-video input schema. Kept inactive because of high provider cost."),
         price_rules={"base": 900, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}], "min": 1, "round": "ceil"},
     ),
@@ -621,10 +794,10 @@ set_model(
     task_type="video",
     input_type="image",
     price_credits=900,
-    is_active=False,
+    is_active=True,
     sort_order=90,
     default_params={"aspect_ratio": "auto", "duration": "8s", "resolution": "720p", "generate_audio": True, "auto_fix": True, "safety_tolerance": "4", "sync_mode": False},
-    description="Veo 3.1 image-to-video. Скрыто до ручного включения из-за высокой стоимости.",
+    description="Veo 3.1 image-to-video через Fal. Высокое качество и высокая стоимость.",
     form_schema=schema(
         [
             field("image_url", "Стартовое изображение", "file", required=True, accept="image/*", max_size_mb=8, helper_text="JPEG/PNG/WebP до 8MB"),
@@ -640,9 +813,96 @@ set_model(
         ],
         submit_label="Оживить через Veo",
         result_type="video",
-        helper_text="Высокая стоимость. Модель скрыта до отдельного включения.",
+        helper_text="Высокая стоимость. Для теста используйте 720p и короткую длительность.",
         schema_source=fal_schema_source("fal-ai/veo3.1/image-to-video", "Fal Veo 3.1 image-to-video input schema. Kept inactive because of high provider cost."),
         price_rules={"base": 900, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "grok_video_t2v",
+    title="Grok Imagine Video Text to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="xai/grok-imagine-video/text-to-video",
+    task_type="video",
+    input_type="text",
+    price_credits=320,
+    is_active=True,
+    sort_order=50,
+    default_params={"duration": 6, "resolution": "720p", "aspect_ratio": "16:9", "sync_mode": False},
+    description="Grok Imagine Video — генерация видео по тексту через Fal.",
+    form_schema=schema(
+        [
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="16:9", options=GROK_VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default=6, options=GROK_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p"], advanced=False),
+        ],
+        submit_label="Сгенерировать Grok Video",
+        result_type="video",
+        helper_text="Grok text-to-video. Для первого теста используйте 480p/720p.",
+        schema_source=fal_schema_source("xai/grok-imagine-video/text-to-video", "Fal Grok Imagine Video text-to-video input schema.", verified_at="2026-06-16"),
+        price_rules={"base": 320, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "grok_video_i2v",
+    title="Grok Imagine Video Image to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="xai/grok-imagine-video/image-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=340,
+    is_active=True,
+    sort_order=55,
+    default_params={"duration": 6, "resolution": "720p", "aspect_ratio": "auto", "sync_mode": False},
+    description="Grok Imagine Video — оживление изображения через Fal.",
+    form_schema=schema(
+        [
+            field("image_url", "Стартовое изображение", "file", required=True, accept="image/*", max_size_mb=30, helper_text="JPEG/PNG/WebP до 30MB"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите движение и сцену"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="auto", options=GROK_VIDEO_ASPECT_I2V, advanced=False),
+            field("duration", "Длительность", "select", default=6, options=GROK_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p"], advanced=False),
+        ],
+        submit_label="Оживить через Grok",
+        result_type="video",
+        helper_text="Grok image-to-video. Для первого теста используйте 480p/720p.",
+        schema_source=fal_schema_source("xai/grok-imagine-video/image-to-video", "Fal Grok Imagine Video image-to-video input schema.", verified_at="2026-06-16"),
+        price_rules={"base": 340, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "happy_horse_i2v",
+    title="Happy Horse 1.0 Image to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="alibaba/happy-horse/image-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=200,
+    is_active=True,
+    sort_order=45,
+    default_params={"duration": "5", "aspect_ratio": "auto", "sync_mode": False},
+    description="Alibaba Happy Horse 1.0 image-to-video через Fal. 1080p, синхронизированный звук, мультиязычный lip-sync.",
+    form_schema=schema(
+        [
+            field("image_url", "Стартовое изображение", "file", required=True, accept="image/*", max_size_mb=30, helper_text="JPEG/PNG/WebP до 30MB"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите движение и сцену"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="auto", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p", "1080p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Оживить через Happy Horse",
+        result_type="video",
+        helper_text="Alibaba Happy Horse. 1080p с нативным звуком и lip-sync.",
+        schema_source=fal_schema_source("alibaba/happy-horse/image-to-video", "Fal Happy Horse 1.0 image-to-video input schema."),
+        price_rules={"base": 200, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1, "1080p": 2}}, {"field": "duration", "values": {"auto": 1, "4": 1, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
     ),
 )
 

@@ -188,6 +188,8 @@ async def effective_model_base_price(session: AsyncSession, model: AIModel) -> i
 async def calculate_generation_cost_breakdown_from_db(session: AsyncSession, model: AIModel, validated_inputs: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
     """Приоритет: model_pricing.price_rules → model_pricing.price_tokens → fallback (старая логика)"""
     pricing = await get_model_pricing(session, model.code)
+    if pricing and not pricing.is_enabled:
+        raise AppError("model_inactive", "Модель временно отключена")
 
     if pricing and pricing.price_rules and isinstance(pricing.price_rules, dict):
         # ── новые price_rules из DB ──

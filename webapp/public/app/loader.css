@@ -1,0 +1,39 @@
+/* ===== Loading overlay (dark theme, particle-assemble) ===== */
+.wj-loader { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0;
+  font-family: 'Manrope', system-ui, sans-serif; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 36%, #161d31 0%, #0a0d17 58%, #07080e 100%); }
+.wj-loader * { box-sizing: border-box; }
+.wj-aurora1, .wj-aurora2 { position: absolute; border-radius: 50%; pointer-events: none; }
+.wj-aurora1 { width: 70vmin; height: 70vmin; left: 22%; top: 30%;
+  background: radial-gradient(circle, rgba(140,155,245,.42), transparent 68%); filter: blur(48px);
+  animation: wj-drift1 16s ease-in-out infinite; }
+.wj-aurora2 { width: 64vmin; height: 64vmin; right: 20%; bottom: 26%;
+  background: radial-gradient(circle, rgba(91,185,246,.38), transparent 68%); filter: blur(52px);
+  animation: wj-drift2 19s ease-in-out infinite; }
+.wj-vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 50%, transparent 55%, rgba(4,5,10,.7) 100%); }
+.wj-stage { position: relative; width: clamp(180px, 31vmin, 340px); aspect-ratio: 767 / 735; }
+.wj-glow { position: absolute; left: 50%; top: 52%; width: 150%; height: 150%; border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none; filter: blur(26px);
+  background: radial-gradient(circle, rgba(110,168,255,.55), rgba(140,155,245,.15) 46%, transparent 70%);
+  animation: wj-glow 4.6s ease-in-out infinite; }
+.wj-canvas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 260%; height: 260%; pointer-events: none; }
+.wj-texts { display: none !important; }
+.wj-phrases { position: relative; height: 22px; width: 280px; max-width: 80vw; }
+.wj-phrase { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 500; letter-spacing: .01em; color: rgba(210,220,245,.72);
+  animation: wj-phrase 4.6s ease-in-out infinite; }
+.wj-phrase:nth-child(2) { animation-delay: 1.53s; }
+.wj-phrase:nth-child(3) { animation-delay: 3.06s; }
+.wj-track { position: relative; width: clamp(168px, 30vmin, 260px); height: 4px; border-radius: 99px;
+  background: rgba(255,255,255,.08); overflow: hidden; }
+.wj-bar { position: absolute; top: 0; left: 0; height: 100%; width: 40%; border-radius: 99px;
+  background: linear-gradient(90deg, rgba(140,155,245,0), #8c9bf5 35%, #5bb9f6 65%, rgba(91,185,246,0));
+  box-shadow: 0 0 12px rgba(110,168,255,.6); animation: wj-slide 1.7s cubic-bezier(.45,0,.55,1) infinite; }
+@keyframes wj-glow   { 0%,100%{opacity:.26;transform:translate(-50%,-50%) scale(1)} 72%{opacity:.58;transform:translate(-50%,-50%) scale(1.13)} }
+@keyframes wj-drift1 { 0%,100%{transform:translate(-14%,-8%) scale(1)} 50%{transform:translate(10%,6%) scale(1.15)} }
+@keyframes wj-drift2 { 0%,100%{transform:translate(12%,10%) scale(1.1)} 50%{transform:translate(-10%,-6%) scale(.95)} }
+@keyframes wj-slide  { 0%{transform:translateX(-145%)} 100%{transform:translateX(295%)} }
+@keyframes wj-phrase { 0%,5%{opacity:0;transform:translateY(7px)} 11%,28%{opacity:1;transform:translateY(0)} 34%,100%{opacity:0;transform:translateY(-7px)} }

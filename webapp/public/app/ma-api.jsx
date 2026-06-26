@@ -1,14 +1,36 @@
 /* ============ API adapter — connects to api.hubicx.ru ============ */
 (function() {
-  var API_URL = 'https://api.hubicx.ru';
   var TIMEOUT_MS = 12000;
+  var UPLOAD_TIMEOUT_MS = 120000;
   var TELEGRAM_ERROR = 'Откройте приложение через Telegram-бота';
 
   var TOKEN_KEY = 'hubicx_jwt';
 
+  function host() {
+    try { return String(window.location && window.location.hostname || '').toLowerCase(); } catch (e) { return ''; }
+  }
+
+  function apiBase() { var h = host(); if (h === 'hubicx.ru' || h === 'www.hubicx.ru' || h === 'webapp.hubicx.ru' || h === 'app.hubicx.ru' || h === 'admin.hubicx.ru') return ''; return 'https://api.hubicx.ru'; }
+  function isMiniAppHost() {
+    if (window.HUBICX_APP_CONTEXT === 'telegram' || host() === 'webapp.hubicx.ru') return true;
+    if (window.HUBICX_APP_CONTEXT === 'auto') {
+      var tg = window.Telegram && window.Telegram.WebApp;
+      return !!(tg && tg.initData);
+    }
+    return false;
+  }
+
+  function isBrowserHost() {
+    var h = host();
+    return window.HUBICX_APP_CONTEXT === 'browser' || h === 'app.hubicx.ru' || h === 'hubicx.ru' || h === 'www.hubicx.ru';
+  }
+
   function getInitData() {
+    // Telegram initData is valid only for the Telegram Mini App product.
+    // app.hubicx.ru is a standalone browser product and must not authorize via initData.
+    if (isBrowserHost()) return '';
     var tg = window.Telegram && window.Telegram.WebApp;
-    return tg ? (tg.initData || '') : '';
+    return (isMiniAppHost() && tg) ? (tg.initData || '') : '';
   }
 
   function getToken() {
@@ -22,6 +44,7 @@
   function authHeaders() {
     var initData = getInitData();
     if (initData) return { 'X-Telegram-Init-Data': initData };
+    if (isMiniAppHost()) return null;
     var token = getToken();
     if (token) return { 'Authorization': 'Bearer ' + token };
     return null;
@@ -34,7 +57,7 @@
     var headers = { 'Content-Type': 'application/json' };
     var initData = getInitData();
     if (initData) headers['X-Telegram-Init-Data'] = initData;
-    return fetch(API_URL + '/api' + path, {
+    return fetch(apiBase() + '/api' + path, {
       method: opts.method || 'GET',
       headers: headers,
       body: opts.body || undefined,
@@ -68,7 +91,7 @@
       for (var i = 0; i < k.length; i++) headers[k[i]] = opts.headers[k[i]];
     }
 
-    return fetch(API_URL + '/api' + path, {
+    return fetch(apiBase() + '/api' + path, {
       method: opts.method || 'GET',
       headers: headers,
       body: opts.body || undefined,
@@ -93,32 +116,96 @@
     });
   }
 
+  function inferImageType(file) {
+    var type = (file && file.type ? String(file.type) : '').toLowerCase();
+    if (type) return type;
+    var name = (file && file.name ? String(file.name) : '').toLowerCase();
+    if (/\.jpe?g$/.test(name)) return 'image/jpeg';
+    if (/\.png$/.test(name)) return 'image/png';
+    if (/\.webp$/.test(name)) return 'image/webp';
+    if (/\.gif$/.test(name)) return 'image/gif';
+    if (/\.heic$/.test(name)) return 'image/heic';
+    if (/\.heif$/.test(name)) return 'image/heif';
+    return type;
+  }
+
+  function canCanvasCompress(file) {
+    var type = inferImageType(file);
+    return /^image\/(jpeg|jpg|png|webp)$/i.test(type || '') && file && file.size > 900 * 1024;
+  }
+
+  function compressImageForUpload(file) {
+    if (!canCanvasCompress(file)) return Promise.resolve(file);
+    return new Promise(function(resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var maxSide = 2200;
+          var w = img.naturalWidth || img.width;
+          var h = img.naturalHeight || img.height;
+          var scale = Math.min(1, maxSide / Math.max(w, h));
+          var nw = Math.max(1, Math.round(w * scale));
+          var nh = Math.max(1, Math.round(h * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = nw;
+          canvas.height = nh;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, nw, nh);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(function(blob) {
+            if (!blob) return resolve(file);
+            // If compression did not help, keep the original file.
+            if (blob.size >= file.size && file.size <= 18 * 1024 * 1024) return resolve(file);
+            var name = (file.name || 'photo').replace(/\.[^.]+$/, '') + '.jpg';
+            try { resolve(new File([blob], name, { type: 'image/jpeg' })); }
+            catch(e) { blob.name = name; resolve(blob); }
+          }, 'image/jpeg', 0.86);
+        } catch(e) {
+          try { URL.revokeObjectURL(url); } catch(_) {}
+          resolve(file);
+        }
+      };
+      img.onerror = function() { try { URL.revokeObjectURL(url); } catch(_) {} resolve(file); };
+      img.src = url;
+    });
+  }
+
   // File upload — multipart/form-data, no JSON Content-Type
   function uploadFile(file) {
     var auth = authHeaders();
     if (!auth) return Promise.reject({ code: 'unauthorized', message: TELEGRAM_ERROR });
     var ctrl = new AbortController();
-    var timer = setTimeout(function() { ctrl.abort(); }, 30000); // 30s for uploads
-    var formData = new FormData();
-    formData.append('file', file);
-    return fetch(API_URL + '/api/files/upload', {
-      method: 'POST',
-      headers: auth,
-      body: formData,
-      signal: ctrl.signal,
-      cache: 'no-store',
-    }).then(function(res) {
+    var timer = setTimeout(function() { ctrl.abort(); }, UPLOAD_TIMEOUT_MS);
+    return compressImageForUpload(file).then(function(uploadFileObj) {
+      var formData = new FormData();
+      var type = inferImageType(uploadFileObj) || (uploadFileObj && uploadFileObj.type) || 'application/octet-stream';
+      var name = (uploadFileObj && uploadFileObj.name) || (file && file.name) || 'upload';
+      if (uploadFileObj && uploadFileObj.type) formData.append('file', uploadFileObj, name);
+      else formData.append('file', new Blob([uploadFileObj], { type: type }), name);
+      return fetch(apiBase() + '/api/files/upload', {
+        method: 'POST',
+        headers: auth,
+        body: formData,
+        signal: ctrl.signal,
+        cache: 'no-store',
+      }).then(function(res) {
+        clearTimeout(timer);
+        if (!res.ok) {
+          return res.json().catch(function() { return {}; }).then(function(err) {
+            return Promise.reject({ code: String(err.code || ''), status: res.status, message: String(err.detail || 'Ошибка загрузки файла') });
+          });
+        }
+        return res.json();
+      }, function(err) {
+        clearTimeout(timer);
+        if (err && err.name === 'AbortError') return Promise.reject({ code: 'timeout', message: 'Файл загружается слишком долго. Попробуйте выбрать фото меньшего размера.' });
+        return Promise.reject({ code: 'network', message: 'Ошибка загрузки' });
+      });
+    }).catch(function(err) {
       clearTimeout(timer);
-      if (!res.ok) {
-        return res.json().catch(function() { return {}; }).then(function(err) {
-          return Promise.reject({ code: String(err.code || ''), message: String(err.detail || 'Ошибка загрузки файла') });
-        });
-      }
-      return res.json();
-    }, function(err) {
-      clearTimeout(timer);
-      if (err && err.name === 'AbortError') return Promise.reject({ code: 'timeout', message: 'Загрузка файла прервана' });
-      return Promise.reject({ code: 'network', message: 'Ошибка загрузки' });
+      if (err && err.code) return Promise.reject(err);
+      return Promise.reject({ code: 'upload_prepare_failed', message: 'Не удалось подготовить файл к загрузке' });
     });
   }
 
@@ -132,7 +219,7 @@
 
     var ctrl = new AbortController();
 
-    fetch(API_URL + '/api/agent/chats/' + chatId + '/stream', {
+    fetch(apiBase() + '/api/agent/chats/' + chatId + '/stream', {
       method: 'POST',
       headers: sseHeaders,
       body: JSON.stringify({ content: content }),
@@ -181,8 +268,10 @@
   }
 
   window.HubicxApi = {
-    hasAuth:        function()          { return !!getInitData() || !!getToken(); },
+    hasAuth:        function()          { return !!getInitData() || (!isMiniAppHost() && !!getToken()); },
     isTelegram:     function()          { return !!getInitData(); },
+    isMiniAppHost:  isMiniAppHost,
+    isBrowserHost:  isBrowserHost,
     getToken:       getToken,
     setToken:       setToken,
     logout:         function()          { setToken(''); },
@@ -203,6 +292,9 @@
     },
     me:             function()          { return request('/auth/me'); },
     pricing:        function()          { return request('/pricing'); },
+    bonuses:        function()          { return request('/bonuses'); },
+    claimBonus:     function(code)      { return request('/bonuses/' + encodeURIComponent(code) + '/claim', { method:'POST', body:'{}' }); },
+    trackRef:       function(refCode)   { return request('/admin/referral/track', { method:'POST', body: JSON.stringify({ ref_code: refCode }) }); },
     profile:        function()          { return request('/profile'); },
     updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
     models:         function(category)  { return requestPublic('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },
@@ -216,6 +308,7 @@
       return request('/agent/chats', { method:'POST', body:JSON.stringify({ agent_mode: mode || 'default', first_message: firstMessage }) });
     },
     agentGetChat:   function(chatId)    { return request('/agent/chats/' + chatId); },
+    agentUpdateChat:function(chatId, payload) { return request('/agent/chats/' + chatId, { method:'PATCH', body:JSON.stringify(payload || {}) }); },
     agentArchiveChat: function(chatId)  { return request('/agent/chats/' + chatId, { method:'DELETE' }); },
     agentStreamMessage: agentStreamMessage,
     createPayment:  function(p)         { return request('/payments/create', { method:'POST', body:JSON.stringify(p) }); },
