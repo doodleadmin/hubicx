@@ -42,7 +42,7 @@ TEMPLATE_ICON_MAP = {
 
 @router.message(F.text.regexp(r".*Шаблоны.*"))
 async def templates(message: Message) -> None:
-    logger.info("TEMPLATES HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("TEMPLATES HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_templates_menu(message)
 
 

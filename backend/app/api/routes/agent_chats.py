@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -30,17 +30,17 @@ CHAT_RATE_WINDOW = 60  # per 60 seconds
 
 class ChatCreate(BaseModel):
     agent_mode: str | None = None
-    first_message: str | None = None
+    first_message: str | None = Field(default=None, max_length=8000)
 
 
 class ChatUpdate(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=MAX_TITLE_LENGTH)
     agent_mode: str | None = None
     is_archived: bool | None = None
 
 
 class MessageCreate(BaseModel):
-    content: str
+    content: str = Field(min_length=1, max_length=8000)
 
 
 # --- Helpers ---

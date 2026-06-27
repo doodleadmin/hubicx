@@ -85,7 +85,7 @@ async def webapp_unavailable(callback: CallbackQuery) -> None:
 
 @router.message(F.text.regexp(r".*Домой.*"))
 async def home_message(message: Message) -> None:
-    logger.info("MENU HOME HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("MENU HOME HANDLER TRIGGERED user_id=%s", message.from_user.id)
     async with async_session() as session:
         user = await session.scalar(select(User).where(User.telegram_id == message.from_user.id))
         if user:
@@ -98,5 +98,5 @@ async def home_message(message: Message) -> None:
 async def debug_unhandled(message: Message) -> None:
     if not settings.debug:
         return
-    logger.warning("MENU FALLBACK TRIGGERED text=%s user_id=%s", message.text, message.from_user.id if message.from_user else None)
+    logger.warning("MENU FALLBACK TRIGGERED user_id=%s text_len=%s", message.from_user.id if message.from_user else None, len(message.text or ""))
     await message.answer(f"DEBUG: получил сообщение: {message.text}")

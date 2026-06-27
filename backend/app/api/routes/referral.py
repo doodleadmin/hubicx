@@ -5,6 +5,7 @@ from backend.app.api.deps import current_user
 from backend.app.db.models import User
 from backend.app.db.session import get_session
 from backend.app.services.referral import track_click, track_conversion
+from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 
 router = APIRouter(prefix="/referral", tags=["referral"])
 
@@ -15,6 +16,7 @@ async def referral_click(
     payload: dict = Body(...),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
+    await check_ip_rate_limit(request, "referral_click", 30, 60)
     ref_code = str(payload.get("ref_code") or "").strip()
     if not ref_code:
         return {"ok": False, "tracked": False}
@@ -35,6 +37,7 @@ async def referral_track(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
+    await check_user_rate_limit(user.id, "referral_track", 20, 3600)
     ref_code = str(payload.get("ref_code") or "").strip()
     if not ref_code:
         return {"ok": False, "tracked": False}

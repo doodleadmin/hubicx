@@ -9,6 +9,7 @@ from backend.app.db.models import TokenPackage, User
 from backend.app.db.session import get_session
 from backend.app.schemas.payments import PaymentCreate, PaymentOut, OrderPreviewRequest
 from backend.app.services.payments import MIN_CUSTOM_TOPUP_RUB, create_payment, process_webhook
+from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 @router.post("/init", response_model=PaymentOut)
 async def init_payment(payload: PaymentCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> PaymentOut:
     """Инициировать платёж. Если T-Bank включён — вернёт PaymentURL."""
+    await check_user_rate_limit(user.id, "payment_init", 10, 300)
     payment, payment_url = await create_payment(
         session, user,
         amount_rub=payload.amount_rub,
@@ -74,8 +76,9 @@ async def payment_webhook_alias(request: Request, session: AsyncSession = Depend
 
 
 @router.post("/orders/preview")
-async def order_preview(payload: OrderPreviewRequest, session: AsyncSession = Depends(get_session)) -> dict:
+async def order_preview(request: Request, payload: OrderPreviewRequest, session: AsyncSession = Depends(get_session)) -> dict:
     """Preview заказа: package или custom top-up."""
+    await check_ip_rate_limit(request, "order_preview", 60, 60)
 
     # ── Режим package ──
     if payload.package_code:

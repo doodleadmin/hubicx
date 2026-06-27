@@ -74,7 +74,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
 
   const submit = function() {
     var em = email.trim();
-    if (!em || password.length < 6) { setErr('Email и пароль от 6 символов'); return; }
+    if (!em || password.length < 8) { setErr('Email и пароль от 8 символов'); return; }
     setBusy(true); setErr('');
     function finish(data) {
       var nextUser = data && data.user ? data.user : data;

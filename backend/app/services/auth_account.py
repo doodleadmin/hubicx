@@ -39,8 +39,8 @@ def normalize_email(email: str) -> str:
 
 
 def _validate_password(password: str) -> None:
-    if not password or len(password) < 6:
-        raise AppError("weak_password", "Пароль должен быть не короче 6 символов", 400)
+    if not password or len(password) < 8:
+        raise AppError("weak_password", "Пароль должен быть не короче 8 символов", 400)
 
 
 async def register_email_user(session: AsyncSession, email: str, password: str, first_name: str | None = None) -> User:

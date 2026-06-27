@@ -38,24 +38,27 @@ class UserOut(BaseModel):
     subscription: SubOut | None = None
 
 
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
 class RegisterIn(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=6, max_length=128)
+    email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
+    password: str = Field(min_length=8, max_length=128)
     first_name: str | None = Field(default=None, max_length=120)
 
 
 class LoginIn(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
     password: str = Field(min_length=1, max_length=128)
 
 
 class LinkEmailIn(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
-    password: str = Field(min_length=6, max_length=128)
+    email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class LinkTelegramIn(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
     password: str = Field(min_length=1, max_length=128)
 
 

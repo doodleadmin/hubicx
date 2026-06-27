@@ -30,7 +30,7 @@ VIDEO_ICON_MAP = {
 
 @router.message(F.text.regexp(r".*Видео.*"))
 async def video_models(message: Message) -> None:
-    logger.info("VIDEO HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("VIDEO HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_video_menu(message)
 
 

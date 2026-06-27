@@ -297,7 +297,7 @@ function LandingAuthModal({ initial = 'register', onClose, onAuthed }) {
         </div>
         <div className="lp-field">
           <label>Пароль</label>
-          <input className="lp-input" type="password" autoComplete={isReg ? 'new-password' : 'current-password'} placeholder="Минимум 6 символов" value={vals.pass} onChange={set('pass')}
+          <input className="lp-input" type="password" autoComplete={isReg ? 'new-password' : 'current-password'} placeholder="Минимум 8 символов" value={vals.pass} onChange={set('pass')}
             onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
         </div>
 

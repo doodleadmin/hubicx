@@ -18,7 +18,7 @@ TEXT_ICON_MAP = {
 
 @router.message(F.text.regexp(r".*Текст.*"))
 async def text_menu(message: Message) -> None:
-    logger.info("TEXT HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("TEXT HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_text_menu(message)
 
 

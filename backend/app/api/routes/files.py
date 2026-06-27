@@ -8,6 +8,7 @@ from backend.app.api.deps import current_user
 from backend.app.db.models import File, User
 from backend.app.db.session import get_session
 from backend.app.schemas.generations import FileUploadOut
+from backend.app.services.rate_limit import check_user_rate_limit
 from backend.app.services.storage import storage_configured, storage_service
 from backend.app.utils.errors import AppError
 
@@ -29,10 +30,11 @@ async def upload_file(
     user: User = Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> FileUploadOut:
+    await check_user_rate_limit(user.id, "file_upload", 20, 300)
     if not storage_configured():
         raise AppError("storage_not_configured", "Хранилище файлов не настроено", 500)
 
-    content_type = file.content_type or "application/octet-stream"
+    content_type = (file.content_type or "application/octet-stream").split(";", 1)[0].strip().lower()
     if content_type not in ALLOWED_CONTENT_TYPES:
         raise AppError("invalid_content_type", f"Тип файла '{content_type}' не поддерживается")
 

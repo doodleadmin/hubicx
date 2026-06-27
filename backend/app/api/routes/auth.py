@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,7 @@ from backend.app.schemas.users import AuthOut, LinkEmailIn, LinkTelegramIn, Logi
 from backend.app.services.balance import award_bonus_tokens
 from backend.app.services.business import SIGNUP_BONUS_TOKENS
 from backend.app.services.auth_account import link_telegram_to_email_account, set_email_password
+from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 from backend.app.services.user_access import ensure_user_not_banned
 from backend.app.utils.errors import AppError
 from backend.app.utils.security import create_jwt, hash_password, make_ref_code, verify_password
@@ -33,7 +34,8 @@ async def award_signup_once(session: AsyncSession, user: User) -> None:
 
 
 @router.post("/register", response_model=AuthOut)
-async def register(payload: RegisterIn, session: AsyncSession = Depends(get_session)) -> dict:
+async def register(payload: RegisterIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
+    await check_ip_rate_limit(request, "auth_register", 5, 3600)
     email = normalize_email(payload.email)
     existing = await session.scalar(select(User).where(func.lower(User.email) == email))
     if existing:
@@ -58,7 +60,8 @@ async def register(payload: RegisterIn, session: AsyncSession = Depends(get_sess
 
 
 @router.post("/login", response_model=AuthOut)
-async def login(payload: LoginIn, session: AsyncSession = Depends(get_session)) -> dict:
+async def login(payload: LoginIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
+    await check_ip_rate_limit(request, "auth_login", 10, 300)
     email = normalize_email(payload.email)
     user = await session.scalar(select(User).where(func.lower(User.email) == email))
     if not user or not verify_password(payload.password, user.password_hash):
@@ -69,11 +72,13 @@ async def login(payload: LoginIn, session: AsyncSession = Depends(get_session)) 
 
 @router.post("/link-email", response_model=UserOut)
 async def link_email(payload: LinkEmailIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> User:
+    await check_user_rate_limit(user.id, "link_email", 5, 3600)
     return await set_email_password(session, user, payload.email, payload.password)
 
 
 @router.post("/link-telegram", response_model=AuthOut)
 async def link_telegram(payload: LinkTelegramIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
+    await check_user_rate_limit(user.id, "link_telegram", 5, 3600)
     if user.telegram_id < 0:
         raise AppError("telegram_required", "Привязать Telegram можно из Telegram Mini App", 400)
     merged = await link_telegram_to_email_account(session, user, payload.email, payload.password)

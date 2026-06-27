@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Body, Depends, Header, Query
+from fastapi import APIRouter, Body, Depends, Header, Query, Request
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -13,6 +13,7 @@ from backend.app.db.models import AIModel, BalanceLedger, File, GenerationTask, 
 from backend.app.db.session import get_session
 from backend.app.services.balance import admin_add_balance
 from backend.app.services.business import SUBSCRIPTION_PLANS_V2
+from backend.app.services.rate_limit import check_ip_rate_limit
 from backend.app.services.telegram_auth import get_current_user as telegram_current_user
 from backend.app.utils.errors import AppError
 
@@ -68,7 +69,8 @@ async def current_admin_user(
 
 
 @router.post("/auth/login")
-async def browser_admin_login(payload: dict = Body(...), session: AsyncSession = Depends(get_session)) -> dict:
+async def browser_admin_login(request: Request, payload: dict = Body(...), session: AsyncSession = Depends(get_session)) -> dict:
+    await check_ip_rate_limit(request, "admin_login", 5, 300)
     password = str(payload.get("password") or "")
     if not settings.admin_panel_password:
         raise AppError("admin_password_not_configured", "ADMIN_PANEL_PASSWORD не настроен", 503)

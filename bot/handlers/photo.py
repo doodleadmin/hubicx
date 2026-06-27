@@ -38,7 +38,7 @@ PHOTO_ICON_MAP = {
 
 @router.message(F.text.regexp(r".*Фото.*"))
 async def photo_models(message: Message) -> None:
-    logger.info("PHOTO HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("PHOTO HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_photo_menu(message)
 
 

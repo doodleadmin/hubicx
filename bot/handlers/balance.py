@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 @router.message(F.text.regexp(r".*Баланс.*"))
 async def balance(message: Message) -> None:
-    logger.info("BALANCE HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("BALANCE HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_balance_menu(message)
 
 

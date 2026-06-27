@@ -10,6 +10,7 @@ from backend.app.db.session import get_session
 from backend.app.schemas.models import AIModelOut
 from backend.app.services.input_validation import validate_inputs_against_schema
 from backend.app.services.pricing import calculate_generation_cost_breakdown_from_db, get_model_pricing
+from backend.app.services.rate_limit import check_user_rate_limit
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/models", tags=["models"])
@@ -76,6 +77,7 @@ async def preview_model_price(
     _user=Depends(current_user),
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, Any]:
+    await check_user_rate_limit(_user.id, "price_preview", 120, 60)
     actual_code = MODEL_ALIASES.get(code, code)
     model = await session.scalar(select(AIModel).where(AIModel.code == actual_code, AIModel.is_active.is_(True)))
     if not model:

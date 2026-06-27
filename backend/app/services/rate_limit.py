@@ -2,6 +2,7 @@
 
 import logging
 
+from fastapi import Request
 import redis.asyncio as aioredis
 
 from backend.app.config import settings
@@ -54,3 +55,21 @@ async def check_rate_limit(key: str, max_requests: int, window_seconds: int) -> 
             f"Слишком много запросов. Попробуйте через {retry_after} сек.",
             429,
         )
+
+
+def client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",", 1)[0].strip() or "unknown"
+    real_ip = request.headers.get("x-real-ip", "").strip()
+    if real_ip:
+        return real_ip
+    return request.client.host if request.client else "unknown"
+
+
+async def check_ip_rate_limit(request: Request, scope: str, max_requests: int, window_seconds: int) -> None:
+    await check_rate_limit(f"ip:{scope}:{client_ip(request)}", max_requests, window_seconds)
+
+
+async def check_user_rate_limit(user_id: int, scope: str, max_requests: int, window_seconds: int) -> None:
+    await check_rate_limit(f"user:{user_id}:{scope}", max_requests, window_seconds)

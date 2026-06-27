@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 @router.message(F.text.regexp(r".*История.*"))
 async def history(message: Message) -> None:
-    logger.info("HISTORY HANDLER TRIGGERED text=%s user_id=%s", message.text, message.from_user.id)
+    logger.info("HISTORY HANDLER TRIGGERED user_id=%s", message.from_user.id)
     await show_history_menu(message)
 
 

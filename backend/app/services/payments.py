@@ -18,6 +18,15 @@ _TOKEN_CATEGORY_CODES = {"topup_300", "topup_1000", "topup_3000", "topup_10000"}
 _TEMPLATE_CATEGORY_CODES = {"templates_mini", "templates_plus"}
 _FULL_CATEGORY_CODES = {"creator", "creator_pro", "studio"}
 _SUBSCRIPTION_PLANS_BY_CODE = {str(plan["code"]): plan for plan in SUBSCRIPTION_PLANS_V2}
+_ALLOWED_RETURN_HOSTS = {
+    "hubicx.ru",
+    "www.hubicx.ru",
+    "webapp.hubicx.ru",
+    "admin.hubicx.ru",
+    "partners.hubicx.ru",
+    "localhost",
+    "127.0.0.1",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +36,19 @@ def _payment_channel(return_url: str | None) -> str:
     return "webapp" if host == "webapp.hubicx.ru" else "desktop"
 
 
+def _safe_return_base(return_url: str | None) -> str:
+    raw = (return_url or settings.webapp_url).strip()
+    parsed = urlparse(raw)
+    host = (parsed.hostname or "").lower()
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"https", "http"} or host not in _ALLOWED_RETURN_HOSTS:
+        logger.warning("PAYMENT_RETURN_URL_REJECTED host=%s scheme=%s", host or "<missing>", scheme or "<missing>")
+        raw = settings.webapp_url
+    return raw.rstrip("/")
+
+
 def _payment_return_urls(return_url: str | None, order_id: str) -> tuple[str, str]:
-    base = (return_url or settings.webapp_url).rstrip("/")
+    base = _safe_return_base(return_url)
     channel = _payment_channel(base)
     path = "" if channel == "webapp" else "/app"
     return (
@@ -141,8 +161,9 @@ async def create_payment(
 
         order_id = _generate_order_id()
         amount_kopecks = int(round(Decimal(str(final_amount)) * 100))
-        channel = _payment_channel(return_url)
-        success_url, fail_url = _payment_return_urls(return_url, order_id)
+        safe_return_url = _safe_return_base(return_url)
+        channel = _payment_channel(safe_return_url)
+        success_url, fail_url = _payment_return_urls(safe_return_url, order_id)
 
         description = f"Пополнение {final_credits} токенов Hubicx"
         if package_code:

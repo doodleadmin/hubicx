@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class IncomingTextLoggingMiddleware(BaseMiddleware):
     async def __call__(self, handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]], event: TelegramObject, data: dict[str, Any]) -> Any:
         if isinstance(event, Message) and event.text and event.from_user:
-            logger.info("Incoming message text=%s user_id=%s", event.text, event.from_user.id)
+            logger.info("Incoming message user_id=%s text_len=%s", event.from_user.id, len(event.text))
         return await handler(event, data)
 
 

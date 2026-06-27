@@ -248,7 +248,7 @@ function DeskAuth({ onAuthed }) {
   const submit = function() {
     var em = email.trim();
     if (!em || !password) { setErr('Введите email и пароль'); return; }
-    if (tab === 'register' && password.length < 6) { setErr('Пароль должен быть не короче 6 символов'); return; }
+    if (tab === 'register' && password.length < 8) { setErr('Пароль должен быть не короче 8 символов'); return; }
     setBusy(true); setErr('');
     var p = tab === 'register'
       ? window.HubicxApi.register(em, password, name.trim())
@@ -1394,7 +1394,7 @@ function DeskLinkEmail({ onClose, onLinked }) {
 
   const submit = function() {
     var em = email.trim();
-    if (!em || password.length < 6) { setErr('Email и пароль (от 6 символов)'); return; }
+    if (!em || password.length < 8) { setErr('Email и пароль (от 8 символов)'); return; }
     setBusy(true); setErr('');
     function finish(u) {
       setBusy(false); setDone(true);
@@ -1431,7 +1431,7 @@ function DeskLinkEmail({ onClose, onLinked }) {
         : <>
           <div className="dk-auth-fields dk-link-fields">
             <input className="dk-auth-in" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
-            <input className="dk-auth-in" type="password" placeholder="Пароль (от 6 символов)" value={password} onChange={e => setPassword(e.target.value)}/>
+            <input className="dk-auth-in" type="password" placeholder="Пароль (от 8 символов)" value={password} onChange={e => setPassword(e.target.value)}/>
           </div>
           {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
           <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
