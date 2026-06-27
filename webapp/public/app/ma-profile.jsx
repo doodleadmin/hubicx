@@ -233,7 +233,12 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
     if (!hasManualBonus) return;
     var now = Date.now();
     var last = 0;
-    try { last = parseInt(localStorage.getItem('hbx_bonus_toast_seen_v1') || '0', 10) || 0; } catch(e) {}
+    try {
+      if (localStorage.getItem('hbx_onboarding_v1') !== 'done') return;
+      var finishedAt = parseInt(localStorage.getItem('hbx_onboarding_finished_at_v1') || '0', 10) || 0;
+      if (finishedAt && now - finishedAt < 2000) return;
+      last = parseInt(localStorage.getItem('hbx_bonus_toast_seen_v1') || '0', 10) || 0;
+    } catch(e) {}
     if (now - last < 24 * 60 * 60 * 1000) return;
     setBonusToast(true);
     try { localStorage.setItem('hbx_bonus_toast_seen_v1', String(now)); } catch(e) {}

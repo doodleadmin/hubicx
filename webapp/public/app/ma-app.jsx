@@ -87,11 +87,15 @@ function deskPathForTab(tab) {
 }
 
 const ONBOARD_KEY = 'hbx_onboarding_v1';
+const ONBOARD_FINISHED_AT_KEY = 'hbx_onboarding_finished_at_v1';
 function isOnboardingDone() {
   try { return localStorage.getItem(ONBOARD_KEY) === 'done'; } catch(e) { return true; }
 }
 function finishOnboarding() {
-  try { localStorage.setItem(ONBOARD_KEY, 'done'); } catch(e) {}
+  try {
+    localStorage.setItem(ONBOARD_KEY, 'done');
+    localStorage.setItem(ONBOARD_FINISHED_AT_KEY, String(Date.now()));
+  } catch(e) {}
 }
 
 function DesktopOnboarding({ onTab, onTopup }) {
@@ -188,6 +192,37 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
     if (step > 0) { setStepDir(-1); animKeyRef.current += 1; setStep(step - 1); }
   };
 
+  function getScrollParent(el) {
+    var node = el && el.parentElement;
+    while (node && node !== document.body && node !== document.documentElement) {
+      var st = window.getComputedStyle(node);
+      if (/(auto|scroll)/.test(st.overflowY || '')) return node;
+      node = node.parentElement;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+
+  function scrollTargetIntoSafeArea(el) {
+    if (!el) return;
+    var sheet = document.querySelector('.mob-onb-sheet');
+    var sheetRect = sheet ? sheet.getBoundingClientRect() : null;
+    var rootStyle = window.getComputedStyle(document.documentElement);
+    var tgTop = parseFloat(rootStyle.getPropertyValue('--hbx-tg-safe-top')) || 0;
+    var safeTop = Math.max(96, tgTop + 78);
+    var safeBottom = Math.max(safeTop + 140, (sheetRect ? sheetRect.top : window.innerHeight * 0.56) - 18);
+    var r = el.getBoundingClientRect();
+    var visibleH = Math.max(140, safeBottom - safeTop);
+    var targetTop = r.height > visibleH ? safeTop : safeTop + (visibleH - r.height) / 2;
+    var delta = r.top - targetTop;
+    if (Math.abs(delta) < 8 && r.bottom <= safeBottom && r.top >= safeTop) return;
+    var scroller = getScrollParent(el);
+    try {
+      scroller.scrollBy({ top: delta, behavior: 'smooth' });
+    } catch(e) {
+      scroller.scrollTop += delta;
+    }
+  }
+
   // Tab switching - deferred to avoid re-render fighting with step state
   uE(function() {
     if (!open || !cur) return;
@@ -204,12 +239,13 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
   uE(function() {
     if (!open || !cur) return;
     var alive = true;
+    var timers = [];
     var selector = cur.selector;
     var update = function() {
       var el = document.querySelector(selector);
       if (!alive) return;
       if (!el) { setRect(null); return; }
-      try { el.scrollIntoView({ block:'center', behavior:'smooth' }); } catch(e) {}
+      scrollTargetIntoSafeArea(el);
       // Longer delay for tab-switch renders
       var delay = (cur.tab !== (steps[Math.max(0,step-1)]||{}).tab) ? 350 : 120;
       setTimeout(function() {
@@ -218,11 +254,18 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
         setRect({ left:r.left, top:r.top, width:r.width, height:r.height });
       }, delay);
     };
-    // Immediate first call, then delayed update
-    update();
-    var t2 = setTimeout(update, cur.tab !== prevTabRef.current ? 250 : 100);
+    setRect(null);
+    var schedule = function(ms) { timers.push(setTimeout(update, ms)); };
+    schedule(60);
+    schedule(240);
+    schedule(560);
+    schedule(920);
     window.addEventListener('resize', update);
-    return function() { alive = false; clearTimeout(t2); window.removeEventListener('resize', update); };
+    return function() {
+      alive = false;
+      timers.forEach(function(t) { clearTimeout(t); });
+      window.removeEventListener('resize', update);
+    };
   }, [open, step]);
 
   if (!open) return null;
