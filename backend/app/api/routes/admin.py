@@ -1,5 +1,6 @@
 import logging
 import secrets
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Body, Depends, Header, Query
 from sqlalchemy import desc, func, select
@@ -108,6 +109,10 @@ async def list_users(
             "language_code": u.language_code,
             "balance_credits": u.balance_credits,
             "is_admin": u.is_admin,
+            "is_banned": bool(u.is_banned),
+            "ban_reason": u.ban_reason,
+            "banned_at": u.banned_at.isoformat() if u.banned_at else None,
+            "banned_by_user_id": u.banned_by_user_id,
             "ref_code": u.ref_code,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         }
@@ -125,6 +130,10 @@ def serialize_user(u: User) -> dict:
         "language_code": u.language_code,
         "balance_credits": u.balance_credits,
         "is_admin": u.is_admin,
+        "is_banned": bool(u.is_banned),
+        "ban_reason": u.ban_reason,
+        "banned_at": u.banned_at.isoformat() if u.banned_at else None,
+        "banned_by_user_id": u.banned_by_user_id,
         "ref_code": u.ref_code,
         "created_at": u.created_at.isoformat() if u.created_at else None,
         "last_active_at": None,
@@ -515,6 +524,38 @@ async def get_admin_user(user_id: int, user: User = Depends(current_admin_user),
     if not target:
         raise AppError("user_not_found", "Пользователь не найден", 404)
     return serialize_user(target)
+
+
+@router.patch("/users/{user_id}/ban")
+async def set_user_ban(user_id: int, payload: dict = Body(...), user: User = Depends(current_admin_user), session: AsyncSession = Depends(get_session)) -> dict:
+    require_admin(user)
+    target = await session.get(User, user_id)
+    if not target:
+        raise AppError("user_not_found", "Пользователь не найден", 404)
+    is_banned = bool(payload.get("is_banned", True))
+    reason = str(payload.get("reason") or "").strip()[:1000]
+    if is_banned:
+        if target.is_admin:
+            raise AppError("cannot_ban_admin", "Нельзя заблокировать администратора", 422)
+        if target.id == user.id:
+            raise AppError("cannot_ban_self", "Нельзя заблокировать самого себя", 422)
+        if not reason:
+            reason = "Доступ ограничен администратором."
+        target.is_banned = True
+        target.ban_reason = reason
+        target.banned_at = datetime.now(timezone.utc)
+        target.banned_by_user_id = user.id
+        action = "ban"
+    else:
+        target.is_banned = False
+        target.ban_reason = None
+        target.banned_at = None
+        target.banned_by_user_id = None
+        action = "unban"
+    await session.commit()
+    await session.refresh(target)
+    logger.info("ADMIN_USER_%s admin_user_id=%s target_user_id=%s", action.upper(), user.id, target.id)
+    return {"ok": True, "user": serialize_user(target)}
 
 
 @router.post("/users/{user_id}/balance-adjust")

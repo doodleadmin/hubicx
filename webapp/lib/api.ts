@@ -89,6 +89,7 @@ export const api = {
   adminUsers: (page = 1, limit = 50) => request(`/admin/users?page=${page}&limit=${limit}`),
   adminTopUp: (telegramId: number, amount: number) => request(`/admin/balance/${telegramId}?amount=${amount}`, { method: "POST" }),
   adminUser: (id: number) => request(`/admin/users/${id}`),
+  adminSetUserBan: (id: number, isBanned: boolean, reason: string) => request(`/admin/users/${id}/ban`, { method: "PATCH", body: JSON.stringify({ is_banned: isBanned, reason }) }),
   adminUserLedger: (id: number, page = 1, limit = 50) => request(`/admin/users/${id}/balance-ledger?page=${page}&limit=${limit}`),
   adminBalanceAdjust: (id: number, amount: number, reason: string) => request(`/admin/users/${id}/balance-adjust`, { method: "POST", body: JSON.stringify({ amount, reason }) }),
   adminTasks: (page = 1, limit = 50, status?: string) => request(`/admin/tasks?page=${page}&limit=${limit}${status ? `&status=${status}` : ""}`),

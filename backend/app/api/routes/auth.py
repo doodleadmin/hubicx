@@ -9,6 +9,7 @@ from backend.app.schemas.users import AuthOut, LinkEmailIn, LinkTelegramIn, Logi
 from backend.app.services.balance import award_bonus_tokens
 from backend.app.services.business import SIGNUP_BONUS_TOKENS
 from backend.app.services.auth_account import link_telegram_to_email_account, set_email_password
+from backend.app.services.user_access import ensure_user_not_banned
 from backend.app.utils.errors import AppError
 from backend.app.utils.security import create_jwt, hash_password, make_ref_code, verify_password
 
@@ -21,6 +22,7 @@ def normalize_email(email: str) -> str:
 
 async def auth_out(session: AsyncSession, user: User) -> dict:
     await session.refresh(user)
+    ensure_user_not_banned(user)
     return {"token": create_jwt(user.id), "user": user}
 
 
@@ -61,6 +63,7 @@ async def login(payload: LoginIn, session: AsyncSession = Depends(get_session)) 
     user = await session.scalar(select(User).where(func.lower(User.email) == email))
     if not user or not verify_password(payload.password, user.password_hash):
         raise AppError("invalid_credentials", "Неверный email или пароль", 401)
+    ensure_user_not_banned(user)
     return await auth_out(session, user)
 
 

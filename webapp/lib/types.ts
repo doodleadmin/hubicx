@@ -42,6 +42,10 @@ export type User = {
   language_code: string;
   balance_credits: number;
   is_admin: boolean;
+  is_banned?: boolean;
+  ban_reason?: string | null;
+  banned_at?: string | null;
+  banned_by_user_id?: number | null;
   ref_code: string;
 };
 
@@ -103,6 +107,10 @@ export type AdminUser = {
   language_code?: string;
   balance_credits: number;
   is_admin: boolean;
+  is_banned?: boolean;
+  ban_reason?: string | null;
+  banned_at?: string | null;
+  banned_by_user_id?: number | null;
   ref_code: string;
   created_at?: string;
   last_active_at?: string | null;

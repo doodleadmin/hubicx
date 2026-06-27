@@ -193,6 +193,68 @@ html.theme-dark .tg-return-secondary { background:var(--card); }
 html.theme-dark .tg-return-note,
 html.theme-dark .tg-return-card.plain .tg-return-pill { background:#12151b; }
 
+.hbx-blocked-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(28px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  color: var(--ink);
+}
+.hbx-blocked-card {
+  width: min(420px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--card);
+  box-shadow: 0 24px 80px rgba(0,0,0,.16);
+  padding: 28px;
+  text-align: center;
+}
+.hbx-blocked-mark {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #fff36b;
+  color: #111318;
+  font-size: 28px;
+  font-weight: 950;
+  box-shadow: 0 12px 32px rgba(252,253,118,.28);
+}
+.hbx-blocked-k {
+  color: var(--link);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.hbx-blocked-card h1 {
+  margin: 8px 0 10px;
+  font-size: 30px;
+  line-height: 1.02;
+  letter-spacing: -.03em;
+}
+.hbx-blocked-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.hbx-blocked-note {
+  margin-top: 18px;
+  border-radius: 16px;
+  background: var(--soft);
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+html.theme-dark .hbx-blocked-card { background: #191c23; border-color: #292d36; }
+html.theme-dark .hbx-blocked-note { background: #12151b; }
+
 /* ── scrollable screen body ── */
 .screen {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;

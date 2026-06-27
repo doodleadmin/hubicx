@@ -324,6 +324,19 @@ function chatTitleFromText(text) {
   return title || 'Новый чат';
 }
 
+function AccessBlockedScreen({ reason }) {
+  var text = reason || 'Доступ к сервису ограничен администратором.';
+  return <div className={DESKTOP ? 'dk-auth hbx-blocked-page' : 'phone hbx-blocked-page'}>
+    <div className="hbx-blocked-card">
+      <div className="hbx-blocked-mark">!</div>
+      <div className="hbx-blocked-k">Доступ ограничен</div>
+      <h1>Аккаунт заблокирован</h1>
+      <p>{text}</p>
+      <div className="hbx-blocked-note">Если вы считаете, что это ошибка, напишите в поддержку: support@hubicx.ru</div>
+    </div>
+  </div>;
+}
+
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
@@ -331,6 +344,7 @@ function App() {
   const [topup, setTopup] = uS(false);
   const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
   const [theme, setTheme] = uS(getInitialTheme);
+  const [accessBlock, setAccessBlock] = uS(null);
 
   // Desktop-only routing state (ignored on mobile)
   const [dtab, setDtab] = uS(deskTabFromLocation);
@@ -348,6 +362,16 @@ function App() {
     try { localStorage.setItem(THEME_KEY, theme); } catch(e) {}
     window.HubicxTheme = { theme: theme, setTheme: setTheme, toggle: () => setTheme(t => t === 'dark' ? 'light' : 'dark') };
   }, [theme]);
+
+  uE(() => {
+    var handler = function(e) {
+      var detail = e && e.detail ? e.detail : {};
+      setAccessBlock({ reason: detail.reason || 'Доступ к сервису ограничен администратором.' });
+      if (window.HubicxApi && !window.HubicxApi.isTelegram()) window.HubicxApi.logout();
+    };
+    window.addEventListener('hubicx:user-banned', handler);
+    return function() { window.removeEventListener('hubicx:user-banned', handler); };
+  }, []);
 
   uE(() => {
     if (!DESKTOP || !window.history) return;
@@ -389,7 +413,7 @@ function App() {
   // Load user balance on mount
   uE(() => {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setAuthChecked(true); return; }
-    window.HubicxApi.me().then(function(u) { setUser(u); setAuthChecked(true);
+    window.HubicxApi.me().then(function(u) { setAccessBlock(null); setUser(u); setAuthChecked(true);
       // Track referral if user came from partner link
       try {
         var refCode = localStorage.getItem('hbx_ref_code');
@@ -401,6 +425,10 @@ function App() {
       } catch(e) {}
     })
       .catch(function(e) {
+        if (e && e.code === 'user_banned') {
+          setAccessBlock({ reason: e.message || 'Доступ к сервису ограничен администратором.' });
+          if (!window.HubicxApi.isTelegram()) window.HubicxApi.logout();
+        }
         // Stale/invalid desktop token → drop it so the auth screen shows
         if (e && (e.code === 'token_expired' || e.code === 'invalid_token' || e.status === 401) && !window.HubicxApi.isTelegram()) {
           window.HubicxApi.logout();
@@ -656,6 +684,9 @@ function App() {
     return <div className={DESKTOP ? 'dk-auth' : 'phone'} style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
       <div className="gen-spinner"></div>
     </div>;
+  }
+  if (accessBlock) {
+    return <AccessBlockedScreen reason={accessBlock.reason}/>;
   }
   if (isMiniAppHost && !hasAuth) {
     return <MiniAppReturnPage result={paymentResult}/>;

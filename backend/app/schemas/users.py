@@ -25,6 +25,10 @@ class UserOut(BaseModel):
     balance_credits: int
     bonus_credits: int = 0
     is_admin: bool
+    is_banned: bool = False
+    ban_reason: str | None = None
+    banned_at: datetime | None = None
+    banned_by_user_id: int | None = None
     ref_code: str
     referred_by_partner_id: int | None = None
     active_menu_chat_id: int | None = None

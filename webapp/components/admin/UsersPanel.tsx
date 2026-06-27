@@ -16,6 +16,9 @@ export default function UsersPanel() {
   const [detail, setDetail] = useState<{ user: AdminUser; ledger: BalanceLedgerItem[]; tasks: AdminTask[] } | null>(null);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("Admin adjustment");
+  const [banTarget, setBanTarget] = useState<AdminUser | null>(null);
+  const [banReason, setBanReason] = useState("");
+  const [banLoading, setBanLoading] = useState(false);
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
@@ -75,6 +78,29 @@ export default function UsersPanel() {
     } catch (e) { setError(e instanceof Error ? e.message : "Ошибка изменения баланса"); }
   }
 
+  async function doSetBan(isBanned: boolean) {
+    if (!banTarget) return;
+    if (isBanned && !banReason.trim()) {
+      setError("Укажите причину блокировки");
+      return;
+    }
+    setBanLoading(true);
+    setError("");
+    try {
+      await api.adminSetUserBan(banTarget.id, isBanned, banReason.trim());
+      setToast(isBanned ? "Пользователь заблокирован" : "Пользователь разблокирован");
+      setTimeout(() => setToast(""), 3000);
+      setBanTarget(null);
+      setBanReason("");
+      void load(page);
+      if (detail && detail.user.id === banTarget.id) await openUser(banTarget);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ошибка изменения доступа");
+    } finally {
+      setBanLoading(false);
+    }
+  }
+
   if (loading && !data) return <p className="text-muted text-sm">Загрузка...</p>;
   if (error && !data) return <p className="text-red-400 text-sm">{error}</p>;
   if (!data) return null;
@@ -83,7 +109,7 @@ export default function UsersPanel() {
     <div>
       {toast && <div className="mb-3 rounded-xl bg-accent/15 px-4 py-2 text-sm text-accent">{toast}</div>}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[600px] text-xs">
+        <table className="w-full min-w-[760px] text-xs">
           <thead>
             <tr className="border-b border-white/10 text-left text-muted">
               <th className="pb-2 pr-2">ID</th>
@@ -91,6 +117,7 @@ export default function UsersPanel() {
               <th className="pb-2 pr-2">Username</th>
               <th className="pb-2 pr-2">Имя</th>
               <th className="pb-2 pr-2">Язык</th>
+              <th className="pb-2 pr-2">Статус</th>
               <th className="pb-2 pr-2 text-right">Баланс</th>
               <th className="pb-2">Действия</th>
             </tr>
@@ -103,11 +130,21 @@ export default function UsersPanel() {
                 <td className="py-2 pr-2">{u.username || "—"}</td>
                 <td className="py-2 pr-2">{u.first_name || "—"}</td>
                 <td className="py-2 pr-2">{u.language_code || "—"}</td>
+                <td className="py-2 pr-2">
+                  {u.is_banned ? <span className="rounded-full bg-red-500/15 px-2 py-1 text-[11px] font-semibold text-red-300">Забанен</span> : <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[11px] font-semibold text-emerald-300">Активен</span>}
+                </td>
                 <td className="py-2 pr-2 text-right font-mono">{u.balance_credits} 🪙</td>
                 <td className="py-2">
                   <div className="flex gap-1">
                     <button onClick={() => openUser(u)} className="rounded-lg bg-white/10 px-2 py-1 text-muted hover:text-white">Открыть</button>
                     <button onClick={() => setTopUpTarget(u)} className="rounded-lg bg-accent/20 px-2 py-1 text-accent hover:bg-accent/30">Пополнить</button>
+                    <button
+                      disabled={u.is_admin}
+                      onClick={() => { setBanTarget(u); setBanReason(u.ban_reason || ""); }}
+                      className={(u.is_banned ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25" : "bg-red-500/15 text-red-300 hover:bg-red-500/25") + " rounded-lg px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40"}
+                    >
+                      {u.is_banned ? "Разбан" : "Бан"}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -137,11 +174,41 @@ export default function UsersPanel() {
           </div>
         </div>
       )}
+      {banTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => setBanTarget(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-card p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold">{banTarget.is_banned ? "Разблокировать пользователя" : "Заблокировать пользователя"}</h3>
+            <p className="mt-1 text-sm text-muted">{banTarget.first_name || banTarget.username || `ID ${banTarget.telegram_id}`}</p>
+            {!banTarget.is_banned && (
+              <textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Причина блокировки, которую увидит пользователь"
+                className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-app px-4 py-3 text-sm outline-none focus:border-accent"
+              />
+            )}
+            {banTarget.is_banned && banTarget.ban_reason && <div className="mt-3 rounded-xl bg-app p-3 text-sm text-muted">Текущая причина: {banTarget.ban_reason}</div>}
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => setBanTarget(null)} className="flex-1 rounded-xl bg-white/5 py-2 text-sm">Отмена</button>
+              <button
+                onClick={() => doSetBan(!banTarget.is_banned)}
+                disabled={banLoading || (!banTarget.is_banned && !banReason.trim())}
+                className={(banTarget.is_banned ? "bg-emerald-300" : "bg-red-300") + " flex-1 rounded-xl py-2 text-sm font-semibold text-black disabled:opacity-50"}
+              >
+                {banLoading ? "..." : (banTarget.is_banned ? "Разблокировать" : "Заблокировать")}
+              </button>
+            </div>
+            {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+          </div>
+        </div>
+      )}
       {detail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setDetail(null)}>
           <div className="w-full max-w-3xl max-h-[86vh] overflow-y-auto rounded-2xl bg-card p-5" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3"><div><h3 className="text-lg font-bold">Пользователь #{detail.user.id}</h3><p className="text-xs text-muted">TG {detail.user.telegram_id} · @{detail.user.username || "—"} · {detail.user.language_code || "—"}</p></div><button onClick={()=>setDetail(null)} className="rounded-lg bg-white/10 px-3 py-1 text-xs">Закрыть</button></div>
-            <div className="mt-4 grid gap-3 md:grid-cols-3"><Card label="Баланс" value={`${detail.user.balance_credits} 🪙`} /><Card label="Создан" value={detail.user.created_at ? new Date(detail.user.created_at).toLocaleDateString("ru-RU") : "—"} /><Card label="Last active" value={detail.user.last_active_at || "—"} /></div>
+            <div className="mt-4 grid gap-3 md:grid-cols-4"><Card label="Баланс" value={`${detail.user.balance_credits} 🪙`} /><Card label="Статус" value={detail.user.is_banned ? "Забанен" : "Активен"} /><Card label="Создан" value={detail.user.created_at ? new Date(detail.user.created_at).toLocaleDateString("ru-RU") : "—"} /><Card label="Last active" value={detail.user.last_active_at || "—"} /></div>
+            {detail.user.is_banned && <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm text-red-100"><b>Причина блокировки:</b> {detail.user.ban_reason || "—"}</div>}
+            <div className="mt-4 rounded-2xl bg-app p-4"><h4 className="font-semibold">Доступ</h4><div className="mt-2 flex flex-wrap gap-2"><button disabled={detail.user.is_admin} onClick={() => { setBanTarget(detail.user); setBanReason(detail.user.ban_reason || ""); }} className={(detail.user.is_banned ? "bg-emerald-300" : "bg-red-300") + " rounded-lg px-3 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40"}>{detail.user.is_banned ? "Разблокировать" : "Заблокировать"}</button>{detail.user.is_admin && <span className="py-2 text-xs text-muted">Администратора нельзя заблокировать.</span>}</div></div>
             <div className="mt-4 rounded-2xl bg-app p-4"><h4 className="font-semibold">Начислить/списать токены</h4><div className="mt-2 grid gap-2 md:grid-cols-4"><input className="rounded-lg bg-card px-3 py-2 text-sm" placeholder="amount, можно -" value={adjustAmount} onChange={(e)=>setAdjustAmount(e.target.value)}/><input className="rounded-lg bg-card px-3 py-2 text-sm md:col-span-2" placeholder="reason" value={adjustReason} onChange={(e)=>setAdjustReason(e.target.value)}/><button onClick={doAdjust} className="rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-black">Сохранить</button></div></div>
             <div className="mt-4 grid gap-4 md:grid-cols-2"><div><h4 className="mb-2 font-semibold">Ledger</h4><div className="space-y-2 text-xs">{detail.ledger.map((x)=><div key={x.id} className="rounded-xl bg-app p-3"><div className="flex justify-between"><b>{x.operation_type}</b><span className={x.amount>=0?"text-accent":"text-red-300"}>{x.amount>0?"+":""}{x.amount}</span></div><div className="text-muted">{x.balance_before} → {x.balance_after}</div><div className="text-muted">{x.reason || "—"}</div></div>)}</div></div><div><h4 className="mb-2 font-semibold">Генерации</h4><div className="space-y-2 text-xs">{detail.tasks.map((x)=><div key={x.id} className="rounded-xl bg-app p-3"><div className="flex justify-between"><b>#{x.id} {x.model_code || x.task_type}</b><span>{x.status}</span></div><div className="text-muted">cost {x.cost_credits} · {x.created_at ? new Date(x.created_at).toLocaleString("ru-RU") : "—"}</div><div className="truncate text-muted">{x.prompt || x.error_message || "—"}</div></div>)}</div></div></div>
           </div>

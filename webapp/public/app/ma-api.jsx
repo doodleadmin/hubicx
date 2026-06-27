@@ -39,6 +39,11 @@
   function setToken(t) {
     try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {}
   }
+  function emitAccessBlocked(message) {
+    try {
+      window.dispatchEvent(new CustomEvent('hubicx:user-banned', { detail: { reason: message } }));
+    } catch (e) {}
+  }
 
   // Auth headers: Telegram initData takes priority, otherwise JWT Bearer (desktop).
   function authHeaders() {
@@ -66,6 +71,7 @@
     }).then(function(res) {
       clearTimeout(timer);
       if (!res.ok) return res.json().catch(function() { return {}; }).then(function(err) {
+        if (String(err.code || '') === 'user_banned') emitAccessBlocked(String(err.detail || 'Доступ ограничен'));
         return Promise.reject({ code: String(err.code || ''), message: String(err.detail || 'Ошибка запроса'), status: res.status });
       });
       return res.json();
@@ -104,6 +110,7 @@
           var code = String(err.code || '');
           var msg = String(err.detail || 'Ошибка запроса');
           if (res.status === 401) code = 'unauthorized';
+          if (code === 'user_banned') emitAccessBlocked(msg);
           return Promise.reject({ code: code, message: msg, status: res.status });
         });
       }
@@ -229,6 +236,7 @@
       if (!res.ok) {
         return res.json().catch(function() { return {}; }).then(function(err) {
           if (onError) onError(String(err.detail || 'Ошибка чата'));
+          if (String(err.code || '') === 'user_banned') emitAccessBlocked(String(err.detail || 'Доступ ограничен'));
         });
       }
       var reader = res.body.getReader();
