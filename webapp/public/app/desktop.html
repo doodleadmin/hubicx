@@ -42,7 +42,6 @@
 <meta name="twitter:title" content="Hubicx — AI-хаб для фото, видео и чата"/>
 <meta name="twitter:description" content="Создавайте фото, видео и тексты силой ИИ. Одна подписка на лучшие AI-модели без VPN."/>
 <meta name="twitter:image" content="https://hubicx.ru/app/assets/og-image.jpg"/>
-<script>window.__APP_BUILD__='20260623-bonus1';</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
 <link rel="preload" as="image" type="image/webp" href="/app/assets/templates/photo/polaroid-party/cover.webp" fetchpriority="high"/>
@@ -76,59 +75,14 @@
   </div>
 </div>
 
-<!-- Desktop mode flag — must be set before any JSX loads -->
-<script>window.DESKTOP_MODE = true;</script>
-
 <!-- Telegram Mini App SDK -->
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<script>
-(function() {
-  var host = String((window.location && window.location.hostname) || '').toLowerCase();
-  window.HUBICX_APP_CONTEXT = host === 'webapp.hubicx.ru' ? 'telegram' : 'browser';
-  var tg = window.Telegram && window.Telegram.WebApp;
-  if (tg) {
-    tg.ready();
-    if (typeof tg.requestFullscreen === 'function') tg.requestFullscreen();
-  }
-})();
-</script>
-
-<!-- Referral tracking: save ?ref=CODE from URL -->
-<script>
-(function() {
-  var q = new URLSearchParams(window.location.search);
-  var ref = q.get('ref');
-  if (ref) {
-    try { localStorage.setItem('hbx_ref_code', ref); } catch(e) {}
-    try { localStorage.setItem('hbx_ref_ts', Date.now()); } catch(e) {}
-    try {
-      fetch('https://api.hubicx.ru/api/referral/click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ref_code: ref, source_url: location.href })
-      }).catch(function(){});
-    } catch(e) {}
-  }
-})();
-</script>
+<script src="/app/desktop-bootstrap.js?v=20260627-static1"></script>
 
 <script src="/app/loader.js?v=20260619-catlove1"></script>
 
 <script src="/app/assets/vendor/react.production.min.js"></script>
 <script src="/app/assets/vendor/react-dom.production.min.js"></script>
-<script>window.babel = { cache: false };</script>
-<script src="/app/assets/vendor/babel.min.js"></script>
-<script src="/app/ma-api.jsx?v=20260627-user-ban1"></script>
-<script src="/app/hbx-i18n.jsx?v=20260619-catlove1"></script>
-<script type="text/babel" src="/app/ma-core.jsx?v=20260624-onboarding2"></script>
-<script type="text/babel" src="/app/ma-chat.jsx?v=20260627-chat-bubbles1"></script>
-<script type="text/babel" src="/app/ma-agent.jsx?v=20260624-onboarding2"></script>
-<script type="text/babel" src="/app/ma-generation.jsx?v=20260624-onboarding2"></script>
-<script type="text/babel" src="/app/ma-create.jsx?v=20260624-profile-icons1"></script>
-<script type="text/babel" src="/app/ma-profile.jsx?v=20260627-security1"></script>
-<script type="text/babel" src="/app/ma-desktop-screens.jsx?v=20260627-security1"></script>
-<script type="text/babel" src="/app/ma-landing.jsx?v=20260627-security1"></script>
-<script type="text/babel" src="/app/ma-app.jsx?v=20260627-user-ban1"></script>
+<script src="/app/assets/app.bundle.js?v=20260627-static1"></script>
 </body>
 </html>
