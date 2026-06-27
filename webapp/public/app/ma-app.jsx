@@ -97,6 +97,16 @@ function finishOnboarding() {
     localStorage.setItem(ONBOARD_FINISHED_AT_KEY, String(Date.now()));
   } catch(e) {}
 }
+function tgHaptic(kind) {
+  try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var h = tg && tg.HapticFeedback;
+    if (!h) return;
+    if (kind === 'success' && h.notificationOccurred) h.notificationOccurred('success');
+    else if (kind === 'selection' && h.selectionChanged) h.selectionChanged();
+    else if (h.impactOccurred) h.impactOccurred(kind || 'light');
+  } catch(e) {}
+}
 
 function DesktopOnboarding({ onTab, onTopup }) {
   const [open, setOpen] = uS(() => DESKTOP && !isOnboardingDone());
@@ -185,10 +195,12 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
   var cur = steps[step] || steps[0];
   var close = function() { finishOnboarding(); setOpen(false); };
   var next = function() {
+    tgHaptic(step >= steps.length - 1 ? 'success' : 'light');
     if (step >= steps.length - 1) close();
     else { setStepDir(1); animKeyRef.current += 1; setStep(step + 1); }
   };
   var prev = function() {
+    tgHaptic('selection');
     if (step > 0) { setStepDir(-1); animKeyRef.current += 1; setStep(step - 1); }
   };
 
@@ -276,20 +288,23 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
     width: Math.min(window.innerWidth - 16, rect.width + pad * 2),
     height: Math.min(window.innerHeight - 16, rect.height + pad * 2),
   } : null;
+  var sheetClass = 'mob-onb-sheet' + (stepDir < 0 ? ' is-back' : (stepDir > 0 ? ' is-next' : ' is-init'));
   return <div className="mob-onb">
     <div className="mob-onb-dim"></div>
     {box && <div className="onb-spot mob-onb-spot" style={{ left:box.left, top:box.top, width:box.width, height:box.height }}></div>}
-    <div className="mob-onb-sheet" key={'s' + animKeyRef.current}>
+    <div className={sheetClass}>
       <button className="mob-onb-x" onClick={close}>×</button>
-      <div className="mob-onb-ic">{cur.icon}</div>
-      <div className="mob-onb-k">Первый запуск · {step + 1}/{steps.length}</div>
-      <h3>{cur.title}</h3>
-      <p>{cur.text}</p>
-      <div className="mob-onb-dots">{steps.map(function(_, i) { return <i key={i} className={i === step ? 'on' : ''}></i>; })}</div>
-      <div className="mob-onb-actions">
-        {cur.fn && <button className="mob-onb-ghost" onClick={() => { close(); cur.fn(); }}>{cur.action}</button>}
-        {step > 0 && <button className="mob-onb-ghost" onClick={prev}>Назад</button>}
-        <button className="mob-onb-primary" onClick={next}>{step >= steps.length - 1 ? 'Понятно' : 'Далее'}</button>
+      <div className="mob-onb-content" key={'c' + animKeyRef.current}>
+        <div className="mob-onb-ic">{cur.icon}</div>
+        <div className="mob-onb-k">Первый запуск · {step + 1}/{steps.length}</div>
+        <h3>{cur.title}</h3>
+        <p>{cur.text}</p>
+        <div className="mob-onb-dots">{steps.map(function(_, i) { return <i key={i} className={i === step ? 'on' : ''}></i>; })}</div>
+        <div className="mob-onb-actions">
+          {cur.fn && <button className="mob-onb-ghost" onClick={() => { tgHaptic('selection'); close(); cur.fn(); }}>{cur.action}</button>}
+          {step > 0 && <button className="mob-onb-ghost" onClick={prev}>Назад</button>}
+          <button className="mob-onb-primary" onClick={next}>{step >= steps.length - 1 ? 'Понятно' : 'Далее'}</button>
+        </div>
       </div>
     </div>
   </div>;
@@ -402,24 +417,6 @@ function App() {
     }).catch(function() {});
   }, []);
 
-  // Telegram BackButton: show only on real inner screens, not on main tab switches
-  var bbHandlerRef = uR(null);
-  uE(() => {
-    if (DESKTOP) return;
-    var tg = window.Telegram && window.Telegram.WebApp;
-    var bb = tg && tg.BackButton;
-    if (!bb) return;
-    if (bbHandlerRef.current) { try { bb.offClick(bbHandlerRef.current); } catch(e) {} }
-    var handler = null;
-    if (createOpen || activeChat) {
-      handler = function() { setCreateOpen(false); setActiveChat(null); };
-    } else if (templatesOpen) {
-      handler = function() { setTemplatesOpen(false); };
-    }
-    if (handler) { bb.show(); bb.onClick(handler); bbHandlerRef.current = handler; }
-    else { bb.hide(); bbHandlerRef.current = null; }
-  }, [createOpen, activeChat, templatesOpen]);
-
   const onDeskAuthed = (u) => {
     if (u) setUser(u);
     // Reload chats list for the freshly authenticated account
@@ -463,6 +460,46 @@ function App() {
   const [createModelCode, setCreateModelCode] = uS(null);
   const [createKey, setCreateKey] = uS(0);
   const [templatesOpen, setTemplatesOpen] = uS(false);
+
+  // Telegram BackButton: show it only inside nested Mini App screens.
+  var bbHandlerRef = uR(null);
+  uE(() => {
+    if (DESKTOP) return;
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var bb = tg && tg.BackButton;
+    if (!bb) return;
+    if (bbHandlerRef.current) {
+      try { bb.offClick(bbHandlerRef.current); } catch(e) {}
+      bbHandlerRef.current = null;
+    }
+    var withHaptic = function(fn) {
+      return function() { tgHaptic('selection'); fn(); };
+    };
+    var handler = null;
+    if (paymentResult) {
+      handler = withHaptic(function() { setPaymentResult(null); });
+    } else if (topup) {
+      handler = withHaptic(function() { setTopup(false); });
+    } else if (activeChat) {
+      handler = withHaptic(function() { setActiveChat(null); });
+    } else if (createOpen) {
+      handler = withHaptic(function() { setCreateOpen(false); });
+    } else if (templatesOpen) {
+      handler = withHaptic(function() { setTemplatesOpen(false); });
+    }
+    if (handler) {
+      try { bb.show(); bb.onClick(handler); } catch(e) {}
+      bbHandlerRef.current = handler;
+    } else {
+      try { bb.hide(); } catch(e) {}
+    }
+    return function() {
+      if (handler) {
+        try { bb.offClick(handler); } catch(e) {}
+      }
+      if (bbHandlerRef.current === handler) bbHandlerRef.current = null;
+    };
+  }, [paymentResult, topup, createOpen, activeChat, templatesOpen]);
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
