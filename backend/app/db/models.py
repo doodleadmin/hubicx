@@ -39,7 +39,10 @@ class User(Base, TimestampMixin):
     active_menu_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     active_menu_message_id: Mapped[int | None] = mapped_column(BigInteger)
 
-    referrer: Mapped["User | None"] = relationship(remote_side="User.id")
+    referrer: Mapped["User | None"] = relationship(
+        foreign_keys=[referrer_id],
+        remote_side=[id],
+    )
 
     @property
     def has_password(self) -> bool:
