@@ -8,6 +8,7 @@ from aiogram.types import MenuButtonWebApp, Message, TelegramObject, WebAppInfo
 
 from bot.config import BACKEND_URL, BOT_TOKEN, WEBAPP_URL
 from bot.handlers import admin, balance, history, language, menu, photo, start, templates, text, video
+from bot.keyboards.models import versioned_webapp_url
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,10 @@ async def main() -> None:
     logger.info("BOT BACKEND_URL=%s", BACKEND_URL)
     bot = Bot(BOT_TOKEN)
     if WEBAPP_URL.startswith("https://"):
+        menu_webapp_url = versioned_webapp_url(WEBAPP_URL)
         try:
-            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть Hubicx", web_app=WebAppInfo(url=WEBAPP_URL)))
-            logger.info("BOT menu button configured url=%s", WEBAPP_URL)
+            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(text="Открыть Hubicx", web_app=WebAppInfo(url=menu_webapp_url)))
+            logger.info("BOT menu button configured url=%s", menu_webapp_url)
         except Exception:
             logger.exception("Failed to configure BOT menu button")
     dp = Dispatcher()
