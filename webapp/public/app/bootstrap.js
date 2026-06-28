@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260623-bonus1';
+  window.__APP_BUILD__ = '20260628-webapp-open1';
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';
