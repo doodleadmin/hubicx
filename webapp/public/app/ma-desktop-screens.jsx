@@ -4,7 +4,7 @@
 
    BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260628-webapp-open1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260628-ios-loader1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */

@@ -337,6 +337,28 @@ function AccessBlockedScreen({ reason }) {
   </div>;
 }
 
+function waitForTelegramAuthReady() {
+  var api = window.HubicxApi;
+  if (!api || !api.isMiniAppHost || !api.isMiniAppHost()) return Promise.resolve();
+  if (api.hasAuth && api.hasAuth()) return Promise.resolve();
+  if (window.HubicxTelegramReady && typeof window.HubicxTelegramReady.then === 'function') {
+    return Promise.race([
+      window.HubicxTelegramReady,
+      new Promise(function(resolve) { setTimeout(resolve, 6500); })
+    ]).then(function() {});
+  }
+  return new Promise(function(resolve) {
+    var started = Date.now();
+    var timer = setInterval(function() {
+      var tg = window.Telegram && window.Telegram.WebApp;
+      if ((api.hasAuth && api.hasAuth()) || tg || Date.now() - started > 6500) {
+        clearInterval(timer);
+        resolve();
+      }
+    }, 50);
+  });
+}
+
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
@@ -412,29 +434,35 @@ function App() {
 
   // Load user balance on mount
   uE(() => {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setAuthChecked(true); return; }
-    window.HubicxApi.me().then(function(u) { setAccessBlock(null); setUser(u); setAuthChecked(true);
-      // Track referral if user came from partner link
-      try {
-        var refCode = localStorage.getItem('hbx_ref_code');
-        if (refCode && u && !u.referred_by_partner_id) {
-          window.HubicxApi.trackRef(refCode).then(function() {
-            try { localStorage.removeItem('hbx_ref_code'); } catch(e) {}
-          }).catch(function() {});
-        }
-      } catch(e) {}
-    })
-      .catch(function(e) {
-        if (e && e.code === 'user_banned') {
-          setAccessBlock({ reason: e.message || 'Доступ к сервису ограничен администратором.' });
-          if (!window.HubicxApi.isTelegram()) window.HubicxApi.logout();
-        }
-        // Stale/invalid desktop token → drop it so the auth screen shows
-        if (e && (e.code === 'token_expired' || e.code === 'invalid_token' || e.status === 401) && !window.HubicxApi.isTelegram()) {
-          window.HubicxApi.logout();
-        }
-        setAuthChecked(true);
-      });
+    var cancelled = false;
+    waitForTelegramAuthReady().then(function() {
+      if (cancelled) return;
+      if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setAuthChecked(true); return; }
+      window.HubicxApi.me().then(function(u) { if (cancelled) return; setAccessBlock(null); setUser(u); setAuthChecked(true);
+        // Track referral if user came from partner link
+        try {
+          var refCode = localStorage.getItem('hbx_ref_code');
+          if (refCode && u && !u.referred_by_partner_id) {
+            window.HubicxApi.trackRef(refCode).then(function() {
+              try { localStorage.removeItem('hbx_ref_code'); } catch(e) {}
+            }).catch(function() {});
+          }
+        } catch(e) {}
+      })
+        .catch(function(e) {
+          if (cancelled) return;
+          if (e && e.code === 'user_banned') {
+            setAccessBlock({ reason: e.message || 'Доступ к сервису ограничен администратором.' });
+            if (!window.HubicxApi.isTelegram()) window.HubicxApi.logout();
+          }
+          // Stale/invalid desktop token → drop it so the auth screen shows
+          if (e && (e.code === 'token_expired' || e.code === 'invalid_token' || e.status === 401) && !window.HubicxApi.isTelegram()) {
+            window.HubicxApi.logout();
+          }
+          setAuthChecked(true);
+        });
+    });
+    return function() { cancelled = true; };
   }, []);
 
   // Apply saved server language before the profile screen is opened.

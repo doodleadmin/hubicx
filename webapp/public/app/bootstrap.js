@@ -1,15 +1,28 @@
 (function() {
-  window.__APP_BUILD__ = '20260628-webapp-open1';
+  window.__APP_BUILD__ = '20260628-ios-loader1';
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';
   var isAppHost = host === 'hubicx.ru';
-  var tg = window.Telegram && window.Telegram.WebApp;
 
   window.HUBICX_APP_CONTEXT = isWebappHost ? 'telegram' : (isAppHost ? 'browser' : 'auto');
+  window.HUBICX_TG_SHELL = isWebappHost;
 
-  if (tg) {
-    window.HUBICX_TG_SHELL = isWebappHost;
+  var telegramReadyResolve;
+  window.HubicxTelegramReady = window.HubicxTelegramReady || new Promise(function(resolve) {
+    telegramReadyResolve = resolve;
+  });
+
+  function resolveTelegramReady(tg) {
+    try {
+      window.dispatchEvent(new CustomEvent('hubicx:telegram-ready', { detail: { hasInitData: !!(tg && tg.initData) } }));
+    } catch (e) {}
+    try { if (telegramReadyResolve) telegramReadyResolve(tg || null); } catch (e2) {}
+  }
+
+  function setupTelegram(tg) {
+    if (!tg || window.__HUBICX_TG_BOOTSTRAPPED__) return;
+    window.__HUBICX_TG_BOOTSTRAPPED__ = true;
     if (isWebappHost) {
       var platform = String(tg.platform || '').toLowerCase();
       var tgDesktop = ['tdesktop', 'macos'].indexOf(platform) !== -1;
@@ -122,6 +135,26 @@
       document.body.addEventListener('click', fsOnUserAction);
       window.addEventListener('load', function() { requestFs('window-load'); }, { once: true });
     }
+    resolveTelegramReady(tg);
+  }
+
+  function currentTelegram() {
+    try { return window.Telegram && window.Telegram.WebApp; } catch (e) { return null; }
+  }
+
+  setupTelegram(currentTelegram());
+  if (isWebappHost && !window.__HUBICX_TG_BOOTSTRAPPED__) {
+    var started = Date.now();
+    var timer = setInterval(function() {
+      var tg = currentTelegram();
+      if (tg) {
+        clearInterval(timer);
+        setupTelegram(tg);
+      } else if (Date.now() - started > 6000) {
+        clearInterval(timer);
+        resolveTelegramReady(null);
+      }
+    }, 50);
   }
 
   if (isAppHost && window.matchMedia && window.matchMedia('(min-width: 900px)').matches) {
