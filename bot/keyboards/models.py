@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import urlsplit, urlunsplit
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
@@ -7,10 +8,22 @@ from bot.custom_emoji import emoji_icon
 from bot.i18n import t
 
 logger = logging.getLogger(__name__)
+TELEGRAM_WEBAPP_OPEN_PATH = "/open/20260628-ios-loader2"
+
+
 def versioned_webapp_url(url: str) -> str:
-    # Telegram mobile is stricter than desktop about WebAppInfo URLs.
-    # Keep the URL canonical; static assets are cache-busted inside HTML.
-    return url
+    parts = urlsplit(url)
+    if parts.netloc != "webapp.hubicx.ru":
+        return url
+
+    path = parts.path or "/"
+    if path.startswith(TELEGRAM_WEBAPP_OPEN_PATH):
+        return url
+    if path == "/":
+        path = TELEGRAM_WEBAPP_OPEN_PATH
+    else:
+        path = f"{TELEGRAM_WEBAPP_OPEN_PATH}{path}"
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
 
 
 def app_button(title: str, url: str, icon_key: str | None = None) -> InlineKeyboardButton:
