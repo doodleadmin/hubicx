@@ -1,4 +1,29 @@
 /* ============ Agent (home) screen ============ */
+function LazyPromoVideo({ src }) {
+  const ref = React.useRef(null);
+  const [active, setActive] = React.useState(false);
+
+  React.useEffect(function() {
+    var node = ref.current;
+    if (!node || active) return;
+    if (!('IntersectionObserver' in window)) {
+      var timer = setTimeout(function() { setActive(true); }, 1800);
+      return function() { clearTimeout(timer); };
+    }
+    var io = new IntersectionObserver(function(entries) {
+      if (entries.some(function(entry) { return entry.isIntersecting || entry.intersectionRatio > 0; })) {
+        setActive(true);
+        io.disconnect();
+      }
+    }, { rootMargin: '80px 0px' });
+    io.observe(node);
+    return function() { io.disconnect(); };
+  }, [active]);
+
+  return <video ref={ref} className="promo-video" src={active ? src : undefined} muted autoPlay playsInline loop
+    preload="none" poster="" style={{ pointerEvents:'none' }}/>;
+}
+
 function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
   onStartChat, chats, onOpenChat, onDeleteChat, onTab, onTemplate, onTemplates }) {
   const { Ic, Star, TopNav, TEMPLATES, TemplateMedia } = window.MiraCore;
@@ -71,22 +96,19 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
       <div className="model-promo-list rise" style={{ '--d':'.32s', marginTop:18 }}>
         <div className="model-promo" style={{ background:'#171b2b', color:'#dfe7ff' }}
           onClick={() => onCreateVideo && onCreateVideo('kling_21_i2v')}>
-          <video className="promo-video" src={klingSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <LazyPromoVideo src={klingSrc}/>
           <div className="model-promo-t">Kling</div>
           <div className="model-promo-s">Киношное движение из фото</div>
         </div>
         <div className="model-promo" style={{ background:'#1c302a', color:'#e5fff4' }}
           onClick={() => onCreateVideo && onCreateVideo('seedance_2_auto')}>
-          <video className="promo-video" src={seedanceSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <LazyPromoVideo src={seedanceSrc}/>
           <div className="model-promo-t">Seedance 2.0</div>
           <div className="model-promo-s">Топовое качество · сам выберет text/image/reference</div>
         </div>
         <div className="model-promo" style={{ background:'#1a1b2e', color:'#e8e0ff' }}
           onClick={() => onCreateVideo && onCreateVideo('happy_horse_i2v')}>
-          <video className="promo-video" src={happyHorseSrc} muted autoPlay playsInline loop
-            preload="none" poster="" style={{ pointerEvents:'none' }}/>
+          <LazyPromoVideo src={happyHorseSrc}/>
           <div className="model-promo-t">Happy Horse</div>
           <div className="model-promo-s">1080p видео от Alibaba со звуком и lip-sync</div>
         </div>
