@@ -58,6 +58,13 @@ def _is_number(value: Any) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _is_numeric_select(field: dict[str, Any]) -> bool:
+    if field.get("type") != "select":
+        return False
+    options = field.get("options") or []
+    return bool(options) and all(_is_number(option) for option in options)
+
+
 def validate_price_rules(model: AIModel, schema: dict[str, Any], errors: list[str]) -> None:
     rules = schema.get("price_rules")
     if not rules:
@@ -99,8 +106,8 @@ def validate_price_rules(model: AIModel, schema: dict[str, Any], errors: list[st
             mode = multiplier.get("mode")
             if mode is not None and mode != "multiply_by_value":
                 fail(errors, prefix, f"unsupported mode {mode!r}")
-            if mode == "multiply_by_value" and field and field.get("type") != "number":
-                fail(errors, prefix, "multiply_by_value can only be used with number fields")
+            if mode == "multiply_by_value" and field and field.get("type") != "number" and not _is_numeric_select(field):
+                fail(errors, prefix, "multiply_by_value can only be used with number fields or numeric select fields")
             values = multiplier.get("values")
             if values is not None:
                 if not isinstance(values, dict):
