@@ -3,6 +3,7 @@ import html
 import logging
 import smtplib
 from email.message import EmailMessage
+from email.utils import formatdate, make_msgid
 
 from backend.app.config import settings
 from backend.app.utils.errors import AppError
@@ -59,6 +60,8 @@ async def _send_smtp_code(email: str, code: str) -> None:
     message["Subject"] = "Код подтверждения Hubicx"
     message["From"] = f"{settings.email_from_name or 'Hubicx'} <{sender_email}>"
     message["To"] = email
+    message["Date"] = formatdate(localtime=True)
+    message["Message-ID"] = make_msgid(domain=sender_email.split("@")[-1])
     message.set_content(_verification_text(code))
     message.add_alternative(_verification_html(code), subtype="html")
 
