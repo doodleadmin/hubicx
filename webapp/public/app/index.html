@@ -30,6 +30,19 @@
 <link rel="stylesheet" href="/app/loader.css?v=20260619-catlove1"/>
   <link rel="stylesheet" href="/app/ma.css?v=20260629-fs-media1"/>
   <link rel="stylesheet" href="/app/ma-desktop.css?v=20260627-chat-settings3"/>
+<link rel="preload" href="/app/assets/vendor/telegram-web-app.62.js" as="script"/>
+<link rel="preload" href="/app/assets/bootstrap.20260629-fs-media1.js" as="script"/>
+<link rel="preload" href="/app/loader.js?v=20260619-catlove1" as="script"/>
+<link rel="preload" href="/app/assets/vendor/react.production.min.js" as="script"/>
+<link rel="preload" href="/app/assets/vendor/react-dom.production.min.js" as="script"/>
+<link rel="preload" href="/app/assets/app.bundle.20260629-vpn-start2.js" as="script"/>
+<!-- Critical scripts live in head with defer so iOS Telegram WebView requests them before heavy body parsing. -->
+<script defer src="/app/assets/vendor/telegram-web-app.62.js"></script>
+<script defer src="/app/assets/bootstrap.20260629-fs-media1.js"></script>
+<script defer src="/app/loader.js?v=20260619-catlove1"></script>
+<script defer src="/app/assets/vendor/react.production.min.js"></script>
+<script defer src="/app/assets/vendor/react-dom.production.min.js"></script>
+<script defer src="/app/assets/app.bundle.20260629-vpn-start2.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -52,15 +65,5 @@
     <div class="wj-track"><div class="wj-bar"></div></div>
   </div>
 </div>
-
-<!-- Telegram Mini App SDK: local copy avoids VPN/provider issues with telegram.org inside WebView -->
-<script src="/app/assets/vendor/telegram-web-app.62.js"></script>
-<script src="/app/assets/bootstrap.20260629-fs-media1.js"></script>
-
-  <script src="/app/loader.js?v=20260619-catlove1"></script>
-
-<script src="/app/assets/vendor/react.production.min.js"></script>
-<script src="/app/assets/vendor/react-dom.production.min.js"></script>
-<script src="/app/assets/app.bundle.20260629-vpn-start1.js"></script>
 </body>
 </html>
