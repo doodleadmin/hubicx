@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     webapp_url: str = "http://localhost:3000"
     backend_url: str = "http://localhost:8000"
     jwt_signing_key: str = ""
+    jwt_secret: str = ""
     jwt_ttl_days: int = 30
     signup_bonus_credits: int = 0
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_aggregator"
@@ -39,6 +40,17 @@ class Settings(BaseSettings):
     @property
     def admin_id_set(self) -> set[int]:
         return {int(x.strip()) for x in self.admin_ids.split(",") if x.strip().isdigit()}
+
+    @property
+    def effective_jwt_signing_key(self) -> str:
+        return (self.jwt_signing_key or "").strip() or (self.jwt_secret or "").strip()
+
+    def validate_runtime_secrets(self) -> None:
+        key = self.effective_jwt_signing_key
+        if not key:
+            raise RuntimeError("JWT_SIGNING_KEY is required for email/password auth")
+        if len(key) < 32:
+            raise RuntimeError("JWT_SIGNING_KEY must be at least 32 characters")
 
 
 @lru_cache

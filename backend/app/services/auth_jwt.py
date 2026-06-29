@@ -24,7 +24,8 @@ def verify_password(password: str, password_hash: str | None) -> bool:
 
 
 def create_access_token(user_id: int) -> str:
-    if not settings.jwt_signing_key:
+    key = settings.effective_jwt_signing_key
+    if not key:
         raise AppError("server_misconfigured", "JWT signing key is not configured", 500)
     now = datetime.now(timezone.utc)
     payload = {
@@ -33,14 +34,15 @@ def create_access_token(user_id: int) -> str:
         "exp": int((now + timedelta(days=settings.jwt_ttl_days)).timestamp()),
         "typ": "access",
     }
-    return jwt.encode(payload, settings.jwt_signing_key, algorithm=_ALGO)
+    return jwt.encode(payload, key, algorithm=_ALGO)
 
 
 def decode_access_token(token: str) -> int:
-    if not settings.jwt_signing_key:
+    key = settings.effective_jwt_signing_key
+    if not key:
         raise AppError("server_misconfigured", "JWT signing key is not configured", 500)
     try:
-        payload = jwt.decode(token, settings.jwt_signing_key, algorithms=[_ALGO])
+        payload = jwt.decode(token, key, algorithms=[_ALGO])
     except jwt.ExpiredSignatureError:
         raise AppError("token_expired", "Сессия истекла, войдите снова", 401)
     except jwt.InvalidTokenError:

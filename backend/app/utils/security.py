@@ -42,7 +42,7 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def _jwt_key() -> bytes:
-    key = (settings.jwt_signing_key or "").strip()
+    key = settings.effective_jwt_signing_key
     if not key:
         raise AppError("jwt_not_configured", "JWT_SIGNING_KEY не настроен", 503)
     return key.encode("utf-8")

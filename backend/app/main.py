@@ -45,3 +45,8 @@ for router in (auth.router, users.router, models.router, templates.router, gener
 
 if settings.debug:
     app.include_router(debug.router, prefix="/api")
+
+
+@app.on_event("startup")
+async def validate_runtime_config() -> None:
+    settings.validate_runtime_secrets()
