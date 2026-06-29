@@ -388,7 +388,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
-  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? formatDurationLabel(durationValue) : null);
+  var displayDurationLabel = durationField && durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;

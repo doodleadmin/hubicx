@@ -138,6 +138,17 @@ function prettyOption(v) {
   var map = { auto:'Auto', square_hd:'HD', square:'Square', portrait_4_3:'4:3', portrait_16_9:'9:16', landscape_4_3:'4:3', landscape_16_9:'16:9', auto_2K:'2K', auto_4K:'4K' };
   return map[s] || s;
 }
+function formatDurationLabel(v) {
+  var s = String(v == null ? '' : v);
+  if (!s) return '';
+  if (s === 'auto') return 'Auto';
+  if (/^\d+s$/i.test(s)) return s.replace(/s$/i, ' сек');
+  if (/^\d+$/.test(s)) return s + ' сек';
+  return s;
+}
+function durationOptionValues(options) {
+  return (Array.isArray(options) ? options : []).map(function(o) { return String(o && typeof o === 'object' ? (o.value != null ? o.value : o.id) : o); });
+}
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
   if (code === 'nano_banana_2') return 'Быстрая генерация';
@@ -665,6 +676,53 @@ function DeskFloatingPicker({ kind, options, current, onPick }) {
   </div>;
 }
 
+function DeskDurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
+  const { Ic } = window.MiraCore;
+  var values = durationOptionValues(options);
+  var autoEnabled = values.indexOf('auto') !== -1;
+  var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
+  if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
+  var selected = String(value == null ? '' : value);
+  var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
+  var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
+  var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
+  var canUnlock = !(template && template.durationUnlockable === false);
+  return <div className={'dk-duration-inline' + (locked ? ' locked' : '')}>
+    <div className="dk-duration-head">
+      <div className="dk-row-ic"><Ic n="clock" s={20} c="var(--ink)"/></div>
+      <div className="dk-row-tx">
+        <div className="dk-row-k">Длительность</div>
+        <div className="dk-row-v">{label || formatDurationLabel(selected)}</div>
+        {template && locked && <div className="dk-row-s">Длительность закреплена за шаблоном</div>}
+      </div>
+      {template && locked && <button className="dk-lock-btn"
+        title={canUnlock ? 'Длительность закреплена. Нажмите, чтобы разблокировать' : 'Длительность закреплена за шаблоном'}
+        onClick={function(e){ e.stopPropagation(); if (canUnlock && onUnlock) onUnlock(); }}>
+        <Ic n="lock" s={18}/>
+      </button>}
+      {template && !locked && template.durationLocked && <button className="dk-lock-btn off"
+        title="Длительность разблокирована"
+        onClick={function(e){ e.stopPropagation(); if (onRelock) onRelock(); }}>
+        <Ic n="unlock" s={18}/>
+      </button>}
+    </div>
+    {!locked && <div className="dk-duration-control">
+      {autoEnabled && <button type="button" className={'dk-duration-auto' + (selected === 'auto' ? ' on' : '')}
+        onClick={function(){ onChange && onChange('auto'); }}>Auto</button>}
+      {numericValues.length > 1
+        ? <React.Fragment>
+            <input className="dk-duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
+              value={selected === 'auto' ? 0 : selectedIndex}
+              onChange={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; onChange && onChange(String(next)); }}/>
+            <div className="dk-duration-scale"><span>{minLabel}</span><b>{label || formatDurationLabel(selected)}</b><span>{maxLabel}</span></div>
+          </React.Fragment>
+        : <div className="dk-duration-chips">
+            {numericValues.map(function(v){ return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function(){ onChange && onChange(String(v)); }}>{formatDurationLabel(v)}</button>; })}
+          </div>}
+    </div>}
+  </div>;
+}
+
 /* ============================================================
    Генерация (two-panel: form + canvas)
    ============================================================ */
@@ -800,11 +858,12 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var qOptions = fieldOptions(qField);
   var qValue = qField ? (qOptions.some(function(o) { return String(o) === String(selectedQuality); }) ? selectedQuality : (initQualityField === qField.name && initQualityValue != null ? initQualityValue : fieldDefault(qField))) : null;
   var durationOptions = fieldOptions(durationField);
+  var visibleDurationOptions = durationOptionValues(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions);
   var durationValue = durationField ? (durationOptions.some(function(o) { return String(o) === String(uiDurationValue || selectedDuration); }) ? (uiDurationValue || selectedDuration) : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField))) : null;
   if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);
-  var displayDurationLabel = uiDurationLabel || (durationValue != null ? String(durationValue) + ' сек' : null);
+  var displayDurationLabel = durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel || (selectedAspectSafe ? selectedAspectSafe.t + ' · ' + selectedAspectSafe.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
@@ -1038,20 +1097,16 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className="dk-row-div"></div>
         </React.Fragment>}
         {durationField && <React.Fragment>
-          <div className={'dk-row' + (durationLocked ? ' locked' : '')} onClick={() => !durationLocked && setOpen(open === 'duration' ? null : 'duration')}>
-            <div className="dk-row-ic"><Ic n="clock" s={20} c="var(--ink)"/></div>
-            <div className="dk-row-tx"><div className="dk-row-k">Длительность</div>
-              <div className="dk-row-v" key={'gen-duration-label-' + String(durationValue) + '-' + displayDurationLabel + '-' + (durationLocked ? 'locked' : 'open')}>{displayDurationLabel}</div>
-              {selectedTpl && durationLocked && <div className="dk-row-s">Длительность закреплена за шаблоном</div>}
-            </div>
-            {selectedTpl && durationLocked && <button className={'dk-lock-btn' + (!durationLocked ? ' off' : '')}
-              title={selectedTpl.durationUnlockable === false ? 'Длительность закреплена за шаблоном' : 'Длительность закреплена. Нажмите, чтобы разблокировать'}
-              onClick={function(e){ e.stopPropagation(); if (selectedTpl.durationUnlockable === false) return; setDurationLocked(false); setOpen('duration'); }}>
-              <Ic n="lock" s={18}/>
-            </button>}
-            {selectedTpl && !durationLocked && selectedTpl.durationLocked && <button className="dk-lock-btn off" title="Длительность разблокирована" onClick={function(e){ e.stopPropagation(); setDurationLocked(true); setOpen(null); }}><Ic n="unlock" s={18}/></button>}
-            {!durationLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
-          </div>
+          <DeskDurationInlineControl
+            value={String(durationValue)}
+            label={displayDurationLabel}
+            options={visibleDurationOptions}
+            locked={durationLocked}
+            template={selectedTpl}
+            onChange={function(next){ setSelectedDuration(next); setUiDurationValue(next); setUiDurationLabel(formatDurationLabel(next)); setOpen(null); }}
+            onUnlock={function(){ if (selectedTpl && selectedTpl.durationUnlockable === false) return; setDurationLocked(false); setOpen(null); }}
+            onRelock={function(){ setDurationLocked(true); setOpen(null); }}
+          />
           <div className="dk-row-div"></div>
         </React.Fragment>}
         <div className="dk-row" onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
@@ -1073,9 +1128,6 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
         {open === 'quality' && qField && <DeskFloatingPicker kind="quality"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>} 
-        {open === 'duration' && !durationLocked && durationField && <DeskFloatingPicker kind="duration"
-          options={(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions).map(function(o){ return { id:String(o), title:String(o) + ' сек', sub:'Длительность видео' }; })} current={String(durationValue)}
-          onPick={function(id){ setSelectedDuration(id); setUiDurationValue(id); setUiDurationLabel(String(id) + ' сек'); setOpen(null); }}/>} 
         {open === 'batch' && <DeskFloatingPicker kind="batch"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:(onePrice * n) + ' ★' }; })} current={String(batchCount)}
           onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>} 
