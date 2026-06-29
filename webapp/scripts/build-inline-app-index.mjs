@@ -16,19 +16,22 @@ const scripts = [
 ];
 
 function escapeScript(source) {
-  return source.replace(/<\/script/gi, "<\\/script");
+  return source
+    .replace(/<\/script/gi, "<\\/script")
+    .replace(/<!--/g, "<\\!--")
+    .replace(/-->/g, "--\\>");
 }
 
 const template = await readFile(path.join(appDir, "index.source.html"), "utf8");
 const blocks = [];
 
-blocks.push("<script>window.__HUBICX_INLINE_INDEX__='20260629-inline1';</script>");
+blocks.push("<script>window.__HUBICX_INLINE_INDEX__='20260629-inline2';</script>");
 
 for (const [name, rel] of scripts) {
   const source = await readFile(path.join(appDir, rel), "utf8");
   blocks.push(`<script data-hubicx-inline="${name}">\n${escapeScript(source)}\n</script>`);
 }
 
-const html = template.replace("<!-- HUBICX_INLINE_SCRIPTS -->", blocks.join("\n"));
+const html = template.replace("<!-- HUBICX_INLINE_SCRIPTS -->", () => blocks.join("\n"));
 await writeFile(path.join(appDir, "index.html"), html, "utf8");
 console.log("Built public/app/index.html with inline Mini App scripts");
