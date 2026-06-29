@@ -49,6 +49,20 @@ class User(Base, TimestampMixin):
         return bool(self.password_hash)
 
 
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), index=True)
+    purpose: Mapped[str] = mapped_column(String(32), index=True)
+    code_hash: Mapped[str] = mapped_column(String(128))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    ip_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class UserProfileSettings(Base, TimestampMixin):
     __tablename__ = "user_profile_settings"
 

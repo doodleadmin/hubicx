@@ -283,16 +283,23 @@
     getToken:       getToken,
     setToken:       setToken,
     logout:         function()          { setToken(''); },
-    register:       function(email, password, firstName) {
-      return requestPublic('/auth/register', { method:'POST', body:JSON.stringify({ email:email, password:password, first_name:firstName || null }) })
+    sendEmailCode:  function(email, purpose) {
+      return requestPublic('/auth/email/start', { method:'POST', body:JSON.stringify({ email:email, purpose:purpose || 'register' }) });
+    },
+    register:       function(email, password, firstName, emailCode) {
+      var payload = { email:email, password:password, first_name:firstName || null };
+      if (emailCode) payload.email_code = emailCode;
+      return requestPublic('/auth/register', { method:'POST', body:JSON.stringify(payload) })
         .then(function(data) { if (data && data.token) setToken(data.token); return data; });
     },
     login:          function(email, password) {
       return requestPublic('/auth/login', { method:'POST', body:JSON.stringify({ email:email, password:password }) })
         .then(function(data) { if (data && data.token) setToken(data.token); return data; });
     },
-    linkEmail:      function(email, password) {
-      return request('/auth/link-email', { method:'POST', body:JSON.stringify({ email:email, password:password }) });
+    linkEmail:      function(email, password, emailCode) {
+      var payload = { email:email, password:password };
+      if (emailCode) payload.email_code = emailCode;
+      return request('/auth/link-email', { method:'POST', body:JSON.stringify(payload) });
     },
     linkTelegram:   function(email, password) {
       return request('/auth/link-telegram', { method:'POST', body:JSON.stringify({ email:email, password:password }) })

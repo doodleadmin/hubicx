@@ -68,9 +68,23 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
   const { Ic } = window.MiraCore;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailCode, setEmailCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
+
+  const sendCode = function() {
+    var em = email.trim();
+    if (!em) { setErr('Введите email'); return; }
+    setCodeBusy(true); setErr('');
+    window.HubicxApi.sendEmailCode(em, 'link_email').then(function() {
+      setCodeBusy(false); setCodeSent(true); setErr('Код отправлен на почту');
+    }).catch(function(e) {
+      setCodeBusy(false); setErr((e && e.message) || 'Не удалось отправить код');
+    });
+  };
 
   const submit = function() {
     var em = email.trim();
@@ -86,7 +100,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
       setErr((e && e.message) || fallback || 'Не удалось связать аккаунты');
     }
     window.HubicxApi.linkTelegram(em, password).then(finish).catch(function(firstErr) {
-      window.HubicxApi.linkEmail(em, password).then(finish).catch(function(secondErr) {
+      window.HubicxApi.linkEmail(em, password, emailCode.trim()).then(finish).catch(function(secondErr) {
         var msg = String((secondErr && secondErr.message) || '').toLowerCase();
         if (msg.indexOf('существ') >= 0 || msg.indexOf('занят') >= 0 || msg.indexOf('already') >= 0) {
           showError(firstErr, 'Email уже зарегистрирован. Проверьте пароль от аккаунта сайта.');
@@ -112,6 +126,13 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
             <div className="profile-sheet-scroll account-link-fields">
               <input className="text-in" type="email" autoComplete="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
               <input className="text-in" type="password" autoComplete="current-password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)}/>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8 }}>
+                <input className="text-in" inputMode="numeric" placeholder="Код из письма" value={emailCode}
+                  onChange={e => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/>
+                <button className="btn-secondary" disabled={codeBusy || !email.trim()} onClick={sendCode}>
+                  {codeBusy ? '...' : codeSent ? 'Ещё' : 'Код'}
+                </button>
+              </div>
             </div>
             {err && <div className="account-link-error">{err}</div>}
             <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>

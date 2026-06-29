@@ -45,6 +45,7 @@ class RegisterIn(BaseModel):
     email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
     password: str = Field(min_length=8, max_length=128)
     first_name: str | None = Field(default=None, max_length=120)
+    email_code: str | None = Field(default=None, max_length=16)
 
 
 class LoginIn(BaseModel):
@@ -55,6 +56,7 @@ class LoginIn(BaseModel):
 class LinkEmailIn(BaseModel):
     email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
     password: str = Field(min_length=8, max_length=128)
+    email_code: str | None = Field(default=None, max_length=16)
 
 
 class LinkTelegramIn(BaseModel):
@@ -65,3 +67,13 @@ class LinkTelegramIn(BaseModel):
 class AuthOut(BaseModel):
     token: str
     user: UserOut
+
+
+class EmailCodeStartIn(BaseModel):
+    email: str = Field(min_length=3, max_length=255, pattern=EMAIL_PATTERN)
+    purpose: str = Field(default="register", max_length=32)
+
+
+class EmailCodeOut(BaseModel):
+    ok: bool = True
+    message: str

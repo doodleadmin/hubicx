@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     s3_bucket: str = ""
     s3_public_url: str = ""
     proxy_url: str = ""
+    email_verification_required: bool = False
+    email_code_ttl_minutes: int = 10
+    email_from: str = "noreply@hubicx.ru"
+    email_from_name: str = "Hubicx"
+    email_provider: str = ""
+    unisender_api_key: str = ""
+    unisender_list_id: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

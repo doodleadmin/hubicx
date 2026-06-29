@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import current_user
 from backend.app.db.models import User, UserSubscription
 from backend.app.db.session import get_session
-from backend.app.schemas.users import AuthOut, LinkEmailIn, LinkTelegramIn, LoginIn, RegisterIn, UserOut
+from backend.app.schemas.users import AuthOut, EmailCodeOut, EmailCodeStartIn, LinkEmailIn, LinkTelegramIn, LoginIn, RegisterIn, UserOut
 from backend.app.services.balance import award_bonus_tokens
 from backend.app.services.business import SIGNUP_BONUS_TOKENS
 from backend.app.services.auth_account import link_telegram_to_email_account, set_email_password
+from backend.app.services.email_verification import require_email_code_if_enabled, start_email_verification
 from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 from backend.app.services.user_access import ensure_user_not_banned
 from backend.app.utils.errors import AppError
@@ -40,6 +41,7 @@ async def register(payload: RegisterIn, request: Request, session: AsyncSession 
     existing = await session.scalar(select(User).where(func.lower(User.email) == email))
     if existing:
         raise AppError("email_exists", "Такой email уже зарегистрирован", 409)
+    await require_email_code_if_enabled(session, email, "register", payload.email_code)
     user = User(
         telegram_id=-int(__import__("secrets").randbelow(9_000_000_000) + 1_000_000_000),
         email=email,
@@ -59,6 +61,12 @@ async def register(payload: RegisterIn, request: Request, session: AsyncSession 
     return await auth_out(session, user)
 
 
+@router.post("/email/start", response_model=EmailCodeOut)
+async def email_code_start(payload: EmailCodeStartIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
+    await start_email_verification(session, request, normalize_email(payload.email), payload.purpose)
+    return {"ok": True, "message": "Код отправлен, если почта указана корректно"}
+
+
 @router.post("/login", response_model=AuthOut)
 async def login(payload: LoginIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
     await check_ip_rate_limit(request, "auth_login", 10, 300)
@@ -73,6 +81,7 @@ async def login(payload: LoginIn, request: Request, session: AsyncSession = Depe
 @router.post("/link-email", response_model=UserOut)
 async def link_email(payload: LinkEmailIn, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> User:
     await check_user_rate_limit(user.id, "link_email", 5, 3600)
+    await require_email_code_if_enabled(session, normalize_email(payload.email), "link_email", payload.email_code)
     return await set_email_password(session, user, payload.email, payload.password)
 
 

@@ -241,17 +241,32 @@ function DeskAuth({ onAuthed }) {
   const [tab, setTab] = useState('login'); // login | register
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailCode, setEmailCode] = useState('');
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
   const [err, setErr] = useState('');
+
+  const sendCode = function() {
+    var em = email.trim();
+    if (!em) { setErr('Введите email'); return; }
+    setCodeBusy(true); setErr('');
+    window.HubicxApi.sendEmailCode(em, 'register').then(function() {
+      setCodeBusy(false); setCodeSent(true); setErr('Код отправлен на почту');
+    }).catch(function(e) {
+      setCodeBusy(false); setErr((e && e.message) || 'Не удалось отправить код');
+    });
+  };
 
   const submit = function() {
     var em = email.trim();
     if (!em || !password) { setErr('Введите email и пароль'); return; }
     if (tab === 'register' && password.length < 8) { setErr('Пароль должен быть не короче 8 символов'); return; }
+    if (tab === 'register' && codeSent && !emailCode.trim()) { setErr('Введите код из письма'); return; }
     setBusy(true); setErr('');
     var p = tab === 'register'
-      ? window.HubicxApi.register(em, password, name.trim())
+      ? window.HubicxApi.register(em, password, name.trim(), emailCode.trim())
       : window.HubicxApi.login(em, password);
     p.then(function(data) { setBusy(false); if (onAuthed) onAuthed(data && data.user); })
       .catch(function(e) { setBusy(false); setErr((e && e.message) || 'Не удалось войти'); });
@@ -278,6 +293,14 @@ function DeskAuth({ onAuthed }) {
           autoComplete={tab === 'register' ? 'new-password' : 'current-password'}
           onChange={e => setPassword(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
+        {tab === 'register' && <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:10 }}>
+          <input className="dk-auth-in" inputMode="numeric" placeholder="Код из письма" value={emailCode}
+            onChange={e => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onKeyDown={e => { if (e.key === 'Enter') submit(); }}/>
+          <button className="dk-btn-sec" type="button" disabled={codeBusy || !email.trim()} onClick={sendCode} style={{ whiteSpace:'nowrap' }}>
+            {codeBusy ? 'Отправляем...' : codeSent ? 'Ещё раз' : 'Получить код'}
+          </button>
+        </div>}
       </div>
 
       {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
@@ -1388,9 +1411,23 @@ function DeskLinkEmail({ onClose, onLinked }) {
   const { Ic } = window.MiraCore;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailCode, setEmailCode] = useState('');
   const [busy, setBusy] = useState(false);
+  const [codeBusy, setCodeBusy] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
   const [err, setErr] = useState('');
   const [done, setDone] = useState(false);
+
+  const sendCode = function() {
+    var em = email.trim();
+    if (!em) { setErr('Введите email'); return; }
+    setCodeBusy(true); setErr('');
+    window.HubicxApi.sendEmailCode(em, 'link_email').then(function() {
+      setCodeBusy(false); setCodeSent(true); setErr('Код отправлен на почту');
+    }).catch(function(e) {
+      setCodeBusy(false); setErr((e && e.message) || 'Не удалось отправить код');
+    });
+  };
 
   const submit = function() {
     var em = email.trim();
@@ -1405,7 +1442,7 @@ function DeskLinkEmail({ onClose, onLinked }) {
       setErr((e && e.message) || fallback || 'Не удалось связать аккаунты');
     }
     window.HubicxApi.linkTelegram(em, password).then(finish).catch(function(firstErr) {
-      window.HubicxApi.linkEmail(em, password).then(finish).catch(function(secondErr) {
+      window.HubicxApi.linkEmail(em, password, emailCode.trim()).then(finish).catch(function(secondErr) {
         var msg = String((secondErr && secondErr.message) || '').toLowerCase();
         if (msg.indexOf('существ') >= 0 || msg.indexOf('занят') >= 0 || msg.indexOf('already') >= 0) {
           fail(firstErr, 'Email уже зарегистрирован. Проверьте пароль от аккаунта сайта.');
@@ -1432,6 +1469,13 @@ function DeskLinkEmail({ onClose, onLinked }) {
           <div className="dk-auth-fields dk-link-fields">
             <input className="dk-auth-in" type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
             <input className="dk-auth-in" type="password" placeholder="Пароль (от 8 символов)" value={password} onChange={e => setPassword(e.target.value)}/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:10 }}>
+              <input className="dk-auth-in" inputMode="numeric" placeholder="Код из письма" value={emailCode}
+                onChange={e => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/>
+              <button className="dk-btn-sec" disabled={codeBusy || !email.trim()} onClick={sendCode} style={{ whiteSpace:'nowrap' }}>
+                {codeBusy ? 'Отправляем...' : codeSent ? 'Ещё раз' : 'Получить код'}
+              </button>
+            </div>
           </div>
           {err && <div className="dk-pay-err" style={{ textAlign:'left', marginTop:12 }}>{err}</div>}
           <button className="dk-cta" style={{ marginTop:16 }} disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
