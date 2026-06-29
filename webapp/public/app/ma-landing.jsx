@@ -236,20 +236,39 @@ function BeforeAfter({ before, after, label }) {
 function LandingAuthModal({ initial = 'register', onClose, onAuthed }) {
   const Ic = LandingIc;
   const [tab, setTab] = React.useState(initial);
-  const [vals, setVals] = React.useState({ name: '', email: '', pass: '' });
+  const [vals, setVals] = React.useState({ name: '', email: '', pass: '', code: '' });
   const [busy, setBusy] = React.useState(false);
+  const [codeBusy, setCodeBusy] = React.useState(false);
+  const [codeSent, setCodeSent] = React.useState(false);
   const [err, setErr] = React.useState('');
   const set = (k) => (e) => setVals(v => ({ ...v, [k]: e.target.value }));
+  const setCode = (e) => setVals(v => ({ ...v, code: e.target.value.replace(/\D/g, '').slice(0, 6) }));
   const isReg = tab === 'register';
-  const valid = vals.email.includes('@') && vals.pass.length >= 6 && (!isReg || vals.name.trim());
+  const valid = vals.email.includes('@') && vals.pass.length >= 8 && (!isReg || vals.name.trim());
+
+  function sendCode() {
+    const email = vals.email.trim();
+    if (!email) { setErr('Введите email'); return; }
+    if (!window.HubicxApi || !window.HubicxApi.sendEmailCode) { setErr('API не загружен, обновите страницу'); return; }
+    setCodeBusy(true); setErr('');
+    window.HubicxApi.sendEmailCode(email, 'register').then(function () {
+      setCodeBusy(false);
+      setCodeSent(true);
+      setErr('Код отправлен на почту');
+    }).catch(function (e) {
+      setCodeBusy(false);
+      setErr((e && e.message) || 'Не удалось отправить код');
+    });
+  }
 
   function submit() {
     if (!valid || busy) return;
+    if (isReg && !vals.code.trim()) { setErr('Введите код из письма'); return; }
     if (!window.HubicxApi) { setErr('API не загружен, обновите страницу'); return; }
     setBusy(true); setErr('');
     const email = vals.email.trim();
     const p = isReg
-      ? window.HubicxApi.register(email, vals.pass, vals.name.trim())
+      ? window.HubicxApi.register(email, vals.pass, vals.name.trim(), vals.code.trim())
       : window.HubicxApi.login(email, vals.pass);
     p.then(function (data) {
       setBusy(false);
@@ -300,6 +319,19 @@ function LandingAuthModal({ initial = 'register', onClose, onAuthed }) {
           <input className="lp-input" type="password" autoComplete={isReg ? 'new-password' : 'current-password'} placeholder="Минимум 8 символов" value={vals.pass} onChange={set('pass')}
             onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
         </div>
+        {isReg && (
+          <div className="lp-field">
+            <label>Код из письма</label>
+            <div className="lp-code-row">
+              <input className="lp-input" inputMode="numeric" autoComplete="one-time-code" placeholder="6 цифр" value={vals.code}
+                onChange={setCode}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); }} />
+              <button className="lp-code-btn" type="button" disabled={codeBusy || !vals.email.trim()} onClick={sendCode}>
+                {codeBusy ? 'Отправляем...' : codeSent ? 'Ещё раз' : 'Получить код'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {err && <div className="dk-pay-err" style={{ textAlign: 'left', margin: '8px 0 0' }}>{err}</div>}
         <button className="lp-btn lp-btn-white lp-btn-lg" disabled={busy}
@@ -406,14 +438,16 @@ function LandingPage({ onAuthed, initialAuth = null }) {
 
   uE(() => {
     document.documentElement.classList.add('lp-active');
+    document.documentElement.classList.remove('theme-dark');
     document.body.classList.add('lp-active');
+    document.body.classList.remove('theme-dark');
     let alive = true;
     let link = document.getElementById('ma-landing-css');
     if (!link) {
       link = document.createElement('link');
       link.id = 'ma-landing-css';
       link.rel = 'stylesheet';
-      link.href = '/app/ma-landing.css?v=20260622-v3';
+      link.href = '/app/ma-landing.css?v=20260629-email-code1';
       document.head.appendChild(link);
     }
     const markReady = () => { if (alive) setCssReady(true); };

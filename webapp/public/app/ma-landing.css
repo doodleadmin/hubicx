@@ -502,6 +502,10 @@ img{display:block;max-width:100%}
 .lp-input{height:50px;border-radius:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:0 15px;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s,background .15s}
 .lp-input:focus{border-color:var(--sage);background:var(--card)}
 .lp-input::placeholder{color:var(--faint)}
+.lp-code-row{display:grid;grid-template-columns:minmax(0,1fr) 132px;gap:10px}
+.lp-code-btn{height:50px;border-radius:13px;border:1px solid var(--line);background:var(--ink);color:#fff;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;transition:transform .15s,opacity .15s,background .15s}
+.lp-code-btn:hover:not(:disabled){transform:translateY(-1px);background:#2a2a26}
+.lp-code-btn:disabled{opacity:.45;cursor:not-allowed}
 .lp-auth-sep{display:flex;align-items:center;gap:12px;color:var(--faint);font-size:12px;font-weight:600;margin:18px 0}
 .lp-auth-sep::before,.lp-auth-sep::after{content:"";height:1px;background:var(--line);flex:1}
 .lp-auth-foot{text-align:center;color:var(--mut);font-size:13px;margin-top:16px}
@@ -566,4 +570,5 @@ img{display:block;max-width:100%}
 @media (max-width:540px){
   .lp-tpl-grid{grid-template-columns:1fr}
   .lp-price,.lp-price-packs,.lp-price.cols-3,.lp-price.cols-5{grid-template-columns:1fr}
+  .lp-code-row{grid-template-columns:1fr}
 }
