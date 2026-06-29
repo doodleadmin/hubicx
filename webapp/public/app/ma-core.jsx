@@ -166,8 +166,28 @@ const FALLBACK_MODELS = [
 /* ---- data ---- */
 
 function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority = 'auto', onError }) {
+  const [videoReady, setVideoReady] = useState(false);
+  useEffect(function() { setVideoReady(false); }, [t && t.coverVideo]);
+
   if (t && t.coverVideo) {
-    return <video src={t.coverVideo} muted autoPlay playsInline loop preload="metadata" onError={onError}></video>;
+    return (
+      <div className="tpl-media">
+        {t.img && <img className="tpl-media-fallback" src={t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority}/>}
+        <video
+          className={'tpl-media-video' + (videoReady ? ' ready' : '')}
+          src={t.coverVideo}
+          poster={t.img || ''}
+          muted
+          autoPlay
+          playsInline
+          loop
+          preload="none"
+          onLoadedData={() => setVideoReady(true)}
+          onCanPlay={() => setVideoReady(true)}
+          onError={onError}
+        ></video>
+      </div>
+    );
   }
   return <img src={t && t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority} onError={onError}/>;
 }
