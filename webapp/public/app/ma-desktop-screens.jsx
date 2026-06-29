@@ -133,6 +133,16 @@ function fieldDefault(field) {
   return field.options && field.options.length ? field.options[0] : null;
 }
 function fieldOptions(field) { return field && Array.isArray(field.options) ? field.options : []; }
+function optionValue(o) {
+  if (o && typeof o === 'object') return o.value != null ? o.value : (o.id != null ? o.id : o.name);
+  return o;
+}
+function normalizeFieldValue(field, value) {
+  var opts = fieldOptions(field);
+  if (value == null) return optionValue(fieldDefault(field));
+  var found = opts.find(function(o) { return String(optionValue(o)) === String(value); });
+  return found != null ? optionValue(found) : value;
+}
 function prettyOption(v) {
   var s = String(v == null ? '' : v);
   var map = { auto:'Auto', square_hd:'HD', square:'Square', portrait_4_3:'4:3', portrait_16_9:'9:16', landscape_4_3:'4:3', landscape_16_9:'16:9', auto_2K:'2K', auto_4K:'4K' };
@@ -147,7 +157,7 @@ function formatDurationLabel(v) {
   return s;
 }
 function durationOptionValues(options) {
-  return (Array.isArray(options) ? options : []).map(function(o) { return String(o && typeof o === 'object' ? (o.value != null ? o.value : o.id) : o); });
+  return (Array.isArray(options) ? options : []).map(function(o) { return String(optionValue(o)); });
 }
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
@@ -678,21 +688,31 @@ function DeskFloatingPicker({ kind, options, current, onPick }) {
 
 function DeskDurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
+  const [localValue, setLocalValue] = useState(String(value == null ? '' : value));
+  useEffect(function() {
+    setLocalValue(String(value == null ? '' : value));
+  }, [value]);
   var values = durationOptionValues(options);
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(value == null ? '' : value);
+  var selected = String(localValue || value || '');
   var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
+  var selectedLabel = formatDurationLabel(selected);
+  var changeDuration = function(next) {
+    var nextValue = String(next);
+    setLocalValue(nextValue);
+    onChange && onChange(nextValue);
+  };
   return <div className={'dk-duration-inline' + (locked ? ' locked' : '')}>
     <div className="dk-duration-head">
       <div className="dk-row-ic"><Ic n="clock" s={20} c="var(--ink)"/></div>
       <div className="dk-row-tx">
         <div className="dk-row-k">Длительность</div>
-        <div className="dk-row-v">{label || formatDurationLabel(selected)}</div>
+        <div className="dk-row-v">{selectedLabel || label}</div>
         {template && locked && <div className="dk-row-s">Длительность закреплена за шаблоном</div>}
       </div>
       {template && locked && <button className="dk-lock-btn"
@@ -708,16 +728,17 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
     </div>
     {!locked && <div className="dk-duration-control">
       {autoEnabled && <button type="button" className={'dk-duration-auto' + (selected === 'auto' ? ' on' : '')}
-        onClick={function(){ onChange && onChange('auto'); }}>Auto</button>}
+        onClick={function(){ changeDuration('auto'); }}>Auto</button>}
       {numericValues.length > 1
         ? <React.Fragment>
             <input className="dk-duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
               value={selected === 'auto' ? 0 : selectedIndex}
-              onChange={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; onChange && onChange(String(next)); }}/>
-            <div className="dk-duration-scale"><span>{minLabel}</span><b>{label || formatDurationLabel(selected)}</b><span>{maxLabel}</span></div>
+              onInput={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; changeDuration(String(next)); }}
+              onChange={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; changeDuration(String(next)); }}/>
+            <div className="dk-duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
-            {numericValues.map(function(v){ return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function(){ onChange && onChange(String(v)); }}>{formatDurationLabel(v)}</button>; })}
+            {numericValues.map(function(v){ return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
           </div>}
     </div>}
   </div>;
@@ -856,10 +877,12 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var qField = getQualityField(curModel);
   var durationField = getDurationField(curModel);
   var qOptions = fieldOptions(qField);
-  var qValue = qField ? (qOptions.some(function(o) { return String(o) === String(selectedQuality); }) ? selectedQuality : (initQualityField === qField.name && initQualityValue != null ? initQualityValue : fieldDefault(qField))) : null;
+  var rawQualityValue = selectedQuality != null ? selectedQuality : (initQualityField === qField.name && initQualityValue != null ? initQualityValue : fieldDefault(qField));
+  var qValue = qField ? normalizeFieldValue(qField, rawQualityValue) : null;
   var durationOptions = fieldOptions(durationField);
   var visibleDurationOptions = durationOptionValues(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions);
-  var durationValue = durationField ? (durationOptions.some(function(o) { return String(o) === String(uiDurationValue || selectedDuration); }) ? (uiDurationValue || selectedDuration) : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField))) : null;
+  var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField)));
+  var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
   if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);

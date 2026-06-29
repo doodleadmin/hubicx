@@ -882,23 +882,33 @@ window.CreateScreen = CreateScreen;
 
 function DurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
+  const [localValue, setLocalValue] = useState(String(value == null ? '' : value));
+  useEffect(function() {
+    setLocalValue(String(value == null ? '' : value));
+  }, [value]);
   var values = durationOptionValues(options);
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(value == null ? '' : value);
+  var selected = String(localValue || value || '');
   var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
   if (selectedIndex < 0) selectedIndex = 0;
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
+  var selectedLabel = formatDurationLabel(selected);
+  var changeDuration = function(next) {
+    var nextValue = String(next);
+    setLocalValue(nextValue);
+    onChange && onChange(nextValue);
+  };
 
   return <div className={'duration-inline' + (locked ? ' locked' : '')}>
     <div className="duration-inline-head">
       <div className="cr-detail-ic"><Ic n="clock" s={21}/></div>
       <div className="duration-inline-title">
         <div className="muted" style={{ fontSize:12 }}>Длительность</div>
-        <div style={{ fontWeight:800, fontSize:15 }}>{label || formatDurationLabel(selected)}</div>
+        <div style={{ fontWeight:800, fontSize:15 }}>{selectedLabel || label}</div>
         {template && locked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Длительность закреплена за шаблоном</div>}
       </div>
       {template && locked && <button className="m-lock-btn"
@@ -914,20 +924,24 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
     </div>
     {!locked && <div className="duration-control">
       {autoEnabled && <button type="button" className={'duration-auto' + (selected === 'auto' ? ' on' : '')}
-        onClick={function() { onChange && onChange('auto'); }}>Auto</button>}
+        onClick={function() { changeDuration('auto'); }}>Auto</button>}
       {numericValues.length > 1
         ? <React.Fragment>
             <input className="duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
               value={selected === 'auto' ? 0 : selectedIndex}
+              onInput={function(e) {
+                var next = numericValues[Number(e.target.value)] || numericValues[0];
+                changeDuration(String(next));
+              }}
               onChange={function(e) {
                 var next = numericValues[Number(e.target.value)] || numericValues[0];
-                onChange && onChange(String(next));
+                changeDuration(String(next));
               }}/>
-            <div className="duration-scale"><span>{minLabel}</span><b>{label || formatDurationLabel(selected)}</b><span>{maxLabel}</span></div>
+            <div className="duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="duration-chips">
             {numericValues.map(function(v) {
-              return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function() { onChange && onChange(String(v)); }}>{formatDurationLabel(v)}</button>;
+              return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function() { changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>;
             })}
           </div>}
     </div>}
