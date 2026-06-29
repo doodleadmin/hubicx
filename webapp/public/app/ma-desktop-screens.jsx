@@ -4,7 +4,7 @@
 
    BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260628-ios-loader2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
@@ -877,16 +877,20 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var qField = getQualityField(curModel);
   var durationField = getDurationField(curModel);
   var qOptions = fieldOptions(qField);
-  var rawQualityValue = selectedQuality != null ? selectedQuality : (initQualityField === qField.name && initQualityValue != null ? initQualityValue : fieldDefault(qField));
+  var rawQualityValue = selectedQuality != null ? selectedQuality : (qField && initQualityField === qField.name && initQualityValue != null ? initQualityValue : fieldDefault(qField));
   var qValue = qField ? normalizeFieldValue(qField, rawQualityValue) : null;
   var durationOptions = fieldOptions(durationField);
-  var visibleDurationOptions = durationOptionValues(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions);
+  var templateDurationOptions = selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : null;
+  var durationOptionsForUi = templateDurationOptions && (durationLocked || selectedTpl.durationUnlockable === false) ? templateDurationOptions : durationOptions;
+  var visibleDurationOptions = durationOptionValues(durationOptionsForUi);
   var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField)));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
-  if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
+  if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
+    durationValue = visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]);
+  }
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);
-  var displayDurationLabel = durationValue != null ? formatDurationLabel(durationValue) : null;
+  var displayDurationLabel = uiDurationLabel || (durationValue != null ? formatDurationLabel(durationValue) : null);
   var displayAspectLabel = uiAspectLabel || (selectedAspectSafe ? selectedAspectSafe.t + ' · ' + selectedAspectSafe.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;

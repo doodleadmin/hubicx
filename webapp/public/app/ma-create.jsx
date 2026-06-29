@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen ============ */
 /* BUILD: 20260622-v3 */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260628-ios-loader2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -382,13 +382,17 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var qOptions = fieldOptions(qField);
   var qValue = qField ? normalizeFieldValue(qField, uiQualityValue != null ? uiQualityValue : (selectedQuality != null ? selectedQuality : fieldDefault(qField))) : null;
   var durationOptions = fieldOptions(durationField);
-  var visibleDurationOptions = durationOptionValues(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions);
+  var templateDurationOptions = selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : null;
+  var durationOptionsForUi = templateDurationOptions && (durationLocked || selectedTpl.durationUnlockable === false) ? templateDurationOptions : durationOptions;
+  var visibleDurationOptions = durationOptionValues(durationOptionsForUi);
   var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : (selectedTpl && templateDurationValue(selectedTpl) ? templateDurationValue(selectedTpl) : fieldDefault(durationField)));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
-  if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
+  if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
+    durationValue = visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]);
+  }
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
-  var displayDurationLabel = durationField && durationValue != null ? formatDurationLabel(durationValue) : null;
+  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? formatDurationLabel(durationValue) : null);
   var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
