@@ -1,7 +1,8 @@
+import asyncio
 import html
 import logging
-
-import httpx
+import smtplib
+from email.message import EmailMessage
 
 from backend.app.config import settings
 from backend.app.utils.errors import AppError
@@ -19,21 +20,14 @@ def _configured_provider() -> str:
 
 async def send_verification_code(email: str, code: str) -> None:
     provider = _configured_provider()
-    if provider == "unisender":
-        await _send_unisender_code(email, code)
+    if provider == "smtp":
+        await _send_smtp_code(email, code)
         return
     raise AppError("email_provider_not_configured", "Отправка email пока не настроена", 503)
 
 
-async def _send_unisender_code(email: str, code: str) -> None:
-    if not settings.unisender_api_key:
-        raise AppError("email_provider_not_configured", "UNISENDER_API_KEY не настроен", 503)
-
-    sender_email = (settings.email_from or "").strip()
-    if not sender_email:
-        raise AppError("email_provider_not_configured", "EMAIL_FROM не настроен", 503)
-
-    body = (
+def _verification_html(code: str) -> str:
+    return (
         "<div style=\"font-family:Arial,sans-serif;font-size:16px;line-height:1.5;color:#191919\">"
         "<h2 style=\"margin:0 0 12px\">Код Hubicx</h2>"
         "<p>Введите этот код для подтверждения почты:</p>"
@@ -42,31 +36,57 @@ async def _send_unisender_code(email: str, code: str) -> None:
         "Если вы не запрашивали письмо, просто проигнорируйте его.</p>"
         "</div>"
     )
-    data = {
-        "format": "json",
-        "api_key": settings.unisender_api_key,
-        "email": email,
-        "sender_name": settings.email_from_name or "Hubicx",
-        "sender_email": sender_email,
-        "subject": "Код подтверждения Hubicx",
-        "body": body,
-    }
-    if settings.unisender_list_id:
-        data["list_id"] = settings.unisender_list_id
+
+
+def _verification_text(code: str) -> str:
+    return (
+        "Код Hubicx\n\n"
+        f"Введите этот код для подтверждения почты: {code}\n\n"
+        f"Код действует {settings.email_code_ttl_minutes} минут. "
+        "Если вы не запрашивали письмо, просто проигнорируйте его."
+    )
+
+
+async def _send_smtp_code(email: str, code: str) -> None:
+    if not settings.smtp_host or not settings.smtp_username or not settings.smtp_password:
+        raise AppError("email_provider_not_configured", "SMTP не настроен", 503)
+
+    sender_email = (settings.email_from or settings.smtp_username or "").strip()
+    if not sender_email:
+        raise AppError("email_provider_not_configured", "EMAIL_FROM не настроен", 503)
+
+    message = EmailMessage()
+    message["Subject"] = "Код подтверждения Hubicx"
+    message["From"] = f"{settings.email_from_name or 'Hubicx'} <{sender_email}>"
+    message["To"] = email
+    message.set_content(_verification_text(code))
+    message.add_alternative(_verification_html(code), subtype="html")
 
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.post("https://api.unisender.com/ru/api/sendEmail", data=data)
-    except httpx.HTTPError as exc:
-        logger.exception("UniSender HTTP error")
+        await asyncio.to_thread(_send_smtp_message, message)
+    except smtplib.SMTPException as exc:
+        logger.exception(
+            "SMTP send failed: host=%s port=%s ssl=%s starttls=%s",
+            settings.smtp_host,
+            settings.smtp_port,
+            settings.smtp_ssl,
+            settings.smtp_starttls,
+        )
         raise AppError("email_send_failed", "Не удалось отправить письмо", 502) from exc
+    except OSError as exc:
+        logger.exception("SMTP connection failed: host=%s port=%s", settings.smtp_host, settings.smtp_port)
+        raise AppError("email_send_failed", "Не удалось подключиться к почтовому серверу", 502) from exc
 
-    try:
-        payload = response.json()
-    except ValueError as exc:
-        logger.warning("UniSender returned non-JSON response: %s", response.text[:300])
-        raise AppError("email_send_failed", "Почтовый сервис вернул некорректный ответ", 502) from exc
 
-    if response.status_code >= 400 or "error" in payload:
-        logger.warning("UniSender sendEmail failed: status=%s payload=%s", response.status_code, payload)
-        raise AppError("email_send_failed", "Почтовый сервис не принял письмо", 502)
+def _send_smtp_message(message: EmailMessage) -> None:
+    if settings.smtp_ssl:
+        with smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port, timeout=20) as server:
+            server.login(settings.smtp_username, settings.smtp_password)
+            server.send_message(message)
+        return
+
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:
+        if settings.smtp_starttls:
+            server.starttls()
+        server.login(settings.smtp_username, settings.smtp_password)
+        server.send_message(message)

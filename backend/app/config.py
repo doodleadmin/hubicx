@@ -39,8 +39,12 @@ class Settings(BaseSettings):
     email_from: str = "noreply@hubicx.ru"
     email_from_name: str = "Hubicx"
     email_provider: str = ""
-    unisender_api_key: str = ""
-    unisender_list_id: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 465
+    smtp_ssl: bool = True
+    smtp_starttls: bool = False
+    smtp_username: str = ""
+    smtp_password: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
