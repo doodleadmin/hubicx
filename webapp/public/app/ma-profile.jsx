@@ -118,7 +118,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
         <div className="account-link-icon"><Ic n="user" s={22} c="#5f9184"/></div>
         <div className="sheet-title">Связать аккаунты</div>
         <div className="muted account-link-copy">
-          Введите email и пароль. Если аккаунт сайта уже есть, мы объединим его с Telegram. Если нет — создадим вход на сайт с этим же балансом.
+          Введите email и пароль от сайта. Если аккаунт уже есть, мы объединим его с Telegram. Если нет — создадим вход с тем же балансом.
         </div>
         {done
           ? <div className="account-link-done"><Ic n="check" s={22} c="#5f9184"/> Готово. Аккаунты связаны.</div>
@@ -126,10 +126,10 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
             <div className="profile-sheet-scroll account-link-fields">
               <input className="text-in" type="email" autoComplete="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
               <input className="text-in" type="password" autoComplete="current-password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)}/>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr auto', gap:8 }}>
+              <div className="account-link-code-row">
                 <input className="text-in" inputMode="numeric" placeholder="Код из письма" value={emailCode}
                   onChange={e => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/>
-                <button className="btn-secondary" disabled={codeBusy || !email.trim()} onClick={sendCode}>
+                <button className="btn-secondary account-link-code-btn" disabled={codeBusy || !email.trim()} onClick={sendCode}>
                   {codeBusy ? '...' : codeSent ? 'Ещё' : 'Код'}
                 </button>
               </div>

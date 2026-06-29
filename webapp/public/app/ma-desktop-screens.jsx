@@ -1577,7 +1577,7 @@ function DeskTelegramLinkModal({ onClose }) {
     <div className="dk-modal dk-link-modal" onClick={e => e.stopPropagation()}>
       <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
       <div className="dk-link-hero">
-        <span><Ic n="chat" s={24} c="#5f9184"/></span>
+        <span className="dk-telegram-mark"><Ic n="telegram" s={24} c="currentColor"/></span>
         <div>
           <div className="dk-modal-title">Привязать Telegram</div>
           <div className="dk-modal-sub">Откройте Hubicx в Telegram и в профиле нажмите «Связать аккаунты». Введите email и пароль от сайта — баланс, история и подписка станут общими.</div>
@@ -1588,7 +1588,7 @@ function DeskTelegramLinkModal({ onClose }) {
         <div><b>2</b><span>Запустите Mini App и откройте профиль</span></div>
         <div><b>3</b><span>Нажмите «Связать аккаунты»</span></div>
       </div>
-      <button className="dk-cta" onClick={openBot}>Открыть Telegram</button>
+      <button className="dk-cta dk-telegram-cta" onClick={openBot}><Ic n="telegram" s={18} c="currentColor"/> Открыть Telegram</button>
     </div>
   </div>;
 }
@@ -1773,7 +1773,7 @@ function DeskProfile({ tokens, user, onTopup, onUserUpdate }) {
           <div className="dk-kv"><span>Telegram</span><b style={{ color: hasTelegram ? '#5f9184' : 'var(--muted)' }}>{hasTelegram ? 'привязан' : 'не привязан'}</b></div>
           {!hasTelegram && <>
             <div className="dk-side-note" style={{ marginTop:8, marginBottom:10, textAlign:'left' }}>Привязка Telegram завершается в Mini App, потому что Telegram должен подтвердить ваш аккаунт.</div>
-            <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setTelegramHelp(true)}><Ic n="chat" s={16}/> Привязать Telegram</button>
+            <button className="dk-btn-sec" style={{ width:'100%' }} onClick={() => setTelegramHelp(true)}><Ic n="telegram" s={16}/> Привязать Telegram</button>
           </>}
           <button className="dk-btn-sec" style={{ width:'100%', marginTop:10 }} onClick={logout}>Выйти из аккаунта</button>
         </>}

@@ -8,6 +8,7 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9 }) {
     image: <g><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5L5 21"/></g>,
     video: <g><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/></g>,
     chat: <path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/>,
+    telegram: <path d="M21 4.8L18 19.2c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2L6.5 13.1 2.1 11.7c-1-.3-1-1 .2-1.4L19.6 3.7c.8-.3 1.5.2 1.3 1.1z"/>,
     arrowUp: <path d="M12 19V6M6 12l6-6 6 6"/>,
     chev: <path d="M9 6l6 6-6 6"/>,
     user: <g><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></g>,
