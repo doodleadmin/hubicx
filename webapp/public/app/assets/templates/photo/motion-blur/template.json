@@ -1,0 +1,10 @@
+{
+  "code": "motion-blur",
+  "title": "Скорость",
+  "type": "photo",
+  "category": "Эффекты",
+  "coverVideo": "cover.mp4",
+  "inputLabel": "Любое фото",
+  "requiresImage": true,
+  "modelCode": "nano_banana_2"
+}

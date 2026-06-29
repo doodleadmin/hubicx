@@ -1,0 +1,10 @@
+{
+  "code": "g7x-flash",
+  "title": "Вспышка G7X",
+  "type": "photo",
+  "category": "Эффекты",
+  "coverVideo": "cover.mp4",
+  "inputLabel": "Любое фото",
+  "requiresImage": true,
+  "modelCode": "nano_banana_2"
+}
