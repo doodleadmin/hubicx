@@ -109,15 +109,22 @@ function resolveSeedanceAutoCode(code, files) {
   var images = list.filter(function(f) { return !f || f.type !== 'video'; }).length;
   var videos = list.filter(function(f) { return f && f.type === 'video'; }).length;
   var isFast = selected === 'seedance_2_fast_auto' || selected.indexOf('_fast') !== -1;
-  if (selected !== 'seedance_2_auto' && selected !== 'seedance_2_fast_auto') return selected;
+  var isMini = selected === 'seedance_2_mini_auto' || selected.indexOf('_mini') !== -1;
+  if (selected !== 'seedance_2_auto' && selected !== 'seedance_2_fast_auto' && selected !== 'seedance_2_mini_auto') return selected;
+  if (isMini) {
+    if (images >= 2 || videos > 0) return 'seedance_2_mini_reference';
+    if (images === 1) return 'seedance_2_mini_i2v';
+    return 'seedance_2_mini_t2v';
+  }
   if (images >= 2 || videos > 0) return isFast ? 'seedance_2_reference_fast' : 'seedance_2_reference';
   if (images === 1) return isFast ? 'seedance_2_i2v_fast' : 'seedance_2_i2v';
-  return 'seedance_2_t2v';
+  return isFast ? 'seedance_2_t2v_fast' : 'seedance_2_t2v';
 }
 function displaySeedanceAutoCode(code) {
   var s = String(code || '');
   if (!isSeedanceModelCode(s)) return s;
-  if (s === 'seedance_2_auto' || s === 'seedance_2_fast_auto') return s;
+  if (s === 'seedance_2_auto' || s === 'seedance_2_fast_auto' || s === 'seedance_2_mini_auto') return s;
+  if (s.indexOf('_mini') !== -1) return 'seedance_2_mini_auto';
   return s.indexOf('_fast') !== -1 ? 'seedance_2_fast_auto' : 'seedance_2_auto';
 }
 function fieldDefault(field) {
@@ -138,6 +145,8 @@ function shortModelDescription(m) {
   if (code === 'nano_banana_edit') return 'Редактирование фото';
   if (code === 'gpt_image_2') return 'Качественная генерация';
   if (code === 'gpt_image_2_edit') return 'Редактирование фото';
+  if (code.indexOf('seedance_2_mini') === 0) return 'Mini · доступное видео';
+  if (code === 'seedance_2_t2v_fast') return 'Fast · текст → видео';
   if (code === 'seedream') return 'Фотореализм';
   if (code === 'flux_schnell') return 'Быстро и дёшево';
   if (code === 'z_image') return 'Доступная генерация';
@@ -763,11 +772,13 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     if (mode === 'video') return m.task_type === 'video' || m.category === 'video';
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
-  var hasSeedance = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1; });
+  var hasSeedance = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1 && String(m.code).indexOf('_mini') === -1; });
   var hasSeedanceFast = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') !== -1; });
+  var hasSeedanceMini = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_mini') !== -1; });
   const modelOpts = [];
   if (mode === 'video' && hasSeedance) modelOpts.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Автовыбор: текст / фото / референсы', price:'от 250 ★' });
   if (mode === 'video' && hasSeedanceFast) modelOpts.push({ id:'seedance_2_fast_auto', t:'Seedance 2.0 Fast', s:'Дешевле и быстрее, автовыбор режима', price:'от 180 ★' });
+  if (mode === 'video' && hasSeedanceMini) modelOpts.push({ id:'seedance_2_mini_auto', t:'Seedance 2.0 Mini', s:'Самый доступный режим, автовыбор', price:'от 120 ★' });
   filtered.forEach(function(m) {
     if (mode === 'video' && isSeedanceModelCode(m.code)) return;
     modelOpts.push({ id:m.code, t:m.title, s:shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });

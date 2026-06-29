@@ -80,6 +80,17 @@ function prettyOption(v) {
   var map = { auto:'Auto', square_hd:'HD', square:'Square', portrait_4_3:'4:3', portrait_16_9:'9:16', landscape_4_3:'4:3', landscape_16_9:'16:9', auto_2K:'2K', auto_4K:'4K' };
   return map[s] || s;
 }
+function formatDurationLabel(v) {
+  var s = String(v == null ? '' : v);
+  if (!s) return '';
+  if (s === 'auto') return 'Auto';
+  if (/^\d+s$/i.test(s)) return s.replace(/s$/i, ' сек');
+  if (/^\d+$/.test(s)) return s + ' сек';
+  return s;
+}
+function durationOptionValues(options) {
+  return (Array.isArray(options) ? options : []).map(function(o) { return String(optionValue(o)); });
+}
 function estimateModelPrice(model, inputs) {
   if (!model) return 0;
   var rules = model.form_schema && model.form_schema.price_rules;
@@ -121,10 +132,16 @@ function resolveSeedanceAutoCode(code, files) {
   var images = list.filter(function(f) { return !f || f.type !== 'video'; }).length;
   var videos = list.filter(function(f) { return f && f.type === 'video'; }).length;
   var isFast = selected === 'seedance_2_fast_auto' || selected.indexOf('_fast') !== -1;
-  if (selected !== 'seedance_2_auto' && selected !== 'seedance_2_fast_auto') return selected;
+  var isMini = selected === 'seedance_2_mini_auto' || selected.indexOf('_mini') !== -1;
+  if (selected !== 'seedance_2_auto' && selected !== 'seedance_2_fast_auto' && selected !== 'seedance_2_mini_auto') return selected;
+  if (isMini) {
+    if (images >= 2 || videos > 0) return 'seedance_2_mini_reference';
+    if (images === 1) return 'seedance_2_mini_i2v';
+    return 'seedance_2_mini_t2v';
+  }
   if (images >= 2 || videos > 0) return isFast ? 'seedance_2_reference_fast' : 'seedance_2_reference';
   if (images === 1) return isFast ? 'seedance_2_i2v_fast' : 'seedance_2_i2v';
-  return 'seedance_2_t2v';
+  return isFast ? 'seedance_2_t2v_fast' : 'seedance_2_t2v';
 }
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
@@ -134,6 +151,8 @@ function shortModelDescription(m) {
   if (code === 'gpt_image_2') return 'Качественная генерация';
   if (code === 'gpt_image_2_edit') return 'Редактирование фото';
   if (code === 'seedream') return 'Фотореализм';
+  if (code.indexOf('seedance_2_mini') === 0) return 'Mini · доступное видео';
+  if (code === 'seedance_2_t2v_fast') return 'Fast · текст → видео';
   if (code === 'flux_schnell') return 'Быстро и дёшево';
   if (code === 'z_image') return 'Доступная генерация';
   if (code === 'kling_21_i2v') return 'Image → video';
@@ -329,11 +348,13 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Picker-compatible model options. Seedance endpoints are grouped into two user-facing choices;
   // the concrete endpoint is selected right before generation from attached files.
-  var hasSeedance = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1; });
+  var hasSeedance = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1 && String(m.code).indexOf('_mini') === -1; });
   var hasSeedanceFast = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') !== -1; });
+  var hasSeedanceMini = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_mini') !== -1; });
   const modelOptions = [];
   if (hasSeedance) modelOptions.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Автовыбор: текст / фото / референсы', price:'от 250 ★' });
   if (hasSeedanceFast) modelOptions.push({ id:'seedance_2_fast_auto', t:'Seedance 2.0 Fast', s:'Дешевле и быстрее, автовыбор режима', price:'от 180 ★' });
+  if (hasSeedanceMini) modelOptions.push({ id:'seedance_2_mini_auto', t:'Seedance 2.0 Mini', s:'Самый доступный режим, автовыбор', price:'от 120 ★' });
   filteredModels.forEach(function(m) {
     if (isSeedanceModelCode(m.code)) return;
     modelOptions.push({ id: m.code, t: m.title, s: shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
@@ -361,12 +382,13 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var qOptions = fieldOptions(qField);
   var qValue = qField ? normalizeFieldValue(qField, uiQualityValue != null ? uiQualityValue : (selectedQuality != null ? selectedQuality : fieldDefault(qField))) : null;
   var durationOptions = fieldOptions(durationField);
+  var visibleDurationOptions = durationOptionValues(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions);
   var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : (selectedTpl && templateDurationValue(selectedTpl) ? templateDurationValue(selectedTpl) : fieldDefault(durationField)));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
   if (selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length && selectedTpl.durationOptions.indexOf(String(durationValue)) === -1) durationValue = String(selectedTpl.durationOptions[0]);
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
-  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? (String(durationValue) + ' сек') : null);
+  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? formatDurationLabel(durationValue) : null);
   var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
@@ -771,27 +793,28 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
           <div className="divider"></div>
         </React.Fragment>}
         {durationField && <React.Fragment>
-          <div key={'d-' + (durationValue || 'init') + '-' + (durationLocked ? 'locked' : 'open')} className={'row-link' + (durationLocked ? ' locked' : '')} onClick={() => !durationLocked && setPicker('duration')}>
-            <div className="cr-detail-ic">
-              <Ic n="clock" s={21}/>
-            </div>
-            <div style={{ minWidth:0, flex:1 }}>
-              <div className="muted" style={{ fontSize:12 }}>Длительность</div>
-              <div style={{ fontWeight:700, fontSize:15 }}>{displayDurationLabel}</div>
-              {selectedTpl && durationLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Длительность закреплена за шаблоном</div>}
-            </div>
-            {selectedTpl && durationLocked && <button className={'m-lock-btn' + (!durationLocked ? ' off' : '')}
-              title={selectedTpl.durationUnlockable === false ? 'Длительность закреплена за шаблоном' : 'Длительность закреплена. Нажмите, чтобы разблокировать'}
-              onClick={function(e) { e.stopPropagation(); if (selectedTpl.durationUnlockable === false) return; setDurationLocked(false); setPicker('duration'); }}>
-              <Ic n="lock" s={18}/>
-            </button>}
-            {selectedTpl && !durationLocked && selectedTpl.durationLocked && <button className="m-lock-btn off"
-              title="Длительность разблокирована"
-              onClick={function(e) { e.stopPropagation(); setDurationLocked(true); setPicker(null); }}>
-              <Ic n="unlock" s={18}/>
-            </button>}
-            {!durationLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
-          </div>
+          <DurationInlineControl
+            value={String(durationValue)}
+            label={displayDurationLabel}
+            options={visibleDurationOptions}
+            locked={durationLocked}
+            template={selectedTpl}
+            onChange={function(next) {
+              setSelectedDuration(next);
+              setUiDurationValue(next);
+              setUiDurationLabel(formatDurationLabel(next));
+              setPicker(null);
+            }}
+            onUnlock={function() {
+              if (selectedTpl && selectedTpl.durationUnlockable === false) return;
+              setDurationLocked(false);
+              setPicker(null);
+            }}
+            onRelock={function() {
+              setDurationLocked(true);
+              setPicker(null);
+            }}
+          />
           <div className="divider"></div>
         </React.Fragment>}
         <div key={'a-' + (uiAspectId || 'init')} className={'row-link' + (aspectLocked ? ' locked' : '')} onClick={() => !aspectLocked && setPicker('aspect')}>
@@ -838,13 +861,6 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       onSelect={function(opt) { setSelectedQuality(opt.id); setUiQualityValue(opt.id); setUiQualityLabel(opt.t || prettyOption(opt.id)); }}
       onClose={() => setPicker(null)}/>}
 
-    {/* Duration picker */}
-    {picker === 'duration' && !durationLocked && durationField && <PickerSheet
-      title="Длительность" options={(selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : durationOptions).map(function(o) { var v = optionValue(o); return { id:String(v), t:String(v) + ' сек', s:'Длительность видео' }; })}
-      current={{ id:String(durationValue) }}
-      onSelect={function(opt) { setSelectedDuration(opt.id); setUiDurationValue(opt.id); setUiDurationLabel((opt.t || (String(opt.id) + ' сек'))); }}
-      onClose={() => setPicker(null)}/>}
-
     {/* Aspect picker */}
     {picker === 'aspect' && !aspectLocked && <PickerSheet
       title="Соотношение сторон" options={ASPECTS}
@@ -863,6 +879,61 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   </div>;
 }
 window.CreateScreen = CreateScreen;
+
+function DurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
+  const { Ic } = window.MiraCore;
+  var values = durationOptionValues(options);
+  var autoEnabled = values.indexOf('auto') !== -1;
+  var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
+  if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
+  var selected = String(value == null ? '' : value);
+  var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
+  if (selectedIndex < 0) selectedIndex = 0;
+  var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
+  var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
+  var canUnlock = !(template && template.durationUnlockable === false);
+
+  return <div className={'duration-inline' + (locked ? ' locked' : '')}>
+    <div className="duration-inline-head">
+      <div className="cr-detail-ic"><Ic n="clock" s={21}/></div>
+      <div className="duration-inline-title">
+        <div className="muted" style={{ fontSize:12 }}>Длительность</div>
+        <div style={{ fontWeight:800, fontSize:15 }}>{label || formatDurationLabel(selected)}</div>
+        {template && locked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Длительность закреплена за шаблоном</div>}
+      </div>
+      {template && locked && <button className="m-lock-btn"
+        title={canUnlock ? 'Длительность закреплена. Нажмите, чтобы разблокировать' : 'Длительность закреплена за шаблоном'}
+        onClick={function(e) { e.stopPropagation(); if (canUnlock && onUnlock) onUnlock(); }}>
+        <Ic n="lock" s={18}/>
+      </button>}
+      {template && !locked && template.durationLocked && <button className="m-lock-btn off"
+        title="Длительность разблокирована"
+        onClick={function(e) { e.stopPropagation(); if (onRelock) onRelock(); }}>
+        <Ic n="unlock" s={18}/>
+      </button>}
+    </div>
+    {!locked && <div className="duration-control">
+      {autoEnabled && <button type="button" className={'duration-auto' + (selected === 'auto' ? ' on' : '')}
+        onClick={function() { onChange && onChange('auto'); }}>Auto</button>}
+      {numericValues.length > 1
+        ? <React.Fragment>
+            <input className="duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
+              value={selected === 'auto' ? 0 : selectedIndex}
+              onChange={function(e) {
+                var next = numericValues[Number(e.target.value)] || numericValues[0];
+                onChange && onChange(String(next));
+              }}/>
+            <div className="duration-scale"><span>{minLabel}</span><b>{label || formatDurationLabel(selected)}</b><span>{maxLabel}</span></div>
+          </React.Fragment>
+        : <div className="duration-chips">
+            {numericValues.map(function(v) {
+              return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function() { onChange && onChange(String(v)); }}>{formatDurationLabel(v)}</button>;
+            })}
+          </div>}
+    </div>}
+  </div>;
+}
+window.DurationInlineControl = DurationInlineControl;
 
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }) {

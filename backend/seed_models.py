@@ -513,6 +513,8 @@ VIDEO_ASPECT = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
 GROK_VIDEO_ASPECT = ["16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"]
 GROK_VIDEO_ASPECT_I2V = ["auto", "16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"]
 SEEDANCE_DURATION = ["auto", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15"]
+SEEDANCE_DURATION_PRICE = {"auto": 1, "4": 1, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}
+SEEDANCE_REFERENCE_DURATION_PRICE = {"auto": 1, "4": 0.8, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}
 GROK_DURATION = [4, 6]
 
 set_model(
@@ -545,6 +547,35 @@ set_model(
 )
 
 set_model(
+    "seedance_2_t2v_fast",
+    title="Seedance 2 Fast Text to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/fast/text-to-video",
+    task_type="video",
+    input_type="text",
+    price_credits=180,
+    is_active=True,
+    sort_order=15,
+    default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "16:9", "generate_audio": True, "sync_mode": False},
+    description="Быстрый text-to-video через Seedance 2.0 Fast.",
+    form_schema=schema(
+        [
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="16:9", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Сгенерировать видео",
+        result_type="video",
+        helper_text="Fast text-to-video. До 15 секунд, 480p/720p.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/fast/text-to-video", "Fal Seedance 2.0 Fast text-to-video input schema.", verified_at="2026-06-30"),
+        price_rules={"base": 180, "multipliers": [{"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
     "seedance_2_i2v_fast",
     title="Seedance 2 Fast Image to Video",
     category="video",
@@ -572,6 +603,96 @@ set_model(
         helper_text="Быстрый image-to-video. Используйте одно стартовое изображение.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/fast/image-to-video", "Fal Seedance 2.0 Fast image-to-video input schema."),
         price_rules={"base": 180, "multipliers": [{"field": "duration", "values": {"auto": 1, "4": 1, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "seedance_2_mini_t2v",
+    title="Seedance 2 Mini Text to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/mini/text-to-video",
+    task_type="video",
+    input_type="text",
+    price_credits=120,
+    is_active=True,
+    sort_order=16,
+    default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "16:9", "generate_audio": True, "sync_mode": False},
+    description="Доступный text-to-video через Seedance 2.0 Mini.",
+    form_schema=schema(
+        [
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="16:9", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Сгенерировать видео",
+        result_type="video",
+        helper_text="Mini text-to-video. Доступный режим Seedance 2.0, до 15 секунд.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/mini/text-to-video", "Fal Seedance 2.0 Mini text-to-video input schema.", verified_at="2026-06-30"),
+        price_rules={"base": 120, "multipliers": [{"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "seedance_2_mini_i2v",
+    title="Seedance 2 Mini Image to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/mini/image-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=120,
+    is_active=True,
+    sort_order=26,
+    default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "auto", "generate_audio": True, "sync_mode": False},
+    description="Доступный image-to-video через Seedance 2.0 Mini.",
+    form_schema=schema(
+        [
+            field("image_url", "Стартовое изображение", "file", required=True, accept="image/*", max_size_mb=30, helper_text="JPEG/PNG/WebP до 30MB"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите движение и сцену"),
+            field("aspect_ratio", "Соотношение сторон", "select", default="auto", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="720p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+            field("end_image_url", "Финальное изображение", "file", required=False, accept="image/*", max_size_mb=30, helper_text="Опционально: финальный кадр", advanced=False),
+        ],
+        submit_label="Оживить изображение",
+        result_type="video",
+        helper_text="Mini image-to-video. Доступный режим Seedance 2.0, до 15 секунд.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/mini/image-to-video", "Fal Seedance 2.0 Mini image-to-video input schema.", verified_at="2026-06-30"),
+        price_rules={"base": 120, "multipliers": [{"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+    ),
+)
+
+set_model(
+    "seedance_2_mini_reference",
+    title="Seedance 2 Mini Reference to Video",
+    category="video",
+    provider="fal",
+    provider_model_id="bytedance/seedance-2.0/mini/reference-to-video",
+    task_type="video",
+    input_type="image",
+    price_credits=120,
+    is_active=True,
+    sort_order=27,
+    default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
+    description="Доступный reference-to-video через Seedance 2.0 Mini для нескольких референсов.",
+    form_schema=schema(
+        [
+            field("image_urls", "Фото-референсы", "files", required=True, accept="image/*", min_files=1, max_files=9, maps_to="image_urls", helper_text="Загрузите 1–9 изображений-референсов"),
+            field("prompt", "Промт", "textarea", required=True, placeholder="Опишите видео и используйте @Image1, @Image2..."),
+            field("aspect_ratio", "Соотношение сторон", "select", default="9:16", options=VIDEO_ASPECT, advanced=False),
+            field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
+            field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p"], advanced=False),
+            field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+        ],
+        submit_label="Создать видео по референсам",
+        result_type="video",
+        helper_text="Mini reference-to-video. Доступный режим Seedance 2.0, до 9 изображений.",
+        schema_source=fal_schema_source("bytedance/seedance-2.0/mini/reference-to-video", "Fal Seedance 2.0 Mini reference-to-video input schema.", verified_at="2026-06-30"),
+        price_rules={"base": 120, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 

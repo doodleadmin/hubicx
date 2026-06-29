@@ -130,7 +130,10 @@ const FALLBACK_MODELS = [
   { code:'flux_schnell',       title:'Fast Image',                category:'photo', task_type:'image', price_credits:30,  description:'Молниеносный' },
   { code:'z_image',            title:'Z-Image',                   category:'photo', task_type:'image', price_credits:25,  description:'Доступный' },
   { code:'seedance_2_t2v',     title:'Seedance 2 Text to Video',  category:'video', task_type:'video', price_credits:250, description:'Текст → видео' },
+  { code:'seedance_2_t2v_fast',title:'Seedance 2 Fast Text→Video',category:'video', task_type:'video', price_credits:180, description:'Fast · текст → видео' },
+  { code:'seedance_2_mini_t2v',title:'Seedance 2 Mini Text→Video',category:'video', task_type:'video', price_credits:120, description:'Mini · текст → видео' },
   { code:'seedance_2_i2v_fast',title:'Seedance 2 Fast Image→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрый Image → видео', input_type:'image' },
+  { code:'seedance_2_mini_i2v',title:'Seedance 2 Mini Image→Video',category:'video',task_type:'video', price_credits:120, description:'Mini · Image → видео', input_type:'image' },
   { code:'seedance_2_reference',title:'Seedance 2 Reference→Video',category:'video',task_type:'video', price_credits:225, description:'Топовое видео по нескольким референсам', input_type:'image', form_schema:{ fields:[
     { name:'image_urls', type:'files' },
     { name:'prompt', type:'textarea' },
@@ -140,6 +143,7 @@ const FALLBACK_MODELS = [
     { name:'generate_audio', type:'switch', default:true }
   ], price_rules:{ base:225, multipliers:[{ field:'resolution', values:{ '480p':0.45, '720p':1, '1080p':2.25 } }, { field:'duration', values:{ auto:1, '4':0.8, '5':1, '6':1.2, '7':1.4, '8':1.6, '9':1.8, '10':2, '11':2.2, '12':2.4, '13':2.6, '14':2.8, '15':3 } }], min:1, round:'ceil' } } },
   { code:'seedance_2_reference_fast',title:'Seedance 2 Fast Reference→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрое видео по нескольким референсам', input_type:'image' },
+  { code:'seedance_2_mini_reference',title:'Seedance 2 Mini Reference→Video',category:'video',task_type:'video', price_credits:120, description:'Mini · видео по референсам', input_type:'image' },
   { code:'seedance_2_i2v',     title:'Seedance 2 Image to Video', category:'video', task_type:'video', price_credits:250, description:'Качественный Image → видео', input_type:'image' },
   { code:'kling_21_i2v',       title:'Kling 2.1 Image to Video',  category:'video', task_type:'video', price_credits:220, description:'Kling 2.1 Image → видео', input_type:'image' },
   { code:'kling_30_i2v',       title:'Kling 3.0 Image to Video',  category:'video', task_type:'video', price_credits:260, description:'Kling 3.0 · image → video', input_type:'image', form_schema:{ fields:[

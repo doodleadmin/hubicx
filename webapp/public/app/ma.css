@@ -339,6 +339,111 @@ html.theme-dark .row-link:active { background: #20242c; }
 .m-lock-btn:active { transform: scale(.96); }
 .divider { height: 1px; background: var(--line); margin-left: 54px; }
 
+.duration-inline {
+  padding: 15px 16px 14px;
+}
+.duration-inline.locked { cursor: default; }
+.duration-inline-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.duration-inline-title {
+  min-width: 0;
+  flex: 1;
+}
+.duration-control {
+  margin: 12px 0 0 54px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+.duration-auto {
+  height: 38px;
+  min-width: 58px;
+  padding: 0 12px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--nav-bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.duration-auto.on {
+  background: var(--ink);
+  color: var(--card);
+  border-color: var(--ink);
+}
+.duration-range {
+  width: 100%;
+  height: 38px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.duration-range::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #dfe6db);
+  border: 1px solid var(--line);
+}
+.duration-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 4px solid var(--card);
+  box-shadow: 0 6px 16px rgba(0,0,0,.18);
+}
+.duration-scale {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.duration-scale b {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+.duration-chips {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.duration-chips button {
+  height: 38px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--nav-bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 900;
+}
+.duration-chips button.on {
+  background: var(--ink);
+  color: var(--card);
+  border-color: var(--ink);
+}
+html.theme-dark .duration-range::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, var(--accent), #2d332f);
+}
+
+@media (max-width: 380px) {
+  .duration-control { margin-left: 0; grid-template-columns: 1fr; }
+  .duration-auto { width: 100%; }
+}
+
 /* ── section header ── */
 .sec-h {
   display: flex; align-items: center; justify-content: space-between; margin: 22px 2px 12px;
