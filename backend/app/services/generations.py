@@ -73,6 +73,8 @@ async def create_generation_task(
         task_type = model.task_type
 
         if inputs and model.form_schema and model.form_schema.get("fields"):
+            if prompt and not inputs.get("prompt"):
+                inputs = {**inputs, "prompt": prompt}
             validated_inputs, provider_input = validate_inputs_against_schema(model.form_schema, inputs, model.default_params)
             resolved_inputs = await resolve_input_files(session, user.id, validated_inputs, model.form_schema)
             provider_input = build_provider_input_from_resolved(resolved_inputs, model.form_schema)
