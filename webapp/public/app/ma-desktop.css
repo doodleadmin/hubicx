@@ -418,10 +418,9 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
 .dk-duration-head { display:flex; align-items:center; gap:13px; }
 .dk-duration-control {
   margin:12px 0 0 53px;
-  display:grid;
-  grid-template-columns:auto minmax(0,1fr);
-  gap:10px;
-  align-items:center;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
 .dk-duration-auto {
   height:36px;
@@ -477,19 +476,22 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
   font-weight:800;
 }
 .dk-duration-scale b { color:var(--ink); font-size:13px; font-weight:950; }
-.dk-duration-chips { grid-column:1 / -1; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.dk-duration-chips button {
-  height:36px;
-  border-radius:12px;
+.dk-duration-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.dk-duration-chip {
+  height:32px;
+  padding:0 10px;
+  border-radius:10px;
   border:1px solid var(--line);
   background:#f1f0ea;
   color:var(--ink);
   font:inherit;
-  font-size:12.5px;
+  font-size:12px;
   font-weight:850;
   cursor:pointer;
+  white-space:nowrap;
+  flex:0 0 auto;
 }
-.dk-duration-chips button.on {
+.dk-duration-chip.on {
   background:var(--ink);
   color:var(--card);
   border-color:var(--ink);
@@ -1008,10 +1010,9 @@ html.theme-dark .dk-canvas-ph,
 html.theme-dark .dk-conv-empty-ic,
 html.theme-dark .dk-hist-img { background: #20242c; }
 html.theme-dark .dk-duration-auto,
-html.theme-dark .dk-duration-chips button { background:#20242c; }
+html.theme-dark .dk-duration-chip { background:#20242c; }
 html.theme-dark .dk-duration-auto.on,
-html.theme-dark .dk-duration-chips button.on { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
-html.theme-dark .dk-duration-range::-webkit-slider-runnable-track { background:linear-gradient(90deg,var(--accent) 0 var(--duration-progress, 0%),#2d332f var(--duration-progress, 0%) 100%); }
+html.theme-dark .dk-duration-chip.on { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
 html.theme-dark .dk-refund { color: #90c7b8; background: rgba(144,199,184,.12); }
 html.theme-dark .dk-pack:hover { border-color: #454b58; }
 html.theme-dark .dk-pack.on { background: rgba(252,253,118,.08); border-color: var(--accent); box-shadow:0 0 0 1px rgba(252,253,118,.16) inset; }

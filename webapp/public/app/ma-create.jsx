@@ -916,9 +916,6 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
   var selectedIndex = durationIndex(numericValues, selected);
   var selectedNumeric = numericValues[selectedIndex] || selected;
   var selectedForLabel = selected === 'auto' ? selected : selectedNumeric;
-  var progress = numericValues.length > 1 ? Math.round((selectedIndex / (numericValues.length - 1)) * 100) : 0;
-  var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
-  var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
   var changeDuration = function(next) {
@@ -948,26 +945,11 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
     {!locked && <div className="duration-control">
       {autoEnabled && <button type="button" className={'duration-auto' + (selected === 'auto' ? ' on' : '')}
         onClick={function() { changeDuration('auto'); }}>Auto</button>}
-      {numericValues.length > 1
-        ? <React.Fragment>
-            <input className="duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
-              style={{ '--duration-progress': progress + '%' }}
-              value={selected === 'auto' ? 0 : selectedIndex}
-              onInput={function(e) {
-                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
-                changeDuration(String(next));
-              }}
-              onChange={function(e) {
-                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
-                changeDuration(String(next));
-              }}/>
-            <div className="duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
-          </React.Fragment>
-        : <div className="duration-chips">
-            {numericValues.map(function(v) {
-              return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function() { changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>;
-            })}
-          </div>}
+      <div className="duration-chips">
+        {numericValues.map(function(v) {
+          return <button key={v} type="button" className={'duration-chip' + (durationValuesMatch(v, selected) ? ' on' : '')} onClick={function() { changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>;
+        })}
+      </div>
     </div>}
   </div>;
 }

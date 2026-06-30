@@ -354,10 +354,9 @@ html.theme-dark .row-link:active { background: #20242c; }
 }
 .duration-control {
   margin: 12px 0 0 54px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 .duration-auto {
   height: 38px;
@@ -418,32 +417,37 @@ html.theme-dark .row-link:active { background: #20242c; }
   font-weight: 950;
 }
 .duration-chips {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.duration-chips button {
-  height: 38px;
-  border-radius: 13px;
+.duration-chip {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 10px;
   border: 1px solid var(--line);
   background: var(--nav-bg);
   color: var(--ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
-.duration-chips button.on {
+.duration-chip.on {
   background: var(--ink);
   color: var(--card);
   border-color: var(--ink);
 }
+html.theme-dark .duration-chip { background:#20242c; }
+html.theme-dark .duration-chip.on { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
 html.theme-dark .duration-range::-webkit-slider-runnable-track {
   background: linear-gradient(90deg, var(--accent) 0 var(--duration-progress, 0%), #2d332f var(--duration-progress, 0%) 100%);
 }
 
 @media (max-width: 380px) {
-  .duration-control { margin-left: 0; grid-template-columns: 1fr; }
+  .duration-control { margin-left: 0; }
   .duration-auto { width: 100%; }
 }
 
