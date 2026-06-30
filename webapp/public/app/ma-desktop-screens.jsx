@@ -4,7 +4,7 @@
 
    BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live3') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live4') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
@@ -158,6 +158,27 @@ function formatDurationLabel(v) {
 }
 function durationOptionValues(options) {
   return (Array.isArray(options) ? options : []).map(function(o) { return String(optionValue(o)); });
+}
+function durationSecondsKey(v) {
+  var m = String(v == null ? '' : v).match(/^(\d+)s?$/i);
+  return m ? String(parseInt(m[1], 10)) : null;
+}
+function durationValuesMatch(a, b) {
+  if (String(a) === String(b)) return true;
+  var ak = durationSecondsKey(a);
+  var bk = durationSecondsKey(b);
+  return !!(ak && bk && ak === bk);
+}
+function coerceDurationValue(values, value) {
+  if (value == null) return null;
+  var selected = String(value);
+  var hit = (values || []).find(function(v) { return durationValuesMatch(v, selected); });
+  return hit != null ? String(hit) : selected;
+}
+function durationIndex(values, value) {
+  var selected = coerceDurationValue(values, value);
+  var index = (values || []).findIndex(function(v) { return durationValuesMatch(v, selected); });
+  return index < 0 ? 0 : index;
 }
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
@@ -692,15 +713,17 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(value == null ? '' : value);
-  var selectedIndex = numericValues.findIndex(function(v) { return String(v) === selected; });
-  if (selectedIndex < 0) selectedIndex = 0;
+  var selected = coerceDurationValue(values, value);
+  var selectedIndex = durationIndex(numericValues, selected);
+  var selectedNumeric = numericValues[selectedIndex] || selected;
+  var selectedForLabel = selected === 'auto' ? selected : selectedNumeric;
+  var progress = numericValues.length > 1 ? Math.round((selectedIndex / (numericValues.length - 1)) * 100) : 0;
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
-  var selectedLabel = label || formatDurationLabel(selected);
+  var selectedLabel = formatDurationLabel(selectedForLabel);
   var changeDuration = function(next) {
-    var nextValue = String(next);
+    var nextValue = coerceDurationValue(values, next);
     onChange && onChange(nextValue);
   };
   return <div className={'dk-duration-inline' + (locked ? ' locked' : '')}>
@@ -728,9 +751,10 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
       {numericValues.length > 1
         ? <React.Fragment>
             <input className="dk-duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
+              style={{ '--duration-progress': progress + '%' }}
               value={selected === 'auto' ? 0 : selectedIndex}
-              onInput={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; changeDuration(String(next)); }}
-              onChange={function(e){ var next = numericValues[Number(e.target.value)] || numericValues[0]; changeDuration(String(next)); }}/>
+              onInput={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}
+              onChange={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}/>
             <div className="dk-duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
@@ -882,7 +906,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField)));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
   if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
-    durationValue = visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]);
+    var coercedDuration = coerceDurationValue(visibleDurationOptions, durationValue);
+    durationValue = visibleDurationOptions.indexOf(String(coercedDuration)) !== -1 ? coercedDuration : (visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]));
   }
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);
@@ -927,7 +952,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const pickTemplate = function(t) {
     setTab('tpl'); setSelTpl(t.t); setMode(t.type === 'video' ? 'video' : 'photo');
     setUploadedFile(null); setUploadedFiles([]);
-    setSelectedModelCode(templateModelCode(t)); setSelectedQuality(templateQualityValue(t) || null); setSelectedDuration(templateDurationValue(t) || null); setUiDurationValue(templateDurationValue(t) || null); setUiModelLabel(null); setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null); setUiDurationLabel(templateDurationValue(t) ? String(templateDurationValue(t)) + ' сек' : null); setUiAspectLabel(null); setDurationLocked(!!t.durationLocked); if (t.aspectId) { var a = ASPECTS.find(function(x){ return String(x.id) === String(t.aspectId); }); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } } setTemplateLocked(true); setOpen(null);
+    setSelectedModelCode(templateModelCode(t)); setSelectedQuality(templateQualityValue(t) || null); setSelectedDuration(templateDurationValue(t) || null); setUiDurationValue(templateDurationValue(t) || null); setUiModelLabel(null); setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null); setUiDurationLabel(null); setUiAspectLabel(null); setDurationLocked(!!t.durationLocked); if (t.aspectId) { var a = ASPECTS.find(function(x){ return String(x.id) === String(t.aspectId); }); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } } setTemplateLocked(true); setOpen(null);
   };
   const clearTemplate = function() {
     setSelTpl(null); setTemplateLocked(false); setTab('prompt'); setPrompt(''); setUploadedFiles([]); setSelectedModelCode(null); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setDurationLocked(false); setOpen(null);

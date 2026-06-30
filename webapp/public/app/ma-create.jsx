@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen ============ */
 /* BUILD: 20260622-v3 */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live3') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live4') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -90,6 +90,27 @@ function formatDurationLabel(v) {
 }
 function durationOptionValues(options) {
   return (Array.isArray(options) ? options : []).map(function(o) { return String(optionValue(o)); });
+}
+function durationSecondsKey(v) {
+  var m = String(v == null ? '' : v).match(/^(\d+)s?$/i);
+  return m ? String(parseInt(m[1], 10)) : null;
+}
+function durationValuesMatch(a, b) {
+  if (String(a) === String(b)) return true;
+  var ak = durationSecondsKey(a);
+  var bk = durationSecondsKey(b);
+  return !!(ak && bk && ak === bk);
+}
+function coerceDurationValue(values, value) {
+  if (value == null) return null;
+  var selected = String(value);
+  var hit = (values || []).find(function(v) { return durationValuesMatch(v, selected); });
+  return hit != null ? String(hit) : selected;
+}
+function durationIndex(values, value) {
+  var selected = coerceDurationValue(values, value);
+  var index = (values || []).findIndex(function(v) { return durationValuesMatch(v, selected); });
+  return index < 0 ? 0 : index;
 }
 function estimateModelPrice(model, inputs) {
   if (!model) return 0;
@@ -388,7 +409,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : (selectedTpl && templateDurationValue(selectedTpl) ? templateDurationValue(selectedTpl) : fieldDefault(durationField)));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
   if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
-    durationValue = visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]);
+    var coercedDuration = coerceDurationValue(visibleDurationOptions, durationValue);
+    durationValue = visibleDurationOptions.indexOf(String(coercedDuration)) !== -1 ? coercedDuration : (visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]));
   }
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
@@ -414,7 +436,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setUiDurationValue(templateDurationValue(t) || null);
     setUiModelLabel(null);
     setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null);
-    setUiDurationLabel(templateDurationValue(t) ? (String(templateDurationValue(t)) + ' сек') : null);
+    setUiDurationLabel(null);
     setTemplateLocked(true);
     setQualityLocked(!!templateQualityValue(t));
     setDurationLocked(!!t.durationLocked);
@@ -890,15 +912,17 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(value == null ? '' : value);
-  var selectedIndex = numericValues.findIndex(function(v) { return String(v) === selected; });
-  if (selectedIndex < 0) selectedIndex = 0;
+  var selected = coerceDurationValue(values, value);
+  var selectedIndex = durationIndex(numericValues, selected);
+  var selectedNumeric = numericValues[selectedIndex] || selected;
+  var selectedForLabel = selected === 'auto' ? selected : selectedNumeric;
+  var progress = numericValues.length > 1 ? Math.round((selectedIndex / (numericValues.length - 1)) * 100) : 0;
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
-  var selectedLabel = label || formatDurationLabel(selected);
+  var selectedLabel = formatDurationLabel(selectedForLabel);
   var changeDuration = function(next) {
-    var nextValue = String(next);
+    var nextValue = coerceDurationValue(values, next);
     onChange && onChange(nextValue);
   };
 
@@ -927,13 +951,14 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
       {numericValues.length > 1
         ? <React.Fragment>
             <input className="duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
+              style={{ '--duration-progress': progress + '%' }}
               value={selected === 'auto' ? 0 : selectedIndex}
               onInput={function(e) {
-                var next = numericValues[Number(e.target.value)] || numericValues[0];
+                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
                 changeDuration(String(next));
               }}
               onChange={function(e) {
-                var next = numericValues[Number(e.target.value)] || numericValues[0];
+                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
                 changeDuration(String(next));
               }}/>
             <div className="duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>

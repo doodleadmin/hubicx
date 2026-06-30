@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260630-duration-live3';
+  window.__APP_BUILD__ = '20260630-duration-live4';
   window.DESKTOP_MODE = true;
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
