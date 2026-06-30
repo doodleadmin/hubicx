@@ -125,7 +125,7 @@ const FALLBACK_MODELS = [
   { code:'nano_banana_2',      title:'Nano Banana 2',             category:'photo', task_type:'image', price_credits:40,  description:'Быстрая генерация' },
   { code:'nano_banana_pro',    title:'Nano Banana Pro',           category:'photo', task_type:'image', price_credits:80,  description:'Pro · высокое разрешение', input_type:'image', form_schema:{ fields:[
     { name:'prompt', type:'textarea' },
-    { name:'image_url', type:'file' },
+    { name:'image_urls', type:'files' },
     { name:'aspect_ratio', type:'select', default:'1:1', options:['1:1','4:5','3:4','9:16','16:9'] },
     { name:'resolution', type:'select', default:'1K', options:['1K','2K','4K'] },
     { name:'num_images', type:'select', default:1, options:[1,2,3,4] }

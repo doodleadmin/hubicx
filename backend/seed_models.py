@@ -378,7 +378,7 @@ set_model(
     form_schema=schema(
         [
             field("prompt", "Промт", "textarea", required=True, placeholder="Опишите, что нужно создать"),
-            field("image_url", "Исходное фото", "file", required=False, accept="image/*", max_size_mb=30, helper_text="Опционально: фото для image-to-image редактирования"),
+            field("image_urls", "Исходное фото", "files", required=False, accept="image/*", min_files=1, max_files=4, maps_to="image_urls", max_size_mb=30, helper_text="Опционально: фото для image-to-image редактирования"),
             field("aspect_ratio", "Соотношение сторон", "select", default="1:1", options=["1:1", "4:5", "3:4", "9:16", "16:9"]),
             field("resolution", "Качество", "select", default="1K", options=["1K", "2K", "4K"], label_key="quality"),
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),

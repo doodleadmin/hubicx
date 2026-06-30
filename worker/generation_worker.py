@@ -67,6 +67,23 @@ def _with_task_input_image(provider_input: dict | None, input_file_url: str | No
     return payload
 
 
+def _as_image_urls(value) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if isinstance(item, str) and item]
+    if isinstance(value, str) and value:
+        return [value]
+    return []
+
+
+def _nano_banana_pro_edit_payload(provider_input: dict | None, input_file_url: str | None) -> dict | None:
+    payload = _with_task_input_image(provider_input, input_file_url)
+    image_urls = _as_image_urls(payload.pop("image_urls", None)) or _as_image_urls(payload.pop("image_url", None))
+    if not image_urls:
+        return None
+    payload["image_urls"] = image_urls
+    return _strip_internal_provider_keys(payload)
+
+
 async def _run_tv_broadcast_pipeline(provider: FalProvider, provider_params: dict) -> object:
     source_image = provider_params.get("start_image_url") or provider_params.get("image_url")
     if not source_image:
@@ -181,7 +198,14 @@ async def _process_generation_task(task_id: int) -> None:
         if task.task_type == "text":
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
         elif task.task_type == "image":
-            if task.provider_input:
+            pro_edit_payload = (
+                _nano_banana_pro_edit_payload(task.provider_input or provider_params, task.input_file_url)
+                if model and model.code == "nano_banana_pro"
+                else None
+            )
+            if pro_edit_payload and isinstance(provider, FalProvider):
+                result = await provider.generate_image_v2("fal-ai/nano-banana-pro/edit", pro_edit_payload)
+            elif task.provider_input:
                 result = await provider.generate_image_v2(
                     provider_model_id,
                     _strip_internal_provider_keys(_with_task_input_image(task.provider_input, task.input_file_url)),
