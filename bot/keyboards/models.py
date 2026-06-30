@@ -1,4 +1,5 @@
 import logging
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
@@ -8,9 +9,16 @@ from bot.i18n import t
 
 logger = logging.getLogger(__name__)
 
+WEBAPP_BUILD_VERSION = "20260630-duration-live4"
+
 
 def versioned_webapp_url(url: str) -> str:
-    return url
+    if not url.startswith("https://"):
+        return url
+    parts = urlsplit(url)
+    query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    query["appv"] = WEBAPP_BUILD_VERSION
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
 
 def app_button(title: str, url: str, icon_key: str | None = None) -> InlineKeyboardButton:
