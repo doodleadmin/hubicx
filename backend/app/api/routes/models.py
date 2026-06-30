@@ -63,6 +63,7 @@ def _serialize_public_model(model: AIModel, pricing: ModelPricing | None = None)
         "task_type": model.task_type,
         "input_type": model.input_type,
         "price_credits": price_credits,
+        "price_rules": pricing.price_rules if pricing and pricing.price_rules else None,
         "default_params": model.default_params,
         "form_schema": model.form_schema,
         "is_active": bool(model.is_active and (not pricing or pricing.is_enabled)),

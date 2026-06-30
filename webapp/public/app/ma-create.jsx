@@ -158,6 +158,31 @@ function durationIndex(values, value) {
 }
 function estimateModelPrice(model, inputs) {
   if (!model) return 0;
+  var dbRules = model.price_rules;
+  var basePrice = Number(model.price_credits || 0);
+  if (dbRules && typeof dbRules === 'object') {
+    var res = String((inputs && inputs.resolution) || dbRules.default_resolution || '').trim();
+    var resKey = res.toLowerCase().endsWith('k') && res.length <= 3 ? res.toUpperCase() : res.toLowerCase();
+    var dur = String((inputs && inputs.duration) || dbRules.default_duration || '5');
+    if (dbRules.resolution_duration_prices) {
+      var byResolution = dbRules.resolution_duration_prices[resKey] || dbRules.resolution_duration_prices[res] || null;
+      if (byResolution && byResolution[dur] != null) return Math.max(1, Number(byResolution[dur]) || basePrice || 1);
+      return Math.max(1, basePrice || 1);
+    }
+    if (dbRules.duration_prices) {
+      if (dbRules.duration_prices[dur] != null) return Math.max(1, Number(dbRules.duration_prices[dur]) || basePrice || 1);
+      return Math.max(1, basePrice || 1);
+    }
+    if (dbRules.resolution_prices) {
+      var price = Number(dbRules.resolution_prices[resKey] != null ? dbRules.resolution_prices[resKey] : dbRules.resolution_prices[res]);
+      if (!price) price = basePrice;
+      if (dbRules.multiply_by_num_images) price *= Math.max(1, Number(inputs && inputs.num_images) || 1);
+      return Math.max(1, Math.ceil(price || basePrice || 1));
+    }
+    if (dbRules.multiply_by_num_images) {
+      return Math.max(1, Math.ceil((basePrice || 1) * Math.max(1, Number(inputs && inputs.num_images) || 1)));
+    }
+  }
   var rules = model.form_schema && model.form_schema.price_rules;
   var total = Number((rules && rules.base) || model.price_credits || 0);
   if (rules && Array.isArray(rules.multipliers)) {
@@ -836,14 +861,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       <div className="label-sec" style={{ marginTop:20, marginBottom:8 }}>Детали</div>
       <div className="card" style={{ overflow:'hidden' }}>
         {showModelPicker && <React.Fragment>
-          <div key={'m-' + displayModelId + '-' + currentPrice} className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
+          <div key={'m-' + displayModelId + '-' + displayModelLabel} className={'row-link' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOptions.length > 1 && setPicker('model')}>
             <div className="cr-detail-ic">
               <Ic n="model" s={21}/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Модель</div>
               <div style={{ fontWeight:700, fontSize:15 }}>
-                {displayModelLabel ? displayModelLabel + ' · ' + currentPrice + ' ★'
+                {displayModelLabel ? displayModelLabel
                   : 'Нет доступных моделей'}
               </div>
             </div>

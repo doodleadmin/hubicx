@@ -198,6 +198,31 @@ function shortModelDescription(m) {
 }
 function estimateModelPrice(model, inputs) {
   if (!model) return 0;
+  var dbRules = model.price_rules;
+  var basePrice = Number(model.price_credits || 0);
+  if (dbRules && typeof dbRules === 'object') {
+    var res = String((inputs && inputs.resolution) || dbRules.default_resolution || '').trim();
+    var resKey = res.toLowerCase().endsWith('k') && res.length <= 3 ? res.toUpperCase() : res.toLowerCase();
+    var dur = String((inputs && inputs.duration) || dbRules.default_duration || '5');
+    if (dbRules.resolution_duration_prices) {
+      var byResolution = dbRules.resolution_duration_prices[resKey] || dbRules.resolution_duration_prices[res] || null;
+      if (byResolution && byResolution[dur] != null) return Math.max(1, Number(byResolution[dur]) || basePrice || 1);
+      return Math.max(1, basePrice || 1);
+    }
+    if (dbRules.duration_prices) {
+      if (dbRules.duration_prices[dur] != null) return Math.max(1, Number(dbRules.duration_prices[dur]) || basePrice || 1);
+      return Math.max(1, basePrice || 1);
+    }
+    if (dbRules.resolution_prices) {
+      var price = Number(dbRules.resolution_prices[resKey] != null ? dbRules.resolution_prices[resKey] : dbRules.resolution_prices[res]);
+      if (!price) price = basePrice;
+      if (dbRules.multiply_by_num_images) price *= Math.max(1, Number(inputs && inputs.num_images) || 1);
+      return Math.max(1, Math.ceil(price || basePrice || 1));
+    }
+    if (dbRules.multiply_by_num_images) {
+      return Math.max(1, Math.ceil((basePrice || 1) * Math.max(1, Number(inputs && inputs.num_images) || 1)));
+    }
+  }
   var rules = model.form_schema && model.form_schema.price_rules;
   var total = Number((rules && rules.base) || model.price_credits || 0);
   if (rules && Array.isArray(rules.multipliers)) {
@@ -615,7 +640,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
               {[1,2,4].map(function(n) {
                 return <div key={n} className={'dk-ask-opt' + (n === batchCount ? ' on' : '')}
                   onClick={() => { setBatchCount(n); setOpen(null); }}>
-                  <span>{n} генераци{n === 1 ? 'я' : 'и'}</span><span className="dk-ask-opt-p">{onePrice * n} ★</span>
+                  <span>{n} генераци{n === 1 ? 'я' : 'и'}</span><span className="dk-ask-opt-p">Итог в кнопке</span>
                 </div>;
               })}
             </div>}
@@ -1129,7 +1154,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className={'dk-row' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
             <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
-              <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '') + '-' + price}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel + ' · ' + price + ' ★' : 'Нет моделей'}</div></div>
+              <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '')}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel : 'Нет моделей'}</div></div>
             {selectedTpl && <button className={'dk-lock-btn' + (!templateLocked ? ' off' : '')} title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'} onClick={function(e){ e.stopPropagation(); setTemplateLocked(!templateLocked); if (templateLocked) setOpen('model'); }}>
               <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
             </button>}
@@ -1169,7 +1194,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className="dk-row" onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
             <div className="dk-row-ic"><Ic n="image" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Количество</div>
-              <div className="dk-row-v">{batchCount} генераци{batchCount === 1 ? 'я' : 'и'} · {price} ★</div></div>
+              <div className="dk-row-v">{batchCount} генераци{batchCount === 1 ? 'я' : 'и'}</div></div>
             <span className="chev"><Ic n="chev" s={19}/></span>
           </div>
           <div className="dk-row-div"></div>
@@ -1193,7 +1218,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>}
         {open === 'batch' && !isPhotoTemplate && <DeskFloatingPicker kind="batch"
-          options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:(onePrice * n) + ' ★' }; })} current={String(batchCount)}
+          options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:'Итоговая стоимость обновится в кнопке' }; })} current={String(batchCount)}
           onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>}
         {open === 'aspect' && !aspectLocked && <DeskFloatingPicker kind="aspect"
           options={aspectOpts.map(function(a){ return { id:a.id, title:a.t, sub:a.s }; })} current={selectedAspectSafe.id}

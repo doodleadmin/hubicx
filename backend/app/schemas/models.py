@@ -44,6 +44,7 @@ class AIModelOut(BaseModel):
     task_type: str
     input_type: str
     price_credits: int
+    price_rules: dict[str, Any] | None = None
     default_params: dict[str, Any]
     form_schema: dict[str, Any] | None = None
     is_active: bool
