@@ -4,7 +4,7 @@
 
    BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live3') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
@@ -688,23 +688,19 @@ function DeskFloatingPicker({ kind, options, current, onPick }) {
 
 function DeskDurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
-  const [localValue, setLocalValue] = useState(String(value == null ? '' : value));
-  useEffect(function() {
-    setLocalValue(String(value == null ? '' : value));
-  }, [value]);
   var values = durationOptionValues(options);
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(localValue || value || '');
-  var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
+  var selected = String(value == null ? '' : value);
+  var selectedIndex = numericValues.findIndex(function(v) { return String(v) === selected; });
+  if (selectedIndex < 0) selectedIndex = 0;
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
-  var selectedLabel = formatDurationLabel(selected);
+  var selectedLabel = label || formatDurationLabel(selected);
   var changeDuration = function(next) {
     var nextValue = String(next);
-    setLocalValue(nextValue);
     onChange && onChange(nextValue);
   };
   return <div className={'dk-duration-inline' + (locked ? ' locked' : '')}>
@@ -890,7 +886,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   }
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);
-  var displayDurationLabel = uiDurationLabel || (durationValue != null ? formatDurationLabel(durationValue) : null);
+  var displayDurationLabel = durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel || (selectedAspectSafe ? selectedAspectSafe.t + ' · ' + selectedAspectSafe.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
@@ -1130,7 +1126,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
             options={visibleDurationOptions}
             locked={durationLocked}
             template={selectedTpl}
-            onChange={function(next){ setSelectedDuration(next); setUiDurationValue(next); setUiDurationLabel(formatDurationLabel(next)); setOpen(null); }}
+            onChange={function(next){ setSelectedDuration(next); setUiDurationValue(next); setUiDurationLabel(null); setOpen(null); }}
             onUnlock={function(){ if (selectedTpl && selectedTpl.durationUnlockable === false) return; setDurationLocked(false); setOpen(null); }}
             onRelock={function(){ setDurationLocked(true); setOpen(null); }}
           />

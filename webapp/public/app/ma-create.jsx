@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen ============ */
 /* BUILD: 20260622-v3 */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live2') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live3') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -392,7 +392,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   }
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
-  var displayDurationLabel = uiDurationLabel || (durationField && durationValue != null ? formatDurationLabel(durationValue) : null);
+  var displayDurationLabel = durationField && durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
@@ -806,7 +806,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
             onChange={function(next) {
               setSelectedDuration(next);
               setUiDurationValue(next);
-              setUiDurationLabel(formatDurationLabel(next));
+              setUiDurationLabel(null);
               setPicker(null);
             }}
             onUnlock={function() {
@@ -886,24 +886,19 @@ window.CreateScreen = CreateScreen;
 
 function DurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
-  const [localValue, setLocalValue] = useState(String(value == null ? '' : value));
-  useEffect(function() {
-    setLocalValue(String(value == null ? '' : value));
-  }, [value]);
   var values = durationOptionValues(options);
   var autoEnabled = values.indexOf('auto') !== -1;
   var numericValues = values.filter(function(v) { return /^\d+s?$/i.test(String(v)); });
   if (!numericValues.length) numericValues = values.filter(function(v) { return String(v) !== 'auto'; });
-  var selected = String(localValue || value || '');
-  var selectedIndex = Math.max(0, numericValues.findIndex(function(v) { return String(v) === selected; }));
+  var selected = String(value == null ? '' : value);
+  var selectedIndex = numericValues.findIndex(function(v) { return String(v) === selected; });
   if (selectedIndex < 0) selectedIndex = 0;
   var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
-  var selectedLabel = formatDurationLabel(selected);
+  var selectedLabel = label || formatDurationLabel(selected);
   var changeDuration = function(next) {
     var nextValue = String(next);
-    setLocalValue(nextValue);
     onChange && onChange(nextValue);
   };
 
