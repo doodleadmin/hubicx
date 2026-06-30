@@ -302,7 +302,64 @@ PROCESSING: cold blue tint overall, very high contrast, strongly underexposed ba
   { code:'camera-g7x', t:'Камера G7X', img:'assets/templates/photo/camera-g7x/cover.webp', type:'photo', category:'Эффекты', requiresImage:true, modelCode:'nano_banana_pro', qualityValue:'1K', inputLabel:'Любое фото', prompt:`Use the uploaded image as the main reference. Preserve the exact person, face, facial features, body shape, figure, proportions, pose, clothing, background, framing, and overall composition as accurately as possible. Keep the subject fully recognizable as the same person. Do not change the person, do not replace the face or body, and do not redesign the scene. Apply only the visual style described below.
 
 Apply a photorealistic Canon PowerShot G7X Mark III signature look to the uploaded image. Create a 1-inch sensor creamy bokeh feel, f/1.8–2.8 24–100mm lens look, and a built-in flash pop directly on the skin for a flattering glow and specular highlights. Make the background slightly underexposed, dark, and softly blurred, around -1.3 to -2 EV. Give the skin soft warm tones with golden-hour peach undertones, translucent pores, and a subtle natural oil sheen. Use low-contrast natural SOOC-style grading, creamy colors with no harsh saturation, subtle low film grain, and a dreamy haze glow around the subject. Create shallow depth-of-field portrait perfection with a trendy 2025 vlog / Instagram aesthetic. Keep the result hyper-real but with organic imperfections and a professional human photo vibe.` },
-];
+  { code:'cinematic-portrait', t:'Кино-портрет', coverVideo:'assets/templates/photo/cinematic-portrait/cover.mp4', type:'photo', category:'Эффекты', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Улучшите портрет, полностью сохранив индивидуальность модели, геометрию лица, его выразительность и индивидуальность. Допускайте только незначительные уточнения, не изменяя черт лица. Сохраняйте фон на 100% идентичным — никаких замен, дополнений или изменений. Повторный рендеринг, как при съемке на Sony A1 с объективом 85 мм f/1.4 (f/1.6, ISO 100, 1/200), с кинематографической малой глубиной резкости, четким фокусом на лице и нейтральным цветовым профилем. Подбирайте оригинальное направление освещения и настроение, усиливая его мягким направленным светом, теплыми бликами, холодными тенями, более глубоким контрастом, широким динамическим диапазоном, естественной микроконтрастностью и плавными тональными переходами. Сохраняйте реалистичную текстуру кожи, естественные цвета, тонкую зернистость пленки и оригинальную атмосферу. Увеличьте реалистичность, глубину и детализацию без изменения сцены. Никаких изменений фона, изменения формы лица, искусственного свечения, резкого или ровного освещения, искусственной кожи или чрезмерного сглаживания. Кинематографическое качество изображения в формате 4K.@Создать изображение` },
+  { code:'pixar-caricature', t:'3D карикатура', coverVideo:'assets/templates/photo/pixar-caricature/cover.mp4', type:'photo', category:'Персонажи', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Используй загруженное фото. Реальный человек остаётся полностью без изменений — точное лицо, волосы, кожа, одежда, поза, фон, освещение, кадрирование. Ничего не менять.
+
+Рядом с ним разместить премиум 3D-карикатуру в стиле Pixar того же человека. Высота — до плеча. Большие выразительные глаза, слегка увеличенная голова, элегантные пропорции. Карикатура слегка касается его плеча. Тёплое, естественное взаимодействие — без объятий, без держания за руки.
+
+То же освещение, та же сцена, бесшовная интеграция. Ультрадетализация, 8K, кинематографическое качество.
+
+Негатив: Funko Pop, чиби, игрушка, маскот, пластик, изменённый реальный человек, висящая в воздухе фигура, низкое качество.` },
+  { code:'anime-movie-frame', t:'Аниме-кадр', coverVideo:'assets/templates/photo/anime-movie-frame/cover.mp4', type:'photo', category:'Стили', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Transform the uploaded photo into a cinematic Japanese anime film frame while preserving the original composition, pose, camera angle, perspective, environment, and storytelling.
+
+Keep the character instantly recognizable with refined anime proportions, expressive eyes, natural-looking hair, detailed clothing, and rich facial expressions.
+
+Use clean anime line art, cinematic shadows, soft gradients, subtle rim lighting, warm color grading, and premium hand-painted textures.
+
+Add gentle environmental motion such as flowing hair, moving clothes, floating dust particles, drifting leaves, soft atmospheric haze, and volumetric sun rays.
+
+Reimagine the entire scene as a high-budget theatrical anime movie with stunning background art, immersive lighting, and exceptional detail.
+
+Final result: an official-looking frame from a world-class Japanese animated feature film, elegant, atmospheric, cinematic, ultra-detailed, 8K.
+
+Negative prompt: low quality, blurry, CGI, plastic, 3D render, chibi, cartoon, comic style, distorted anatomy, extra limbs, violence, explosions, destruction, speed lines.` },
+  { code:'claymation-portrait', t:'Пластилин', coverVideo:'assets/templates/photo/claymation-portrait/cover.mp4', type:'photo', category:'Стили', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Transform the uploaded photo into an absurd stop-motion clay animation inspired by classic British claymation.
+
+Preserve the original composition exactly: same framing, pose, facial expression, clothing, camera angle, lighting, perspective, and background.
+
+Turn every subject into a handcrafted clay character with exaggerated caricature features: oversized asymmetrical eyes, huge mouth, chunky teeth, visible pink gums, expressive eyebrows, slightly distorted proportions, and humorous facial expressions.
+
+Use heavy matte modeling clay with visible fingerprints, sculpting marks, tiny cracks, dents, rough handmade imperfections, and slightly uneven geometry to emphasize the handcrafted stop-motion look.
+
+Soft studio lighting, macro depth of field, cinematic color grading, ultra-detailed textures, realistic clay materials, premium stop-motion aesthetic, 8K.
+
+Negative prompt: CGI plastic, glossy surface, realistic human skin, anime, Pixar, smooth textures, low quality, blurry, extra limbs, distorted anatomy, watermark, text.` },
+  { code:'age-timeline', t:'Лента возраста', coverVideo:'assets/templates/photo/age-timeline/cover.mp4', type:'photo', category:'Портрет', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Create a hyper-realistic chronological portrait of the same person shown at ages 5, 12, 25, 40, and 65, arranged from left to right.
+
+Maintain perfect identity across every age: identical facial bone structure, proportions, skin characteristics, facial features, and expression, showing only natural biological aging. The person should remain instantly recognizable at every stage.
+
+Use a clean dark gradient background with cinematic side and top lighting, placing all versions in one seamless shared environment.
+
+Dress each version in age-appropriate clothing while preserving a consistent visual style.
+
+Compose the image like a premium editorial portrait with subtle perspective, soft depth of field, and a faint curved arrow suggesting the passage of time.
+
+Ultra-realistic skin textures, natural aging details, cinematic shadows, realistic reflections, premium color grading, ultra-detailed, photorealistic, 8K, vertical 3:4 composition, centered layout.
+
+Negative prompt: different person, face swap, inconsistent identity, duplicate faces, exaggerated aging, cartoon, CGI, low quality, blurry, distorted anatomy, extra limbs, text, watermark.` },
+  { code:'lego-minifigure', t:'LEGO-фигурка', coverVideo:'assets/templates/photo/lego-minifigure/cover.mp4', type:'photo', category:'Персонажи', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Преобразуйте людей на изображении в точные фигурки Lego Minifigure. Сохраните выражение лица, позу, прическу, аксессуары и фоновую сцену максимально близко к оригиналу.
+
+Технические характеристики фигурки: крупная цилиндрическая голова с плоским верхом и характерным стабом, круглые руки-крюки без пальцев, блочное прямоугольное тело с горизонтальным стыком на талии, квадратные ступни. Кожа, одежда и аксессуары — матовый ABS-пластик с легким глянцем. Детали одежды — плоская 2D-печать прямо на корпусе фигурки, не объёмная лепка.
+
+Рендер: фотореалистичный 3D, мягкое студийное освещение с небольшими тенями, макро-съёмка с боке на фоне, резкость на фигурке. Финальный результат — будто реальная коллекционная LEGO-фигурка сфотографирована в студии на оригинальном фоне из референса.` },
+  { code:'skin-retouch', t:'Ретушь кожи', coverVideo:'assets/templates/photo/skin-retouch/cover.mp4', type:'photo', category:'Портрет', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Skin enhancement retouch, preserve original identity and structure, refine skin texture without smoothing, maintain pores, freckles, and natural variation, reduce temporary blemishes and redness only, even out tone subtly without flattening depth, retain natural highlights and shadow transitions, keep under-eye detail intact with slight softening not removal, avoid plastic or airbrushed finish, maintain original lighting and color balance, enhance micro-contrast for realistic texture, lips and eyes untouched except for natural clarity, no reshaping of facial features, no artificial glow, no over-sharpening, seamless integration with original image, invisible edit with high realism.` },
+].map(function(t) {
+  if (!t || t.type !== 'photo') return t;
+  return Object.assign({}, t, {
+    aspectId: t.aspectId || '3:4',
+    aspectLocked: t.aspectLocked !== false,
+  });
+});
 const CREATE_TPL = TEMPLATES.slice();
 
 /* ---- favorites (shared between mobile & desktop) ---- */
