@@ -1,5 +1,5 @@
 /* ============ Create photo/video screen ============ */
-/* BUILD: 20260630-duration-slider-haptic1 */
+/* BUILD: 20260630-aspect-desktop1 */
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
