@@ -360,9 +360,72 @@ function waitForTelegramAuthReady() {
   });
 }
 
+const MOBILE_TABS = ['agent', 'gen', 'profile'];
+function getSwipeTab(active, direction) {
+  var idx = MOBILE_TABS.indexOf(active);
+  if (idx < 0) idx = 0;
+  var next = Math.max(0, Math.min(MOBILE_TABS.length - 1, idx + direction));
+  return MOBILE_TABS[next];
+}
+function isMobileSwipeBlockedTarget(target) {
+  if (!target || !target.closest) return false;
+  var selectors = [
+    'input', 'textarea', 'select', 'button', 'a', '[contenteditable="true"]', '[role="button"]',
+    '.topnav', '.tn-seg', '.tn-icon', '.m-notif',
+    '.sheet-ov', '.sheet', '.topup-sheet', '.pay-result-ov',
+    '.mob-onb', '.mob-onb-panel', '.onb',
+    '.chat-wrap', '.chat-body',
+    '.tpl-rail', '.quick-row', '.chips', '.picker-grid', '.template-grid', '.tpl-grid',
+    '.seg', '.upload-box', '.dur-control', '.duration-row', '.range-wrap',
+    'input[type="range"]'
+  ].join(',');
+  return !!target.closest(selectors);
+}
+function MobileTabSwipeLayer({ active, disabled, direction, onSwipe, children }) {
+  const startRef = uR(null);
+  const dirClass = direction > 0 ? ' swipe-next' : direction < 0 ? ' swipe-prev' : '';
+
+  const onTouchStart = (e) => {
+    if (DESKTOP || disabled || !e.touches || e.touches.length !== 1) { startRef.current = null; return; }
+    var touch = e.touches[0];
+    if (isMobileSwipeBlockedTarget(e.target)) { startRef.current = null; return; }
+    startRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      t: Date.now(),
+      active: active
+    };
+  };
+  const onTouchEnd = (e) => {
+    var start = startRef.current;
+    startRef.current = null;
+    if (!start || disabled || !e.changedTouches || e.changedTouches.length !== 1) return;
+    var touch = e.changedTouches[0];
+    var dx = touch.clientX - start.x;
+    var dy = touch.clientY - start.y;
+    var ax = Math.abs(dx);
+    var ay = Math.abs(dy);
+    var threshold = Math.max(58, Math.min(92, Math.round((window.innerWidth || 390) * 0.16)));
+    if (Date.now() - start.t > 900) return;
+    if (ax < threshold || ax < ay * 1.35) return;
+    var swipeDir = dx < 0 ? 1 : -1;
+    var next = getSwipeTab(start.active, swipeDir);
+    if (next === start.active) return;
+    tgHaptic('selection');
+    if (onSwipe) onSwipe(next, swipeDir);
+  };
+
+  return <div className={'mob-swipe-stage' + dirClass}
+    onTouchStart={onTouchStart}
+    onTouchEnd={onTouchEnd}>
+    {children}
+  </div>;
+}
+
 function App() {
   const { Star } = window.MiraCore;
   const [tab, setTab] = uS(() => localStorage.getItem(TAB_KEY) || 'agent');
+  const [tabSwipeDir, setTabSwipeDir] = uS(0);
   const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
   const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
@@ -562,8 +625,9 @@ function App() {
 
   const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
   const openTemplates = () => { setCreateOpen(false); setActiveChat(null); setTemplatesOpen(true); };
-  const goTab = (t) => {
+  const goTab = (t, opts) => {
     if (t === 'templates') { openTemplates(); return; }
+    setTabSwipeDir(opts && opts.swipeDir ? opts.swipeDir : 0);
     setCreateOpen(false); setActiveChat(null); setTemplatesOpen(false); setTab(t);
   };
 
@@ -749,10 +813,15 @@ function App() {
     body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser}/>;
   }
 
-  const mainContent = <React.Fragment>
+  const swipeDisabled = !!(createOpen || templatesOpen || activeChat || topup || paymentResult);
+  const mainContent = <MobileTabSwipeLayer key={'mob-swipe-' + tab + '-' + tabSwipeDir}
+    active={tab}
+    disabled={swipeDisabled}
+    direction={tabSwipeDir}
+    onSwipe={(next, dir) => goTab(next, { swipeDir: dir })}>
     {body}
     {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat} onSetAgent={setChatAgent}/>}
-  </React.Fragment>;
+  </MobileTabSwipeLayer>;
 
   if (DESKTOP) {
     const TITLES = {

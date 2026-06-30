@@ -263,6 +263,20 @@ html.theme-dark .hbx-blocked-note { background: #12151b; }
 }
 body.hbx-modal-open .screen { overflow: hidden !important; }
 .screen::-webkit-scrollbar { display: none; }
+.mob-swipe-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
+}
+.mob-swipe-stage > .screen,
+.mob-swipe-stage > .chat-wrap { min-height: 0; }
+.mob-swipe-stage.swipe-next { animation: tabInNext .24s cubic-bezier(.2,.85,.25,1) both; }
+.mob-swipe-stage.swipe-prev { animation: tabInPrev .24s cubic-bezier(.2,.85,.25,1) both; }
+@keyframes tabInNext { from { opacity: .86; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes tabInPrev { from { opacity: .86; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
 
 /* ── cards ── */
 .card {
@@ -1234,7 +1248,7 @@ html.theme-dark .bubble.bot .chat-md code { background: rgba(255,255,255,.08); }
 @keyframes scrUp { from { transform: translateY(12px); } to { transform: none; } }
 .rise { animation: rise .48s cubic-bezier(.2,.85,.25,1) both; animation-delay: var(--d, 0s); }
 @keyframes rise { from { transform: translateY(14px); } to { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .scr-enter, .bubble, .rise { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .scr-enter, .bubble, .rise, .mob-swipe-stage { animation: none !important; } }
 
 /* ══ Telegram fullscreen: 100px safe area at top ═══════════════ */
 .tg-fs {
