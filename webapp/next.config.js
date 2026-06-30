@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  skipTrailingSlashRedirect: true,
   async redirects() {
     return [
       {
@@ -10,6 +11,20 @@ const nextConfig = {
         permanent: true,
       },
     ];
+  },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/app",
+          destination: "/app/index.html",
+        },
+        {
+          source: "/app/",
+          destination: "/app/index.html",
+        },
+      ],
+    };
   },
   async headers() {
     const securityHeaders = [

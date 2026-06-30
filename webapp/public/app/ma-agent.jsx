@@ -47,6 +47,52 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
     { bg:"#fbe6d2", c:"#c47e44", ic:"image",   l:"Создать фото" },
     { bg:"#f8e1ec", c:"#c45c92", ic:"wand",    l:"Помочь с текстом" },
   ];
+  function uniqTemplates(list) {
+    var seen = {};
+    return list.filter(function(t) {
+      var key = t && (t.code || t.t);
+      if (!key || seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+  function byCodes(codes) {
+    return uniqTemplates(codes.map(function(code) {
+      return TEMPLATES.find(function(t) { return t.code === code || t.t === code; });
+    }).filter(Boolean));
+  }
+  function byCategory(names, limit) {
+    var set = {};
+    names.forEach(function(n) { set[n] = true; });
+    return TEMPLATES.filter(function(t) { return set[t.category] || (names.indexOf('Видео') !== -1 && t.type === 'video'); }).slice(0, limit || 6);
+  }
+  function renderTemplateRail(list, label) {
+    if (!list || !list.length) return null;
+    return <div className="home-template-strip">
+      <div className="home-strip-head">
+        <span>{label}</span>
+        <button onClick={onTemplates}>Все</button>
+      </div>
+      <div className="home-strip-rail">
+        {list.map(function(t, i) {
+          return <div className="home-mini-tpl" key={(t.code || t.t) + i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
+            <TemplateMedia t={t} loading={i < 3 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i === 0 ? 'high' : 'auto'}/>
+            <div className="shade"></div>
+            <div className="home-mini-name">{t.t}</div>
+          </div>;
+        })}
+      </div>
+    </div>;
+  }
+  var categoryCards = [
+    { title:'Тренды', sub:'эффекты и стили', ic:'sparkle', bg:'#f6efd7', c:'#bd8a42', list: byCodes(['Полароид с вечеринки','Камера G7X','Аниме-кадр','Пластилин']) },
+    { title:'Портрет', sub:'лицо и образ', ic:'user', bg:'#e8f0ec', c:'#5f9184', list: byCodes(['Кино-портрет','Лента возраста','Метро','Волк']) },
+    { title:'Видео', sub:'сцены и движение', ic:'video', bg:'#e8e5f8', c:'#6f6cc8', list: byCategory(['Видео'], 5) },
+    { title:'Животные', sub:'кадры с питомцами', ic:'heart', bg:'#f7e7ee', c:'#c45c92', list: byCategory(['Животные'], 5) },
+  ].filter(function(c) { return c.list && c.list.length; });
+  var trendTemplates = byCodes(['Полароид с вечеринки','Камера G7X','Аниме-кадр','Пластилин','Нео-нуар']);
+  var portraitTemplates = byCodes(['Кино-портрет','Лента возраста','Метро','Волк','Розы']);
+  var videoTemplates = byCategory(['Видео'], 6);
 
   return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
     <TopNav active="agent" onTab={onTab}/>
@@ -79,6 +125,19 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
         })}
       </div>
 
+      <div className="home-cats rise" style={{ '--d':'.22s' }}>
+        {categoryCards.map(function(c, i) {
+          var first = c.list[0];
+          return <div className="home-cat-card" key={c.title} onClick={() => first ? onTemplate(first) : onTemplates()}>
+            <span className="home-cat-ic" style={{ background:c.bg, color:c.c }}><Ic n={c.ic} s={18} c={c.c}/></span>
+            <b>{c.title}</b>
+            <small>{c.sub}</small>
+          </div>;
+        })}
+      </div>
+
+      {renderTemplateRail(trendTemplates, 'Тренды сейчас')}
+
       <div className="sec-h rise" style={{ '--d':'.24s', marginTop:22, marginBottom:12 }}>
         <h2>Быстрые идеи</h2>
         <div style={{ width:18, height:18, borderRadius:'50%', border:'2px solid var(--faint)' }}></div>
@@ -100,12 +159,14 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
           <div className="model-promo-t">Kling</div>
           <div className="model-promo-s">Киношное движение из фото</div>
         </div>
+        {renderTemplateRail(portraitTemplates, 'Портрет и стиль')}
         <div className="model-promo" style={{ background:'#1c302a', color:'#e5fff4' }}
           onClick={() => onCreateVideo && onCreateVideo('seedance_2_auto')}>
           <LazyPromoVideo src={seedanceSrc}/>
           <div className="model-promo-t">Seedance 2.0</div>
           <div className="model-promo-s">Топовое качество · сам выберет text/image/reference</div>
         </div>
+        {renderTemplateRail(videoTemplates, 'Видео-сцены')}
         <div className="model-promo" style={{ background:'#1a1b2e', color:'#e8e0ff' }}
           onClick={() => onCreateVideo && onCreateVideo('happy_horse_i2v')}>
           <LazyPromoVideo src={happyHorseSrc}/>
