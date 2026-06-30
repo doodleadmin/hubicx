@@ -14,7 +14,7 @@ from backend.app.services.generations import create_generation_task, get_user_ta
 from backend.app.services.rate_limit import check_user_rate_limit
 from backend.app.services.telegram_sender import send_generation_result_to_chat
 from backend.app.utils.errors import AppError
-from worker.generation_worker import process_generation_task
+from worker.generation_worker import notify_user, process_generation_task
 
 router = APIRouter(prefix="/generations", tags=["generations"])
 logger = logging.getLogger(__name__)
@@ -40,6 +40,16 @@ def serialize_task(task: GenerationTask) -> GenerationOut:
     )
 
 
+async def notify_generation_started(telegram_id: int, task: GenerationTask) -> None:
+    if not telegram_id or telegram_id <= 0:
+        return
+    kind = "Видео" if task.task_type == "video" else "Фото" if task.task_type in {"image", "photo"} else "Генерация"
+    await notify_user(
+        telegram_id,
+        f"⏳ {kind} запущено. Можно вернуться в Hubicx — результат пришлём сюда, когда он будет готов.",
+    )
+
+
 @router.post("", response_model=GenerationQueued)
 async def create_generation(payload: GenerationCreate, user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> GenerationQueued:
     await check_user_rate_limit(user.id, "generation_create", 10, 60)
@@ -58,6 +68,8 @@ async def create_generation(payload: GenerationCreate, user: User = Depends(curr
             await asyncio.sleep(0.2 * (attempt + 1))
     if task is None:
         raise last_exc  # type: ignore[misc]
+    if user.telegram_id and user.telegram_id > 0:
+        asyncio.create_task(notify_generation_started(user.telegram_id, task))
     process_generation_task.delay(task.id)
     return GenerationQueued(task_id=task.id, status=task.status)
 

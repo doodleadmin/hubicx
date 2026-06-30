@@ -350,7 +350,7 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
   </div>;
 }
 
-function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, refreshBalance }) {
+function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, onQueued, refreshBalance }) {
   const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
 
   // Models from API
@@ -663,6 +663,15 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setCurrentTask(null);
 
     window.HubicxApi.createGeneration(payload).then(function(data) {
+      if (onQueued) {
+        if (refreshBalance) refreshBalance();
+        onQueued({
+          taskId: data.task_id,
+          status: data.status,
+          isVideo: mode === 'video',
+        });
+        return;
+      }
       var cancel = pollTask(
         data.task_id,
         function(task) { setCurrentTask(task); },
@@ -696,24 +705,31 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   // ── Generating view ──
   if (genState === 'generating') {
     var minimize = onMinimize || resetGen;
-    var isVideoModel = mode === 'video' || !!(currentModelCode && (currentModelCode.indexOf('seedance') !== -1 || currentModelCode.indexOf('kling') !== -1 || currentModelCode.indexOf('video') !== -1));
     return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <div className="cr-head">
         <div className="cr-back" onClick={minimize}><Ic n="back" s={20}/></div>
-        <div className="cr-title">Создание…</div>
+        <div className="cr-title">Запускаем…</div>
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
-      <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <GenStageCanvas running={true} done={false} isVideo={isVideoModel} aspectId={selectedAspect && selectedAspect.id} task={currentTask}/>
+      <div className="screen scr-enter gen-queue-screen">
+        <div className="gen-queue-card">
+          <div className="gen-spinner"></div>
+          <h3>Отправляем задачу</h3>
+          <p>
+            {mode === 'video'
+              ? 'Видео уйдёт в генерацию в фоне. Когда будет готово, пришлём результат в Telegram.'
+              : 'Фото уйдёт в генерацию в фоне. Результат появится в истории и придёт в Telegram.'}
+          </p>
+        </div>
         <div className="muted" style={{ fontSize:13.5, textAlign:'center', margin:'14px auto 0', maxWidth:280 }}>
           {mode === 'video'
-            ? 'Видео генерируется 2–3 минуты. Можно свернуть — пришлём уведомление в Telegram, когда будет готово.'
-            : 'Обычно занимает 15–40 секунд. Результат проявится на этом холсте.'}
+            ? 'Обычно видео занимает 2–3 минуты.'
+            : 'Обычно фото занимает 15–40 секунд.'}
         </div>
         <button className="btn-secondary" style={{ margin:'14px auto 0', maxWidth:220 }}
           onClick={minimize}>Свернуть</button>
         <div className="muted" style={{ fontSize:12, textAlign:'center', margin:'10px auto 0', maxWidth:260 }}>
-          Генерация продолжится в фоне и появится в разделе «Генерация»
+          Можно продолжать пользоваться Hubicx
         </div>
       </div>
     </div>;

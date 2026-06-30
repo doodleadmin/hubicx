@@ -107,6 +107,7 @@ function tgHaptic(kind) {
     else if (h.impactOccurred) h.impactOccurred(kind || 'light');
   } catch(e) {}
 }
+window.tgHaptic = tgHaptic;
 
 function DesktopOnboarding({ onTab, onTopup }) {
   const [open, setOpen] = uS(() => DESKTOP && !isOnboardingDone());
@@ -431,6 +432,8 @@ function App() {
   const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
   const [theme, setTheme] = uS(getInitialTheme);
   const [accessBlock, setAccessBlock] = uS(null);
+  const [mobileNotice, setMobileNotice] = uS(null);
+  const mobileNoticeTimer = uR(null);
 
   // Desktop-only routing state (ignored on mobile)
   const [dtab, setDtab] = uS(deskTabFromLocation);
@@ -457,6 +460,12 @@ function App() {
     };
     window.addEventListener('hubicx:user-banned', handler);
     return function() { window.removeEventListener('hubicx:user-banned', handler); };
+  }, []);
+
+  uE(() => {
+    return function() {
+      if (mobileNoticeTimer.current) clearTimeout(mobileNoticeTimer.current);
+    };
   }, []);
 
   uE(() => {
@@ -630,6 +639,19 @@ function App() {
     setTabSwipeDir(opts && opts.swipeDir ? opts.swipeDir : 0);
     setCreateOpen(false); setActiveChat(null); setTemplatesOpen(false); setTab(t);
   };
+  const showMobileNotice = (notice) => {
+    if (mobileNoticeTimer.current) clearTimeout(mobileNoticeTimer.current);
+    setMobileNotice(Object.assign({ id: Date.now() }, notice || {}));
+    mobileNoticeTimer.current = setTimeout(function() { setMobileNotice(null); }, 5200);
+  };
+  const handleMobileGenerationQueued = (info) => {
+    tgHaptic('success');
+    goTab('gen');
+    showMobileNotice({
+      title: info && info.isVideo ? 'Видео запущено' : 'Генерация запущена',
+      text: 'Результат появится в истории и придёт в Telegram, когда будет готов.',
+    });
+  };
 
   // Append streaming text chunk to last bot message
   const appendBotChunk = (chatId, chunk) => {
@@ -794,7 +816,7 @@ function App() {
   if (createOpen) {
     body = <CreateScreen key={createKey + ':' + mode + ':' + (preset && (preset.code || preset.t) || '') + ':' + (createModelCode || '')}
       tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
-      onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} refreshBalance={refreshBalance}/>;
+      onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} onQueued={handleMobileGenerationQueued} refreshBalance={refreshBalance}/>;
   } else if (templatesOpen) {
     body = <TemplatesScreen onBack={() => setTemplatesOpen(false)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)}/>;
@@ -875,6 +897,15 @@ function App() {
 
   return <div className="phone">
     {mainContent}
+    {mobileNotice && <div className="gen-toast-top" key={mobileNotice.id}>
+      <div className="gen-toast-ic">✨</div>
+      <div className="gen-toast-copy">
+        <b>{mobileNotice.title}</b>
+        <span>{mobileNotice.text}</span>
+      </div>
+      <button className="gen-toast-main" onClick={() => { tgHaptic('selection'); setMobileNotice(null); goTab('profile'); }}>История</button>
+      <button className="gen-toast-x" onClick={() => setMobileNotice(null)} aria-label="Закрыть">×</button>
+    </div>}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
     {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     <MobileOnboarding key="mob-onb" onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
