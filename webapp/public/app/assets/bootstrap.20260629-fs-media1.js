@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260630-photo-edit1';
+  window.__APP_BUILD__ = '20260630-duration-slider-haptic1';
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';

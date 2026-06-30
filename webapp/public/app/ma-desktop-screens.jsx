@@ -2,9 +2,8 @@
    Hubicx — Desktop (PC) screens
    Loaded only in desktop.html, before ma-app.jsx.
 
-   BUILD: 20260622-v3
+   BUILD: 20260630-no-refresh-loop
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-photo-edit1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
