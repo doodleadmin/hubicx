@@ -57,42 +57,37 @@ function getAspectField(model) {
 }
 function aspectValueForField(field, aspectId) {
   if (!field) return aspectId;
-  var opts = fieldOptions(field).map(function(o) { return String(o); });
+  var opts = fieldOptions(field).map(function(o) { return String(optionValue(o)); });
   if (opts.indexOf(String(aspectId)) !== -1) return aspectId;
   var map = {
     '1:1': ['square_hd', 'square', '1:1'],
-    '2:3': ['portrait_4_3', 'portrait_16_9', '9:16', '2:3'],
-    '3:4': ['3:4', 'portrait_4_3', 'portrait_16_9'],
-    '4:5': ['4:5', 'portrait_4_3', 'portrait_16_9'],
-    '3:2': ['landscape_4_3', 'landscape_16_9', '16:9', '3:2'],
-    '4:3': ['4:3', 'landscape_4_3', 'landscape_16_9'],
-    '5:4': ['5:4', 'landscape_4_3', 'landscape_16_9'],
-    '9:16': ['portrait_16_9', '9:16', 'portrait_4_3'],
-    '16:9': ['landscape_16_9', '16:9', 'landscape_4_3'],
-    '21:9': ['21:9', 'landscape_16_9']
+    '2:3': ['2:3'],
+    '3:4': ['3:4', 'portrait_4_3'],
+    '4:5': ['4:5'],
+    '3:2': ['3:2'],
+    '4:3': ['4:3', 'landscape_4_3'],
+    '5:4': ['5:4'],
+    '9:16': ['portrait_16_9', '9:16'],
+    '16:9': ['landscape_16_9', '16:9'],
+    '21:9': ['21:9']
   };
   var candidates = map[String(aspectId)] || [String(aspectId)];
   for (var i = 0; i < candidates.length; i++) if (opts.indexOf(candidates[i]) !== -1) return candidates[i];
-  return fieldDefault(field) || aspectId;
+  return optionValue(fieldDefault(field)) || aspectId;
 }
 function getAspectOptionsForModel(model, fallbackAspects) {
   var field = getAspectField(model);
   if (!field) return fallbackAspects;
-  var opts = fieldOptions(field).map(function(o) { return String(o); });
+  var opts = fieldOptions(field).map(function(o) { return String(optionValue(o)); });
   var filtered = fallbackAspects.filter(function(a) {
     if (opts.indexOf(String(a.id)) !== -1) return true;
     if (field.name !== 'image_size') return false;
     var map = {
       '1:1': ['square_hd', 'square'],
-      '2:3': ['portrait_4_3', 'portrait_16_9'],
-      '3:4': ['portrait_4_3', 'portrait_16_9'],
-      '4:5': ['portrait_4_3'],
-      '3:2': ['landscape_4_3', 'landscape_16_9'],
-      '4:3': ['landscape_4_3', 'landscape_16_9'],
-      '5:4': ['landscape_4_3'],
+      '3:4': ['portrait_4_3'],
+      '4:3': ['landscape_4_3'],
       '9:16': ['portrait_16_9'],
-      '16:9': ['landscape_16_9'],
-      '21:9': ['landscape_16_9']
+      '16:9': ['landscape_16_9']
     };
     return (map[String(a.id)] || []).some(function(v) { return opts.indexOf(v) !== -1; });
   });
@@ -730,7 +725,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
       <div className="dk-row-ic"><Ic n="clock" s={20} c="var(--ink)"/></div>
       <div className="dk-row-tx">
         <div className="dk-row-k">Длительность</div>
-        <div className="dk-row-v">{selectedLabel || label}</div>
+        <div className="dk-row-v" key={'dk-dur-head-' + String(selectedForLabel)}>{selectedLabel || label}</div>
         {template && locked && <div className="dk-row-s">Длительность закреплена за шаблоном</div>}
       </div>
       {template && locked && <button className="dk-lock-btn"
@@ -754,10 +749,10 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
               value={selected === 'auto' ? 0 : selectedIndex}
               onInput={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}
               onChange={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}/>
-            <div className="dk-duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="dk-duration-scale"><span>{minLabel}</span><b key={'dk-dur-scale-' + String(selectedForLabel)}>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
-            {numericValues.map(function(v){ return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
+            {numericValues.map(function(v){ return <button key={v} type="button" className={durationValuesMatch(v, selected) ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
           </div>}
     </div>}
   </div>;
@@ -884,6 +879,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var defaultModelId = (modelOpts[0] && modelOpts[0].id) || (filtered[0] && filtered[0].code) || null;
   var displayModelId = displaySeedanceAutoCode(selectedModelCode || defaultModelId);
   var selectedTpl = DESK_TPL.find(function(t) { return t.t === selTpl; }) || null;
+  var isPhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo';
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var uploadedRefFiles = referenceSlots ? uploadedFiles.filter(Boolean) : (uploadedFile ? [uploadedFile] : []);
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles);
@@ -916,7 +912,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
   var onePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
-  var price = Math.max(1, onePrice * batchCount);
+  var effectiveBatchCount = isPhotoTemplate ? 1 : batchCount;
+  var price = Math.max(1, onePrice * effectiveBatchCount);
 
   const handleFile = function(file, target) {
     if (!file || uploading || !window.HubicxApi || !window.HubicxApi.hasAuth()) return;
@@ -950,7 +947,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
 
   const pickTemplate = function(t) {
     setTab('tpl'); setSelTpl(t.t); setMode(t.type === 'video' ? 'video' : 'photo');
-    setUploadedFile(null); setUploadedFiles([]);
+    setUploadedFile(null); setUploadedFiles([]); if (t.type === 'photo') setBatchCount(1);
     setSelectedModelCode(templateModelCode(t)); setSelectedQuality(templateQualityValue(t) || null); setSelectedDuration(templateDurationValue(t) || null); setUiDurationValue(templateDurationValue(t) || null); setUiModelLabel(null); setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null); setUiDurationLabel(null); setUiAspectLabel(null); setDurationLocked(!!t.durationLocked); if (t.aspectId) { var a = ASPECTS.find(function(x){ return String(x.id) === String(t.aspectId); }); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } } setTemplateLocked(true); setOpen(null);
   };
   const clearTemplate = function() {
@@ -992,7 +989,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       input_file_url: (referenceSlots && uploadedRefFiles[0]) ? uploadedRefFiles[0].url : (uploadedFile ? uploadedFile.url : null),
       inputs: inputs,
     }; };
-    var count = Math.max(1, Math.min(4, Number(batchCount) || 1));
+    var count = Math.max(1, Math.min(4, Number(effectiveBatchCount) || 1));
     var ids = Array.from({ length: count }, function(_, i) { return 'local-' + Date.now() + '-' + i; });
     setSessionItems(ids.map(function(id, i) { return { tempId:id, index:i, status:'creating', task:null, error:null, mode:mode, aspectId:selectedAspectSafe && selectedAspectSafe.id }; }));
     setCanvas('generating'); setErr(null); setTask(null);
@@ -1102,7 +1099,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
             <div className="dk-template-selected-tx">
               <div className="dk-template-selected-k">Выбран шаблон</div>
               <div className="dk-template-selected-v">{selectedTpl.t}</div>
-              <div className="dk-template-selected-s">Модель закреплена за шаблоном. Нажмите замок, чтобы сменить.</div>
+              <div className="dk-template-selected-s">{selectedTpl.type === 'photo' ? 'Модель выбрана шаблоном. Можно настроить только качество и формат.' : 'Модель закреплена за шаблоном. Нажмите замок, чтобы сменить.'}</div>
             </div>
             <button className="dk-template-clear" title="Убрать шаблон" onClick={clearTemplate}><Ic n="close" s={18}/></button>
           </div>}
@@ -1124,16 +1121,18 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
 
       <div className="dk-lbl">Детали</div>
       <div className="dk-card">
-        <div className={'dk-row' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
-          <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
-          <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
-            <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '') + '-' + price}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel + ' · ' + price + ' ★' : 'Нет моделей'}</div></div>
-          {selectedTpl && <button className={'dk-lock-btn' + (!templateLocked ? ' off' : '')} title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'} onClick={function(e){ e.stopPropagation(); setTemplateLocked(!templateLocked); if (templateLocked) setOpen('model'); }}>
-            <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
-          </button>}
-          {!templateLocked && modelOpts.length > 0 && <span className="chev"><Ic n="chev" s={19}/></span>}
-        </div>
-        <div className="dk-row-div"></div>
+        {!isPhotoTemplate && <React.Fragment>
+          <div className={'dk-row' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
+            <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
+            <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
+              <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '') + '-' + price}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel + ' · ' + price + ' ★' : 'Нет моделей'}</div></div>
+            {selectedTpl && <button className={'dk-lock-btn' + (!templateLocked ? ' off' : '')} title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'} onClick={function(e){ e.stopPropagation(); setTemplateLocked(!templateLocked); if (templateLocked) setOpen('model'); }}>
+              <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
+            </button>}
+            {!templateLocked && modelOpts.length > 0 && <span className="chev"><Ic n="chev" s={19}/></span>}
+          </div>
+          <div className="dk-row-div"></div>
+        </React.Fragment>}
         {qField && <React.Fragment>
           <div className="dk-row" onClick={() => setOpen(open === 'quality' ? null : 'quality')}>
             <div className="dk-row-ic"><Ic n="sparkle" s={20} c="var(--ink)"/></div>
@@ -1143,7 +1142,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           </div>
           <div className="dk-row-div"></div>
         </React.Fragment>}
-        {durationField && <React.Fragment>
+        {durationField && !isPhotoTemplate && <React.Fragment>
           <DeskDurationInlineControl
             value={String(durationValue)}
             label={displayDurationLabel}
@@ -1156,26 +1155,28 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           />
           <div className="dk-row-div"></div>
         </React.Fragment>}
-        <div className="dk-row" onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
-          <div className="dk-row-ic"><Ic n="image" s={20} c="var(--ink)"/></div>
-          <div className="dk-row-tx"><div className="dk-row-k">Количество</div>
-            <div className="dk-row-v">{batchCount} генераци{batchCount === 1 ? 'я' : 'и'} · {price} ★</div></div>
-          <span className="chev"><Ic n="chev" s={19}/></span>
-        </div>
-        <div className="dk-row-div"></div>
+        {!isPhotoTemplate && <React.Fragment>
+          <div className="dk-row" onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
+            <div className="dk-row-ic"><Ic n="image" s={20} c="var(--ink)"/></div>
+            <div className="dk-row-tx"><div className="dk-row-k">Количество</div>
+              <div className="dk-row-v">{batchCount} генераци{batchCount === 1 ? 'я' : 'и'} · {price} ★</div></div>
+            <span className="chev"><Ic n="chev" s={19}/></span>
+          </div>
+          <div className="dk-row-div"></div>
+        </React.Fragment>}
         <div className="dk-row" onClick={() => setOpen(open === 'aspect' ? null : 'aspect')}>
           <div className="dk-row-ic"><Ic n="aspect" s={20} c="var(--ink)"/></div>
           <div className="dk-row-tx"><div className="dk-row-k">Формат</div>
             <div className="dk-row-v" key={'gen-aspect-label-' + (selectedAspectSafe && selectedAspectSafe.id) + '-' + displayAspectLabel}>{displayAspectLabel}</div></div>
           <span className="chev"><Ic n="chev" s={19}/></span>
         </div>
-        {open === 'model' && !templateLocked && <DeskFloatingPicker kind="model"
+        {open === 'model' && !templateLocked && !isPhotoTemplate && <DeskFloatingPicker kind="model"
           options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:(o.s ? o.s + ' · ' : '') + (o.price || '') }; })} current={curCode}
           onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(opt ? opt.t : null); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>}
         {open === 'quality' && qField && <DeskFloatingPicker kind="quality"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>}
-        {open === 'batch' && <DeskFloatingPicker kind="batch"
+        {open === 'batch' && !isPhotoTemplate && <DeskFloatingPicker kind="batch"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:(onePrice * n) + ' ★' }; })} current={String(batchCount)}
           onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>}
         {open === 'aspect' && <DeskFloatingPicker kind="aspect"

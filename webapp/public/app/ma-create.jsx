@@ -54,6 +54,51 @@ function getDurationField(model) { return getModelField(model, ['duration']); }
 function getFilesField(model) { return getModelField(model, ['image_urls', 'media_urls']); }
 function getSingleImageField(model) { return getModelField(model, ['image_url']); }
 function getSingleVideoField(model) { return getModelField(model, ['video_url']); }
+function getAspectField(model) {
+  var aspect = getModelField(model, ['aspect_ratio']);
+  if (aspect) return aspect;
+  var imageSize = getModelField(model, ['image_size']);
+  if (imageSize && Array.isArray(imageSize.options)) return imageSize;
+  return null;
+}
+function aspectValueForField(field, aspectId) {
+  if (!field) return aspectId;
+  var opts = fieldOptions(field).map(function(o) { return String(optionValue(o)); });
+  if (opts.indexOf(String(aspectId)) !== -1) return aspectId;
+  var map = {
+    '1:1': ['square_hd', 'square', '1:1'],
+    '2:3': ['2:3'],
+    '3:4': ['3:4', 'portrait_4_3'],
+    '4:5': ['4:5'],
+    '3:2': ['3:2'],
+    '4:3': ['4:3', 'landscape_4_3'],
+    '5:4': ['5:4'],
+    '9:16': ['portrait_16_9', '9:16'],
+    '16:9': ['landscape_16_9', '16:9'],
+    '21:9': ['21:9']
+  };
+  var candidates = map[String(aspectId)] || [String(aspectId)];
+  for (var i = 0; i < candidates.length; i++) if (opts.indexOf(candidates[i]) !== -1) return candidates[i];
+  return optionValue(fieldDefault(field)) || aspectId;
+}
+function getAspectOptionsForModel(model, fallbackAspects) {
+  var field = getAspectField(model);
+  if (!field) return fallbackAspects;
+  var opts = fieldOptions(field).map(function(o) { return String(optionValue(o)); });
+  var filtered = fallbackAspects.filter(function(a) {
+    if (opts.indexOf(String(a.id)) !== -1) return true;
+    if (field.name !== 'image_size') return false;
+    var map = {
+      '1:1': ['square_hd', 'square'],
+      '3:4': ['portrait_4_3'],
+      '4:3': ['landscape_4_3'],
+      '9:16': ['portrait_16_9'],
+      '16:9': ['landscape_16_9']
+    };
+    return (map[String(a.id)] || []).some(function(v) { return opts.indexOf(v) !== -1; });
+  });
+  return filtered.length ? filtered : fallbackAspects;
+}
 function fieldDefault(field) {
   if (!field) return null;
   if (field.default != null) return field.default;
@@ -388,6 +433,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var currentModelOpt = modelOptions.find(function(m) { return String(m.id) === String(displayModelId); }) || modelOptions.find(function(m) { return String(m.id) === String(currentModelCode); }) || modelOptions[0];
   var qField = getQualityField(currentModelFull);
   var durationField = getDurationField(currentModelFull);
+  var aspectField = getAspectField(currentModelFull);
   var filesField = getFilesField(currentModelFull);
   var singleImageField = getSingleImageField(currentModelFull);
   var singleVideoField = getSingleVideoField(currentModelFull);
@@ -397,8 +443,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   if (selectedTpl && !tplList.some(function(t) { return t.t === selectedTpl.t; })) tplList = [selectedTpl].concat(tplList);
   // Single source of truth for the visible and sent aspect is React state.
   // localStorage is used only to prefill templates, never to override live picker changes.
+  var aspectOpts = getAspectOptionsForModel(currentModelFull, ASPECTS);
   var effectiveAspectId = uiAspectId || selectedAspectId;
-  var selectedAspect = ASPECTS.find(function(a) { return String(a.id) === String(effectiveAspectId); }) || ASPECTS[1] || ASPECTS[0];
+  var selectedAspect = aspectOpts.find(function(a) { return String(a.id) === String(effectiveAspectId); }) || aspectOpts[0] || ASPECTS[1] || ASPECTS[0];
   var qOptions = fieldOptions(qField);
   var qValue = qField ? normalizeFieldValue(qField, uiQualityValue != null ? uiQualityValue : (selectedQuality != null ? selectedQuality : fieldDefault(qField))) : null;
   var durationOptions = fieldOptions(durationField);
@@ -414,7 +461,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
   var displayDurationLabel = durationField && durationValue != null ? formatDurationLabel(durationValue) : null;
-  var displayAspectLabel = uiAspectLabel || (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
+  var displayAspectLabel = uiAspectLabel && selectedAspect && String(selectedAspect.id) === String(effectiveAspectId)
+    ? uiAspectLabel
+    : (selectedAspect ? selectedAspect.t + ' · ' + selectedAspect.s : '');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
@@ -538,7 +587,11 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     var inputs = {};
     var hasSchemaFields = modelFields(currentModelFull).length > 0;
     var hasField = function(name) { return !hasSchemaFields || !!getModelField(currentModelFull, [name]); };
-    if (effectiveAspectId) inputs.aspect_ratio = effectiveAspectId;
+    if (selectedAspect) {
+      var providerAspectValue = aspectField ? aspectValueForField(aspectField, selectedAspect.id) : selectedAspect.id;
+      if (aspectField) inputs[aspectField.name] = providerAspectValue;
+      else inputs.aspect_ratio = providerAspectValue;
+    }
     if (qField && qValue != null) inputs[qField.name] = qValue;
     if (durationField && durationValue != null) inputs[durationField.name] = String(durationValue);
     if (selectedTpl && selectedTpl.templatePipeline && hasField('template_pipeline')) inputs.template_pipeline = selectedTpl.templatePipeline;
@@ -626,7 +679,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
       <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <GenStageCanvas running={true} done={false} isVideo={isVideoModel} aspectId={effectiveAspectId} task={currentTask}/>
+        <GenStageCanvas running={true} done={false} isVideo={isVideoModel} aspectId={selectedAspect && selectedAspect.id} task={currentTask}/>
         <div className="muted" style={{ fontSize:13.5, textAlign:'center', margin:'14px auto 0', maxWidth:280 }}>
           {mode === 'video'
             ? 'Видео генерируется 2–3 минуты. Можно свернуть — пришлём уведомление в Telegram, когда будет готово.'
@@ -650,7 +703,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
         <div className="cr-tok"><Star s={15} c="#c9c7f4"/> {tokens}</div>
       </div>
       <div className="screen scr-enter" style={{ paddingTop:14 }}>
-        <GenResult task={currentTask} tokens={tokens} onNewGeneration={resetGen} aspectId={effectiveAspectId}/>
+        <GenResult task={currentTask} tokens={tokens} onNewGeneration={resetGen} aspectId={selectedAspect && selectedAspect.id}/>
       </div>
     </div>;
   }
@@ -888,7 +941,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
     {/* Aspect picker */}
     {picker === 'aspect' && !aspectLocked && <PickerSheet
-      title="Соотношение сторон" options={ASPECTS}
+      title="Соотношение сторон" options={aspectOpts}
       current={selectedAspect}
       onSelect={function(opt) {
         if (opt && opt.id) {
