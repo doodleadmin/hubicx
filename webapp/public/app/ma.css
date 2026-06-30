@@ -559,7 +559,7 @@ html.theme-dark .duration-range::-webkit-slider-runnable-track {
 }
 .tpl-rail::-webkit-scrollbar { display: none; }
 .tpl-card {
-  width: 132px; height: 162px; flex: 0 0 132px; scroll-snap-align: start;
+  width: 156px; height: 192px; flex: 0 0 156px; scroll-snap-align: start;
   cursor: pointer; box-shadow: var(--shadow-sm);
 }
 .home-cats {
@@ -654,10 +654,10 @@ html.theme-dark .duration-range::-webkit-slider-runnable-track {
 .home-strip-rail::-webkit-scrollbar { display: none; }
 .home-mini-tpl {
   position: relative;
-  flex: 0 0 96px;
-  width: 96px;
-  height: 116px;
-  border-radius: 15px;
+  flex: 0 0 118px;
+  width: 118px;
+  height: 146px;
+  border-radius: 18px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.36);
   background: var(--nav-bg);
@@ -667,12 +667,12 @@ html.theme-dark .duration-range::-webkit-slider-runnable-track {
 }
 .home-mini-tpl .home-mini-name {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  left: 9px;
+  right: 9px;
+  bottom: 9px;
   z-index: 2;
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.12;
   font-weight: 950;
   text-shadow: 0 1px 7px rgba(0,0,0,.55);
@@ -686,7 +686,7 @@ html.theme-dark .home-cat-card { background: #191c23; }
 .tpl-filter { position: sticky; top: 0; z-index: 2; margin-bottom: 2px; }
 .model-promo-list { display: flex; flex-direction: column; gap: 12px; padding-bottom: 2px; }
 .model-promo {
-  min-height: 128px; border-radius: 22px; padding: 16px; overflow: hidden; position: relative;
+  min-height: 192px; border-radius: 24px; padding: 18px; overflow: hidden; position: relative;
   display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer;
   border: 1px solid rgba(255,255,255,.12); box-shadow: var(--shadow-sm);
 }
