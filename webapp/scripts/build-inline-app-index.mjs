@@ -25,7 +25,7 @@ function escapeScript(source) {
 const template = await readFile(path.join(appDir, "index.source.html"), "utf8");
 const blocks = [];
 
-blocks.push("<script>window.__HUBICX_INLINE_INDEX__='20260630-duration-chips1';</script>");
+blocks.push("<script>window.__HUBICX_INLINE_INDEX__='20260630-duration-slider-haptic1';</script>");
 
 for (const [name, rel] of scripts) {
   const source = await readFile(path.join(appDir, rel), "utf8");

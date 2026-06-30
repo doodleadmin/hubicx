@@ -1,6 +1,6 @@
 /* ============ Create photo/video screen ============ */
 /* BUILD: 20260622-v3 */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-live4') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-slider-haptic1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_ATTEMPTS = 230; // ~11.5 min — must exceed backend FAL_TASK_TIMEOUT (10 min)
@@ -906,6 +906,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 }
 window.CreateScreen = CreateScreen;
 
+function hbxDurationHaptic() {
+  try {
+    var tg = window.Telegram && window.Telegram.WebApp;
+    var h = tg && tg.HapticFeedback;
+    if (h && h.selectionChanged) h.selectionChanged();
+    else if (h && h.impactOccurred) h.impactOccurred('light');
+  } catch (e) {}
+}
 function DurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
   var values = durationOptionValues(options);
@@ -916,10 +924,14 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
   var selectedIndex = durationIndex(numericValues, selected);
   var selectedNumeric = numericValues[selectedIndex] || selected;
   var selectedForLabel = selected === 'auto' ? selected : selectedNumeric;
+  var progress = numericValues.length > 1 ? Math.round((selectedIndex / (numericValues.length - 1)) * 100) : 0;
+  var minLabel = numericValues.length ? formatDurationLabel(numericValues[0]) : '';
+  var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
+    if (String(nextValue) !== String(selected)) hbxDurationHaptic();
     onChange && onChange(nextValue);
   };
 
@@ -928,7 +940,7 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
       <div className="cr-detail-ic"><Ic n="clock" s={21}/></div>
       <div className="duration-inline-title">
         <div className="muted" style={{ fontSize:12 }}>Длительность</div>
-        <div style={{ fontWeight:800, fontSize:15 }}>{selectedLabel || label}</div>
+        <div style={{ fontWeight:800, fontSize:15 }} key={'dur-head-' + String(selectedForLabel)}>{selectedLabel || label}</div>
         {template && locked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Длительность закреплена за шаблоном</div>}
       </div>
       {template && locked && <button className="m-lock-btn"
@@ -945,11 +957,26 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
     {!locked && <div className="duration-control">
       {autoEnabled && <button type="button" className={'duration-auto' + (selected === 'auto' ? ' on' : '')}
         onClick={function() { changeDuration('auto'); }}>Auto</button>}
-      <div className="duration-chips">
-        {numericValues.map(function(v) {
-          return <button key={v} type="button" className={'duration-chip' + (durationValuesMatch(v, selected) ? ' on' : '')} onClick={function() { changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>;
-        })}
-      </div>
+      {numericValues.length > 1
+        ? <React.Fragment>
+            <input className="duration-range" type="range" min="0" max={numericValues.length - 1} step="1"
+              style={{ '--duration-progress': progress + '%' }}
+              value={selected === 'auto' ? 0 : selectedIndex}
+              onInput={function(e) {
+                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
+                changeDuration(String(next));
+              }}
+              onChange={function(e) {
+                var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
+                changeDuration(String(next));
+              }}/>
+            <div className="duration-scale"><span>{minLabel}</span><b key={'dur-scale-' + String(selectedForLabel)}>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+          </React.Fragment>
+        : <div className="duration-chips">
+            {numericValues.map(function(v) {
+              return <button key={v} type="button" className={'duration-chip' + (durationValuesMatch(v, selected) ? ' on' : '')} onClick={function() { changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>;
+            })}
+          </div>}
     </div>}
   </div>;
 }

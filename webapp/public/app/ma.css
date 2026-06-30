@@ -354,9 +354,10 @@ html.theme-dark .row-link:active { background: #20242c; }
 }
 .duration-control {
   margin: 12px 0 0 54px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
 }
 .duration-auto {
   height: 38px;
@@ -417,6 +418,7 @@ html.theme-dark .row-link:active { background: #20242c; }
   font-weight: 950;
 }
 .duration-chips {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -447,7 +449,7 @@ html.theme-dark .duration-range::-webkit-slider-runnable-track {
 }
 
 @media (max-width: 380px) {
-  .duration-control { margin-left: 0; }
+  .duration-control { margin-left: 0; grid-template-columns: 1fr; }
   .duration-auto { width: 100%; }
 }
 
