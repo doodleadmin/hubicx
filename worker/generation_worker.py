@@ -60,6 +60,13 @@ def _strip_internal_provider_keys(params: dict | None) -> dict:
     return clean
 
 
+def _with_task_input_image(provider_input: dict | None, input_file_url: str | None) -> dict:
+    payload = dict(provider_input or {})
+    if input_file_url and "image_url" not in payload and "image_urls" not in payload:
+        payload["image_url"] = input_file_url
+    return payload
+
+
 async def _run_tv_broadcast_pipeline(provider: FalProvider, provider_params: dict) -> object:
     source_image = provider_params.get("start_image_url") or provider_params.get("image_url")
     if not source_image:
@@ -175,7 +182,10 @@ async def _process_generation_task(task_id: int) -> None:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
         elif task.task_type == "image":
             if task.provider_input:
-                result = await provider.generate_image_v2(provider_model_id, _strip_internal_provider_keys(task.provider_input))
+                result = await provider.generate_image_v2(
+                    provider_model_id,
+                    _strip_internal_provider_keys(_with_task_input_image(task.provider_input, task.input_file_url)),
+                )
             else:
                 result = await provider.generate_image(provider_model_id, prompt, task.input_file_url, provider_params)
         elif task.task_type == "video":

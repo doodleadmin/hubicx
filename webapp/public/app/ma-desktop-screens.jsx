@@ -4,7 +4,7 @@
 
    BUILD: 20260622-v3
    ============================================================ */
-(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-duration-slider-haptic1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
+(function(){ if (typeof window!=='undefined' && window.__APP_BUILD__ && window.__APP_BUILD__!=='20260630-photo-edit1') { var u = new URL(window.location); u.searchParams.set('_r', Date.now()); window.location.replace(u.href); } })();
    /* Uses globals from ma-core (useState/useEffect/useRef, MiraCore)
    and window.HubicxApi. Mobile screens are untouched.
    ============================================================ */
@@ -707,14 +707,6 @@ function DeskFloatingPicker({ kind, options, current, onPick }) {
   </div>;
 }
 
-function hbxDurationHaptic() {
-  try {
-    var tg = window.Telegram && window.Telegram.WebApp;
-    var h = tg && tg.HapticFeedback;
-    if (h && h.selectionChanged) h.selectionChanged();
-    else if (h && h.impactOccurred) h.impactOccurred('light');
-  } catch (e) {}
-}
 function DeskDurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
   var values = durationOptionValues(options);
@@ -732,7 +724,6 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
   var selectedLabel = formatDurationLabel(selectedForLabel);
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
-    if (String(nextValue) !== String(selected)) hbxDurationHaptic();
     onChange && onChange(nextValue);
   };
   return <div className={'dk-duration-inline' + (locked ? ' locked' : '')}>
@@ -740,7 +731,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
       <div className="dk-row-ic"><Ic n="clock" s={20} c="var(--ink)"/></div>
       <div className="dk-row-tx">
         <div className="dk-row-k">Длительность</div>
-        <div className="dk-row-v" key={'dk-dur-head-' + String(selectedForLabel)}>{selectedLabel || label}</div>
+        <div className="dk-row-v">{selectedLabel || label}</div>
         {template && locked && <div className="dk-row-s">Длительность закреплена за шаблоном</div>}
       </div>
       {template && locked && <button className="dk-lock-btn"
@@ -764,10 +755,10 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
               value={selected === 'auto' ? 0 : selectedIndex}
               onInput={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}
               onChange={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}/>
-            <div className="dk-duration-scale"><span>{minLabel}</span><b key={'dk-dur-scale-' + String(selectedForLabel)}>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="dk-duration-scale"><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
-            {numericValues.map(function(v){ return <button key={v} type="button" className={'dk-duration-chip' + (durationValuesMatch(v, selected) ? ' on' : '')} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
+            {numericValues.map(function(v){ return <button key={v} type="button" className={String(v) === selected ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
           </div>}
     </div>}
   </div>;
@@ -1181,16 +1172,16 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
         </div>
         {open === 'model' && !templateLocked && <DeskFloatingPicker kind="model"
           options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:(o.s ? o.s + ' · ' : '') + (o.price || '') }; })} current={curCode}
-          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(opt ? opt.t : null); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>} 
+          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(opt ? opt.t : null); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>}
         {open === 'quality' && qField && <DeskFloatingPicker kind="quality"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
-          onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>} 
+          onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>}
         {open === 'batch' && <DeskFloatingPicker kind="batch"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:(onePrice * n) + ' ★' }; })} current={String(batchCount)}
-          onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>} 
+          onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>}
         {open === 'aspect' && <DeskFloatingPicker kind="aspect"
           options={aspectOpts.map(function(a){ return { id:a.id, title:a.t, sub:a.s }; })} current={selectedAspectSafe.id}
-          onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }}/>} 
+          onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }}/>}
       </div>
 
       <button className="dk-cta" disabled={!ready || uploading || !modelsLoaded || !curModel || canvas === 'generating'} onClick={start}>
@@ -1207,7 +1198,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className="dk-canvas-et">Здесь появится результат</div>
           <div className="dk-canvas-es">Выберите шаблон или опишите идею — результаты появятся коллекцией в этой сессии</div>
         </div>}
-        {(canvas === 'generating' || canvas === 'done') && sessionItems.length > 0 && <DeskSessionGrid items={sessionItems} onAgain={reset}/>} 
+        {(canvas === 'generating' || canvas === 'done') && sessionItems.length > 0 && <DeskSessionGrid items={sessionItems} onAgain={reset}/>}
         {canvas === 'error' && <div className="dk-canvas-empty">
           <div style={{ fontSize:40 }}>{errKind === 'timeout' ? '⏳' : '⚠️'}</div>
           <div className="dk-canvas-et" style={{ marginTop:12 }}>{errKind === 'timeout' ? 'Почти готово' : 'Ошибка'}</div>
