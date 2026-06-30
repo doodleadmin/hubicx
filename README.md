@@ -170,11 +170,12 @@ limit 5;
 - `/tasks` - последние задачи.
 - `/errors` - последние ошибки.
 
-## Payments MVP
+## Payments
 
-- `POST /api/payments/create` создаёт mock payment.
-- Ручное пополнение делается через `/add_balance`.
-- Таблицы и webhook endpoint подготовлены для Telegram Stars, CryptoBot или ЮKassa.
+- `POST /api/payments/create` создаёт платёж через T-Bank Internet Acquiring.
+- `POST /api/payments/notify` принимает server-to-server уведомления T-Bank.
+- Desktop и Telegram Mini App используют отдельные терминалы, выбранные по return URL host.
+- Ручное пополнение для админских операций доступно через `/add_balance`.
 
 ## Где Менять provider_model_id
 
