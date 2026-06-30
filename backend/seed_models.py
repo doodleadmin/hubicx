@@ -47,7 +47,7 @@ AI_MODELS_CATALOG = [
         "provider": "fal",
         "provider_model_id": "fal-ai/nano-banana-pro",
         "task_type": "image",
-        "input_type": "text",
+        "input_type": "image",
         "price_credits": 80,
         "is_active": True,
         "sort_order": 12,
@@ -373,6 +373,7 @@ set_model(
 
 set_model(
     "nano_banana_pro",
+    input_type="image",
     default_params={"output_format": "png", "safety_tolerance": "4"},
     form_schema=schema(
         [
