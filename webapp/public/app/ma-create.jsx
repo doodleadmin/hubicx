@@ -494,6 +494,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
   var currentPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
+  var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
   var showModelPicker = !selectedTpl;
 
   var pickTemplate = function(t) {
@@ -578,9 +579,12 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     var slotMode = typeof slotIndex === 'number';
     var allowed = list.filter(function(f) { return (mode === 'video' && !slotMode) ? /^(image|video)\//.test(f.type || '') : /^image\//.test(f.type || ''); });
     if (allowed.length !== list.length) alert(mode === 'photo' ? 'В генерации фото можно прикреплять только изображения' : 'Можно прикреплять только фото или видео');
-    var room = slotMode ? 1 : Math.max(0, 8 - uploadedFiles.length);
+    var room = slotMode ? 1 : (singlePhotoTemplate ? 1 : Math.max(0, 8 - uploadedFiles.length));
     allowed = allowed.slice(0, room);
-    if (!allowed.length) { if (uploadedFiles.length >= 8) alert('Можно загрузить максимум 8 файлов'); return; }
+    if (!allowed.length) {
+      alert(singlePhotoTemplate ? 'Для этого шаблона можно загрузить только одно фото' : 'Можно загрузить максимум 8 файлов');
+      return;
+    }
     setUploading(true);
     Promise.all(allowed.map(function(file) {
       var previewUrl = URL.createObjectURL(file);
@@ -595,6 +599,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
           next[slotIndex] = items[0];
           return next.slice(0, 8);
         }
+        if (singlePhotoTemplate) return items.slice(0, 1);
         return prev.concat(items).slice(0, 8);
       });
       setUploading(false);
@@ -646,10 +651,6 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     if (mediaUrls.length && hasField('media_urls')) inputs.media_urls = mediaUrls;
 
     var finalPrompt = (tab === 'prompt' ? prompt.trim() : ((selectedTpl && selectedTpl.prompt) || selTpl)) || null;
-    if (mediaUrls.length) {
-      var refs = cleanFiles.map(function(f, i) { return '[file' + (i + 1) + '] ' + f.url; }).join('\n');
-      finalPrompt = (finalPrompt ? finalPrompt + '\n\n' : '') + 'Прикрепленные медиафайлы для промпта:\n' + refs;
-    }
     var payload = {
       model_code: currentModelFull.code,
       prompt: finalPrompt,
@@ -796,7 +797,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       </div>
 
       {/* Hidden file input */}
-      <input ref={fileInputRef} type="file" multiple accept={mode === 'photo' ? 'image/*' : 'image/*,video/*'} style={{ display:'none' }}
+      <input ref={fileInputRef} type="file" multiple={!singlePhotoTemplate} accept={mode === 'photo' ? 'image/*' : 'image/*,video/*'} style={{ display:'none' }}
         onChange={function(e) { var slot = uploadSlotRef.current; uploadSlotRef.current = null; handleFiles(e.target.files, slot); e.target.value = ''; }}/>
 
       {/* Drop-zone / upload preview */}
@@ -826,12 +827,12 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
                 <b>file{i + 1}</b>
                 <button onClick={function(e) { e.stopPropagation(); setUploadedFiles(function(prev) { return prev.filter(function(_, idx) { return idx !== i; }); }); }}>×</button>
               </div>; })}
-              {uploadedCount < 8 && <div className="media-add"><Ic n="plus" s={20}/><span>{uploadedCount}/8</span></div>}
+              {!singlePhotoTemplate && uploadedCount < 8 && <div className="media-add"><Ic n="plus" s={20}/><span>{uploadedCount}/8</span></div>}
             </div>
             <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4, marginTop:8 }}>
               <div className="di"><Ic n="check" s={24} c="#5f9184"/></div>
-              <div className="dt">Загружено файлов: {uploadedCount}/8</div>
-              <div className="ds">В промпте можно ссылаться: file1, file2…</div>
+              <div className="dt">{singlePhotoTemplate ? 'Фото загружено' : 'Загружено файлов: ' + uploadedCount + '/8'}</div>
+              <div className="ds">{singlePhotoTemplate ? 'Нажмите, чтобы заменить фото' : 'Файлы отправятся в генерацию вместе с промптом'}</div>
             </div>
           </div>
         : <div className="drop-zone" onClick={() => !uploading && fileInputRef.current && fileInputRef.current.click()}>
@@ -840,7 +841,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
                   <div className="dt">Загружаю…</div></>
               : <><div className="di"><Ic n="addimg" s={24} c="var(--ink)"/></div>
                    <div className="dt">{needsTplImage && selectedTpl ? selectedTpl.inputLabel : (mode === 'photo' ? 'Загрузить фото' : 'Загрузить фото или видео')}</div>
-                   <div className="ds">До 8 файлов · в промпте: file1, file2…</div></>}
+                   <div className="ds">{singlePhotoTemplate ? 'Только 1 фото для этого шаблона' : 'До 8 файлов · медиа отправятся вместе с промптом'}</div></>}
           </div>}
 
       {/* Content tabs */}

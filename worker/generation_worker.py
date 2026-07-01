@@ -75,6 +75,16 @@ def _as_image_urls(value) -> list[str]:
     return []
 
 
+def _strip_inline_attachment_refs(prompt: str | None) -> str | None:
+    if not isinstance(prompt, str):
+        return prompt
+    marker = "Прикрепленные медиафайлы для промпта:"
+    idx = prompt.find(marker)
+    if idx == -1:
+        return prompt
+    return prompt[:idx].rstrip()
+
+
 def _nano_banana_pro_edit_payload(provider_input: dict | None, input_file_url: str | None) -> dict | None:
     payload = _with_task_input_image(provider_input, input_file_url)
     image_urls = _as_image_urls(payload.pop("image_urls", None)) or _as_image_urls(payload.pop("image_url", None))
@@ -194,6 +204,9 @@ async def _process_generation_task(task_id: int) -> None:
         provider_params = task.provider_input or task.params or {}
         if "prompt" not in provider_params:
             provider_params = {**provider_params, "prompt": prompt}
+        if isinstance(provider_params.get("prompt"), str):
+            provider_params = {**provider_params, "prompt": _strip_inline_attachment_refs(provider_params.get("prompt"))}
+            prompt = provider_params["prompt"] or prompt
 
         if task.task_type == "text":
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
