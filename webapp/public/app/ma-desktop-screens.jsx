@@ -840,6 +840,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
+  var controlClass = 'dk-duration-control' + (autoEnabled ? '' : ' no-auto');
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
     onChange && onChange(nextValue);
@@ -863,7 +864,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
         <Ic n="unlock" s={18}/>
       </button>}
     </div>
-    {!locked && <div className="dk-duration-control">
+    {!locked && <div className={controlClass}>
       {autoEnabled && <button type="button" className={'dk-duration-auto' + (selected === 'auto' ? ' on' : '')}
         onClick={function(){ changeDuration('auto'); }}>Auto</button>}
       {numericValues.length > 1

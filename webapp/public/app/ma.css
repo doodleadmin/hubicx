@@ -373,6 +373,9 @@ html.theme-dark .row-link:active { background: #20242c; }
   gap: 10px;
   align-items: center;
 }
+.duration-control.no-auto {
+  grid-template-columns: minmax(0, 1fr);
+}
 .duration-auto {
   height: 38px;
   min-width: 58px;
@@ -399,6 +402,9 @@ html.theme-dark .row-link:active { background: #20242c; }
   margin: 0;
   accent-color: var(--accent);
   background: transparent;
+}
+.duration-control.no-auto .duration-range {
+  grid-column: 1 / -1;
 }
 .duration-range::-webkit-slider-runnable-track {
   height: 8px;

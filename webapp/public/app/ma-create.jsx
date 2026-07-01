@@ -1168,6 +1168,7 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
+  var controlClass = 'duration-control' + (autoEnabled ? '' : ' no-auto');
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
     if (String(nextValue) !== String(selected)) hbxDurationHaptic();
@@ -1193,7 +1194,7 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
         <Ic n="unlock" s={18}/>
       </button>}
     </div>
-    {!locked && <div className="duration-control">
+    {!locked && <div className={controlClass}>
       {autoEnabled && <button type="button" className={'duration-auto' + (selected === 'auto' ? ' on' : '')}
         onClick={function() { changeDuration('auto'); }}>Auto</button>}
       {numericValues.length > 1

@@ -423,6 +423,9 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
   gap:10px;
   align-items:center;
 }
+.dk-duration-control.no-auto {
+  grid-template-columns:minmax(0,1fr);
+}
 .dk-duration-auto {
   height:36px;
   min-width:58px;
@@ -449,6 +452,9 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
   margin:0;
   accent-color:var(--accent);
   background:transparent;
+}
+.dk-duration-control.no-auto .dk-duration-range {
+  grid-column:1 / -1;
 }
 .dk-duration-range::-webkit-slider-runnable-track {
   height:8px;

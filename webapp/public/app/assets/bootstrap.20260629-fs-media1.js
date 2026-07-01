@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260701-220337-gen-price-trace1';
+  window.__APP_BUILD__ = '20260701-221641-gen-price-trace1';
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';
