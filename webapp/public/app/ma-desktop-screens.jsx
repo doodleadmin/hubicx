@@ -134,6 +134,19 @@ function displaySeedanceAutoCode(code) {
   if (!isSeedanceModelCode(s)) return s;
   return 'seedance_2_auto';
 }
+function modelMatchesMode(model, mode) {
+  if (!model) return false;
+  if (mode === 'video') return model.task_type === 'video' || model.category === 'video';
+  return model.task_type === 'image' || (model.category === 'photo' && model.task_type !== 'video');
+}
+function sanitizeDisplayModelId(rawId, mode, modelOptions, filteredModels) {
+  var raw = rawId ? String(rawId) : '';
+  if (!raw) return null;
+  var display = displaySeedanceAutoCode(raw);
+  if ((modelOptions || []).some(function(o) { return String(o.id) === display; })) return display;
+  var direct = (filteredModels || []).find(function(m) { return String(m.code) === raw && modelMatchesMode(m, mode); });
+  return direct ? displaySeedanceAutoCode(direct.code) : null;
+}
 function fieldDefault(field) {
   if (!field) return null;
   if (field.default != null) return field.default;
@@ -882,8 +895,8 @@ function DeskStageCanvas({ mode, aspectId }) {
 function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initBatchCount, refreshBalance, searchQuery }) {
   const { Ic, Star, ASPECTS } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
-  const [apiModels, setApiModels] = useState(window.MiraCore.FALLBACK_MODELS || []);
-  const [modelsLoaded, setModelsLoaded] = useState(true);
+  const [apiModels, setApiModels] = useState([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [selectedModelCode, setSelectedModelCode] = useState(initModelCode || (initTpl ? templateModelCode(initTpl) : null));
   const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(initModelCode || (initTpl ? templateModelCode(initTpl) : null)); });
   const [selectedAspect, setSelectedAspect] = useState(
@@ -925,6 +938,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const pricePreviewSeqRef = useRef(0);
 
   useEffect(function() {
+    setModelsLoaded(false);
     if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
     window.HubicxApi.models().then(function(m) {
       if (Array.isArray(m) && m.length > 0) setApiModels(m);
@@ -932,6 +946,9 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       setModelsLoaded(true);
     }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); });
   }, []);
+  useEffect(function() {
+    if (mode === 'video' && batchCount !== 1) setBatchCount(1);
+  }, [mode, batchCount]);
   const cancelRunning = function() {
     if (!cancelRef.current) return;
     if (Array.isArray(cancelRef.current)) cancelRef.current.forEach(function(fn) { try { if (fn) fn(); } catch(e) {} });
@@ -952,14 +969,14 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     modelOpts.push({ id:m.code, t:modelDisplayTitle(m), s:shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
   });
   var defaultModelId = (modelOpts[0] && modelOpts[0].id) || (filtered[0] && filtered[0].code) || null;
-  var displayModelId = displaySeedanceAutoCode(selectedModelCode || defaultModelId);
+  var displayModelId = sanitizeDisplayModelId(selectedModelCode, mode, modelOpts, filtered) || defaultModelId;
   var selectedTpl = DESK_TPL.find(function(t) { return t.t === selTpl; }) || null;
   var isPhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo';
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var uploadedRefFiles = referenceSlots ? uploadedFiles.filter(Boolean) : (uploadedFile ? [uploadedFile] : []);
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles, seedanceTier);
   var curCode = displayModelId;
-  var curModel = filtered.find(function(m) { return m.code === currentModelCode; }) || filtered[0];
+  var curModel = filtered.find(function(m) { return m.code === currentModelCode; }) || filtered[0] || null;
   var curOpt = modelOpts.find(function(m) { return m.id === displayModelId; }) || modelOpts.find(function(m) { return m.id === currentModelCode; }) || modelOpts[0];
   var needsVideoFile = !!getModelField(curModel, ['video_url']);
   var aspectOpts = getAspectOptionsForModel(curModel, ASPECTS);
@@ -988,13 +1005,14 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
   var priceSignature = curModel
-    ? [curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    ? [mode, curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
-  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
+  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : 0;
   var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
   var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
-  var effectiveBatchCount = isPhotoTemplate ? 1 : batchCount;
-  var price = Math.max(1, onePrice * effectiveBatchCount);
+  var canPickBatch = mode === 'photo' && !isPhotoTemplate;
+  var effectiveBatchCount = canPickBatch ? batchCount : 1;
+  var price = curModel ? Math.max(1, onePrice * effectiveBatchCount) : 0;
 
   useEffect(function() {
     if (!curModel || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
@@ -1274,7 +1292,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           />
           <div className="dk-row-div"></div>
         </React.Fragment>}
-        {!isPhotoTemplate && <React.Fragment>
+        {canPickBatch && <React.Fragment>
           <div className="dk-row" onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
             <div className="dk-row-ic"><Ic n="image" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Количество</div>
@@ -1301,7 +1319,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
         {open === 'quality' && !qualityLocked && qField && <DeskPicker kind="quality" title="Качество"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
-        {open === 'batch' && !isPhotoTemplate && <DeskPicker kind="batch" title="Количество"
+        {open === 'batch' && canPickBatch && <DeskPicker kind="batch" title="Количество"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:'Итоговая стоимость обновится в кнопке' }; })} current={String(batchCount)}
           onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
         {open === 'aspect' && !aspectLocked && <DeskPicker kind="aspect" title="Формат"
@@ -1310,7 +1328,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       </div>
 
       <button className="dk-cta" disabled={!ready || uploading || !modelsLoaded || !curModel || canvas === 'generating'} onClick={start}>
-        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : 'Сгенерировать · ' + price + ' ★'}
+        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (modelsLoaded && curModel ? 'Сгенерировать · ' + price + ' ★' : 'Загрузка моделей…')}
       </button>
     </div>
 

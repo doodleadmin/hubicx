@@ -248,6 +248,24 @@ function resolveSeedanceAutoCode(code, files, tier) {
   if (images === 1) return isFast ? 'seedance_2_i2v_fast' : 'seedance_2_i2v';
   return isFast ? 'seedance_2_t2v_fast' : 'seedance_2_t2v';
 }
+function displaySeedanceAutoCode(code) {
+  var s = String(code || '');
+  if (!isSeedanceModelCode(s)) return s;
+  return 'seedance_2_auto';
+}
+function modelMatchesMode(model, mode) {
+  if (!model) return false;
+  if (mode === 'video') return model.task_type === 'video' || model.category === 'video';
+  return model.task_type === 'image' || (model.category === 'photo' && model.task_type !== 'video');
+}
+function sanitizeDisplayModelId(rawId, mode, modelOptions, filteredModels) {
+  var raw = rawId ? String(rawId) : '';
+  if (!raw) return null;
+  var display = displaySeedanceAutoCode(raw);
+  if ((modelOptions || []).some(function(o) { return String(o.id) === display; })) return display;
+  var direct = (filteredModels || []).find(function(m) { return String(m.code) === raw && modelMatchesMode(m, mode); });
+  return direct ? displaySeedanceAutoCode(direct.code) : null;
+}
 function modelDisplayTitle(m) {
   var code = String((m && m.code) || '');
   var titles = {
@@ -387,8 +405,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
 
   // Models from API
-  const [apiModels, setApiModels] = useState(FALLBACK_MODELS || []);
-  const [modelsLoaded, setModelsLoaded] = useState(true);
+  const [apiModels, setApiModels] = useState([]);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
   const [selectedQuality, setSelectedQuality] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
   const [selectedDuration, setSelectedDuration] = useState(function() { return preset ? (templateDurationValue(preset) || null) : null; });
@@ -451,9 +469,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       (Array.isArray(remote) ? remote : []).forEach(function(m) { if (m && m.code) byCode[m.code] = Object.assign({}, byCode[m.code] || {}, m); });
       return Object.keys(byCode).map(function(k) { return byCode[k]; });
     }
+    setModelsLoaded(false);
     if (!window.HubicxApi) { setApiModels(mergeModels([])); setModelsLoaded(true); return; }
-    setApiModels(mergeModels([]));
-    setModelsLoaded(true);
     window.HubicxApi.models().then(function(models) {
       setApiModels(mergeModels(models));
       setModelsLoaded(true);
@@ -485,9 +502,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Resolve current model
   var defaultModelId = (modelOptions[0] && modelOptions[0].id) || (filteredModels[0] && filteredModels[0].code) || null;
-  var displayModelId = uiModelId || selectedModelCode || defaultModelId;
+  var requestedModelId = uiModelId || selectedModelCode || null;
+  var displayModelId = sanitizeDisplayModelId(requestedModelId, mode, modelOptions, filteredModels) || defaultModelId;
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedFiles, seedanceTier);
-  var currentModelFull = filteredModels.find(function(m) { return m.code === currentModelCode; }) || filteredModels[0];
+  var currentModelFull = filteredModels.find(function(m) { return m.code === currentModelCode; }) || filteredModels[0] || null;
   var currentModelOpt = modelOptions.find(function(m) { return String(m.id) === String(displayModelId); }) || modelOptions.find(function(m) { return String(m.id) === String(currentModelCode); }) || modelOptions[0];
   var qField = getQualityField(currentModelFull);
   var durationField = getDurationField(currentModelFull);
@@ -527,9 +545,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
   var priceSignature = currentModelFull
-    ? [currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    ? [mode, currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
-  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
+  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : 0;
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
@@ -1035,7 +1053,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       <button className="btn-primary"
         disabled={!ready || uploading || !currentModelFull}
         onClick={startGeneration}>
-        {'Создать · ' + currentPrice + ' ★'}
+        {modelsLoaded && currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Загрузка моделей…'}
       </button>
     </div>
 
@@ -1043,7 +1061,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     {picker === 'model' && !templateLocked && modelOptions.length > 0 && <PickerSheet
       title="Модель" options={modelOptions}
       current={currentModelOpt || modelOptions[0]}
-      onSelect={function(opt) { setSelectedModelCode(opt.id); setUiModelId(opt.id); setUiModelLabel(opt.id === 'seedance_2_auto' ? null : (opt.t || String(opt.id))); setSelectedQuality(null); setUiQualityValue(null); setUiQualityLabel(null); setQualityLocked(false); }}
+      onSelect={function(opt) { setSelectedModelCode(opt.id); setUiModelId(opt.id); setUiModelLabel(opt.id === 'seedance_2_auto' ? null : (opt.t || String(opt.id))); setSelectedQuality(null); setUiQualityValue(null); setUiQualityLabel(null); setSelectedDuration(null); setUiDurationValue(null); setUiDurationLabel(null); setQualityLocked(false); setDurationLocked(false); }}
       onClose={() => setPicker(null)}/>}
 
     {/* Quality picker */}
