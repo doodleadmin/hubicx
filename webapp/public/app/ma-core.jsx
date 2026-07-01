@@ -176,6 +176,87 @@ const FALLBACK_MODELS = [
   { code:'veo_31_i2v',         title:'Veo 3.1 · по фото',         category:'video', task_type:'video', price_credits:900, description:'Кинематографично оживляет фото', input_type:'image' },
 ];
 
+function makeSeedancePriceRules(base, resolutionMultipliers) {
+  var durationKeys = ['4','5','6','7','8','9','10','11','12','13','14','15'];
+  var table = {};
+  Object.keys(resolutionMultipliers).forEach(function(resolution) {
+    var multiplier = Number(resolutionMultipliers[resolution]) || 1;
+    table[resolution] = { auto: Math.ceil(base * multiplier) };
+    durationKeys.forEach(function(duration) {
+      table[resolution][duration] = Math.ceil(base * multiplier * (Number(duration) / 5));
+    });
+  });
+  return {
+    default_duration: '5',
+    default_resolution: '720p',
+    resolution_duration_prices: table,
+  };
+}
+
+FALLBACK_MODELS.forEach(function(model) {
+  var code = String((model && model.code) || '');
+  if (code.indexOf('seedance_2_') !== 0) return;
+  var isMini = code.indexOf('_mini') !== -1;
+  var isFast = !isMini && code.indexOf('_fast') !== -1;
+  var base = isMini ? 240 : (isFast ? 370 : 460);
+  var resolutionMultipliers = isMini ? { '480p':0.466, '720p':1 } : (isFast ? { '480p':0.45, '720p':1 } : { '480p':0.45, '720p':1, '1080p':2.25 });
+  var isReference = code.indexOf('reference') !== -1;
+  var isImage = code.indexOf('_i2v') !== -1;
+  var mediaField = isReference
+    ? { name:'image_urls', type:'files', required:true, max_files:8 }
+    : (isImage ? { name:'image_url', type:'file', required:true } : null);
+  var fields = [];
+  if (mediaField) fields.push(mediaField);
+  fields.push({ name:'prompt', type:'textarea', required:true });
+  fields.push({ name:'aspect_ratio', type:'select', default:isImage ? 'auto' : '16:9', options:['auto','21:9','16:9','4:3','1:1','3:4','9:16'] });
+  fields.push({ name:'duration', type:'select', default:'5', options:['auto','4','5','6','7','8','9','10','11','12','13','14','15'] });
+  fields.push({ name:'resolution', type:'select', default:isReference ? '480p' : '720p', options:Object.keys(resolutionMultipliers) });
+  fields.push({ name:'generate_audio', type:'switch', default:true });
+  model.price_rules = makeSeedancePriceRules(base, resolutionMultipliers);
+  model.form_schema = Object.assign({}, model.form_schema || {}, { fields:fields });
+  model.default_params = Object.assign({ duration:'5', resolution:isReference ? '480p' : '720p', generate_audio:true }, model.default_params || {});
+});
+
+function mergeModelCatalog(remoteModels) {
+  var byCode = {};
+  FALLBACK_MODELS.forEach(function(model) {
+    if (model && model.code) byCode[model.code] = Object.assign({}, model);
+  });
+  (Array.isArray(remoteModels) ? remoteModels : []).forEach(function(model) {
+    if (!model || !model.code) return;
+    var fallback = byCode[model.code] || {};
+    byCode[model.code] = Object.assign({}, fallback, model, {
+      form_schema: model.form_schema || fallback.form_schema || null,
+      default_params: model.default_params || fallback.default_params || null,
+      price_rules: model.price_rules || fallback.price_rules || null,
+    });
+  });
+  return Object.keys(byCode).map(function(code) { return byCode[code]; });
+}
+
+const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v2';
+
+function readCachedModelCatalog() {
+  try {
+    var raw = window.localStorage && window.localStorage.getItem(MODEL_CATALOG_CACHE_KEY);
+    var parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function persistModelCatalog(models) {
+  if (!Array.isArray(models) || !models.length) return;
+  try {
+    if (window.localStorage) window.localStorage.setItem(MODEL_CATALOG_CACHE_KEY, JSON.stringify(models));
+  } catch (_) {}
+}
+
+function initialModelCatalog() {
+  return mergeModelCatalog(readCachedModelCatalog());
+}
+
 /* ---- data ---- */
 
 function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority = 'auto', onError }) {
@@ -411,4 +492,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };

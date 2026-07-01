@@ -402,10 +402,10 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
 }
 
 function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, onQueued, refreshBalance }) {
-  const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
+  const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
 
   // Models from API
-  const [apiModels, setApiModels] = useState([]);
+  const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
   const [selectedQuality, setSelectedQuality] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
@@ -463,18 +463,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Load models on mount
   useEffect(function() {
-    function mergeModels(remote) {
-      var byCode = {};
-      (FALLBACK_MODELS || []).forEach(function(m) { if (m && m.code) byCode[m.code] = m; });
-      (Array.isArray(remote) ? remote : []).forEach(function(m) { if (m && m.code) byCode[m.code] = Object.assign({}, byCode[m.code] || {}, m); });
-      return Object.keys(byCode).map(function(k) { return byCode[k]; });
-    }
-    setModelsLoaded(false);
-    if (!window.HubicxApi) { setApiModels(mergeModels([])); setModelsLoaded(true); return; }
+    var mergeModels = mergeModelCatalog || function(remote) { return Array.isArray(remote) && remote.length ? remote : (FALLBACK_MODELS || []).slice(); };
+    if (!window.HubicxApi) { setModelsLoaded(true); return; }
     window.HubicxApi.models().then(function(models) {
-      setApiModels(mergeModels(models));
+      var nextCatalog = mergeModels(models);
+      setApiModels(nextCatalog);
+      if (persistModelCatalog) persistModelCatalog(nextCatalog);
       setModelsLoaded(true);
-    }).catch(function() { setApiModels(mergeModels([])); setModelsLoaded(true); });
+    }).catch(function() { setModelsLoaded(true); });
   }, []);
 
   // Cancel polling on unmount
@@ -1072,7 +1068,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       <button className="btn-primary"
         disabled={!ready || uploading || !currentModelFull}
         onClick={startGeneration}>
-        {currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Загрузка моделей…'}
+        {currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Модель временно недоступна'}
       </button>
     </div>
 

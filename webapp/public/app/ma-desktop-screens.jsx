@@ -893,9 +893,9 @@ function DeskStageCanvas({ mode, aspectId }) {
 }
 
 function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initBatchCount, refreshBalance, searchQuery }) {
-  const { Ic, Star, ASPECTS } = window.MiraCore;
+  const { Ic, Star, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
-  const [apiModels, setApiModels] = useState([]);
+  const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [selectedModelCode, setSelectedModelCode] = useState(initModelCode || (initTpl ? templateModelCode(initTpl) : null));
   const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(initModelCode || (initTpl ? templateModelCode(initTpl) : null)); });
@@ -938,13 +938,14 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const pricePreviewSeqRef = useRef(0);
 
   useEffect(function() {
-    setModelsLoaded(false);
-    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
+    var mergeModels = mergeModelCatalog || function(remote) { return Array.isArray(remote) && remote.length ? remote : (FALLBACK_MODELS || []).slice(); };
+    if (!window.HubicxApi) { setModelsLoaded(true); return; }
     window.HubicxApi.models().then(function(m) {
-      if (Array.isArray(m) && m.length > 0) setApiModels(m);
-      else setApiModels(window.MiraCore.FALLBACK_MODELS);
+      var nextCatalog = mergeModels(m);
+      setApiModels(nextCatalog);
+      if (persistModelCatalog) persistModelCatalog(nextCatalog);
       setModelsLoaded(true);
-    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); });
+    }).catch(function() { setModelsLoaded(true); });
   }, []);
   useEffect(function() {
     if (mode === 'video' && batchCount !== 1) setBatchCount(1);
@@ -1348,7 +1349,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       </div>
 
       <button className="dk-cta" disabled={!ready || uploading || !curModel || canvas === 'generating'} onClick={start}>
-        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (curModel ? 'Сгенерировать · ' + price + ' ★' : 'Загрузка моделей…')}
+        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (curModel ? 'Сгенерировать · ' + price + ' ★' : 'Модель временно недоступна')}
       </button>
     </div>
 
