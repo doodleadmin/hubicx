@@ -901,6 +901,8 @@ function App() {
         aspectId: (opts && opts.aspectId) || null,
         qualityField: (opts && opts.qualityField) || null,
         qualityValue: (opts && opts.qualityValue) || null,
+        durationField: (opts && opts.durationField) || null,
+        durationValue: (opts && opts.durationValue) || null,
         batchCount: (opts && opts.batchCount) || 1 });
       setGenKey(k => k + 1); goDtab('gen');
     };
@@ -913,7 +915,7 @@ function App() {
 
     let dbody;
     if (dtab === 'home') dbody = <DeskHome tokens={tokens} onGen={goGen} onStartChat={dStartChat} onTemplate={onTemplate} onHistory={() => goDtab('history')}/>;
-    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} initModelCode={genInit.modelCode} initAspectId={genInit.aspectId} initQualityField={genInit.qualityField} initQualityValue={genInit.qualityValue} initBatchCount={genInit.batchCount} refreshBalance={refreshBalance} searchQuery={deskSearch}/>;
+    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} initModelCode={genInit.modelCode} initAspectId={genInit.aspectId} initQualityField={genInit.qualityField} initQualityValue={genInit.qualityValue} initDurationField={genInit.durationField} initDurationValue={genInit.durationValue} initBatchCount={genInit.batchCount} refreshBalance={refreshBalance} searchQuery={deskSearch}/>;
     else if (dtab === 'tpl') dbody = <DeskTemplates onTemplate={onTemplate} searchQuery={deskSearch}/>;
     else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat} onSetAgent={setChatAgent}/>;
     else if (dtab === 'history') dbody = <DeskHistory/>;

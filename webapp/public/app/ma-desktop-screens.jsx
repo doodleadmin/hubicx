@@ -575,6 +575,8 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   const [batchCount, setBatchCount] = useState(1);
   const [open, setOpen] = useState(null); // 'model' | 'quality' | 'duration' | 'batch' | 'aspect'
   const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  const [serverOnePrice, setServerOnePrice] = useState(null);
+  const pricePreviewSeqRef = useRef(0);
 
   useEffect(function() {
     var mergeModels = mergeModelCatalog || function(remote) { return Array.isArray(remote) && remote.length ? remote : (FALLBACK_MODELS || []).slice(); };
@@ -597,15 +599,48 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   var aspectOpts = getAspectOptionsForModel(curModel, ASPECTS);
   var aspectObj = aspectOpts.find(function(a) { return a.id === aspectId; }) || aspectOpts[0] || ASPECTS[1];
   var qField = getQualityField(curModel);
+  var durationField = getDurationField(curModel);
   var qOptions = fieldOptions(qField);
   var qValue = qField ? (qOptions.some(function(o) { return String(o) === String(qualityValue); }) ? qualityValue : fieldDefault(qField)) : null;
+  var durationOptions = fieldOptions(durationField);
+  var visibleDurationOptions = durationOptionValues(durationOptions);
+  var durationValue = durationField ? normalizeFieldValue(durationField, fieldDefault(durationField)) : null;
+  if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
+    var coercedDuration = coerceDurationValue(visibleDurationOptions, durationValue);
+    durationValue = visibleDurationOptions.indexOf(String(coercedDuration)) !== -1 ? coercedDuration : (visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]));
+  }
   var qualityLabel = uiQualityLabel || prettyOption(qValue);
   var aspectLabel = uiAspectLabel || (aspectObj ? aspectObj.t : '2:3');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
-  var onePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:hmode, displayModelId:curModel.code, concreteModelCode:curModel.code }) : 0;
+  if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
+  var priceSignature = curModel
+    ? [hmode, curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    : '';
+  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:hmode, displayModelId:curModel.code, concreteModelCode:curModel.code }) : 0;
+  var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
+  var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
   var effectiveHomeBatchCount = hmode === 'photo' ? batchCount : 1;
   var totalPrice = curModel ? Math.max(1, onePrice * effectiveHomeBatchCount) : 0;
+  useEffect(function() {
+    if (!curModel || hmode === 'chat' || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
+      setServerOnePrice({ signature: priceSignature, value: null });
+      return;
+    }
+    var seq = ++pricePreviewSeqRef.current;
+    var signature = priceSignature;
+    var timer = setTimeout(function() {
+      window.HubicxApi.modelPricePreview(curModel.code, priceInputs).then(function(data) {
+        if (seq !== pricePreviewSeqRef.current) return;
+        var next = data && (data.final_price_credits != null ? data.final_price_credits : data.price_tokens);
+        next = Number(next);
+        setServerOnePrice({ signature: signature, value: next > 0 ? Math.ceil(next) : null });
+      }).catch(function() {
+        if (seq === pricePreviewSeqRef.current) setServerOnePrice({ signature: signature, value: null });
+      });
+    }, 120);
+    return function() { clearTimeout(timer); };
+  }, [priceSignature]);
   useEffect(function() {
     if (!window.MiraCore || !window.MiraCore.writePriceTrace || hmode === 'chat') return;
     window.MiraCore.writePriceTrace('desktop-home', {
@@ -621,17 +656,21 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
       selectedModelCode: modelCode,
       priceInputs: priceInputs,
       quality: qField ? qField.name + '=' + String(qValue) : '',
+      duration: durationField ? durationField.name + '=' + String(durationValue) : '',
       batchCount: batchCount,
       effectiveBatchCount: effectiveHomeBatchCount,
-      localPrice: onePrice,
+      localPrice: localOnePrice,
+      serverPrice: serverOnePriceFresh,
+      previewMismatch: serverOnePriceFresh != null && serverOnePriceFresh !== localOnePrice,
       finalPrice: totalPrice,
+      signature: priceSignature,
     });
-  }, [hmode, modelsLoaded, curModel && curModel.code, qField && qField.name, qValue, batchCount, onePrice, totalPrice, modelCode]);
+  }, [priceSignature, hmode, modelsLoaded, curModel && curModel.code, qField && qField.name, qValue, durationField && durationField.name, durationValue, batchCount, localOnePrice, serverOnePriceFresh, totalPrice, modelCode]);
 
   const submit = function() {
     const t = val.trim();
     if (hmode === 'chat') { onStartChat(t || 'Привет!'); return; }
-    onGen(hmode, t, { modelCode: curModel ? curModel.code : null, aspectId: aspectId, qualityField: qField ? qField.name : null, qualityValue: qValue, batchCount: batchCount });
+    onGen(hmode, t, { modelCode: curModel ? curModel.code : null, aspectId: aspectId, qualityField: qField ? qField.name : null, qualityValue: qValue, durationField: durationField ? durationField.name : null, durationValue: durationValue, batchCount: batchCount });
   };
 
   const chips = ['Неоновый портрет','Оживить фото','Аватар в стиле аниме','Кадр из фильма','Минималистичный постер'];
@@ -932,7 +971,7 @@ function DeskStageCanvas({ mode, aspectId }) {
   </div>;
 }
 
-function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initBatchCount, refreshBalance, searchQuery }) {
+function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initDurationField, initDurationValue, initBatchCount, refreshBalance, searchQuery }) {
   const { Ic, Star, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
   const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
@@ -944,11 +983,11 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       || (initTpl && initTpl.aspectId && ASPECTS.find(function(a) { return String(a.id) === String(initTpl.aspectId); }))
       || ASPECTS[1]);
   const [selectedQuality, setSelectedQuality] = useState(initQualityValue || null);
-  const [selectedDuration, setSelectedDuration] = useState(initTpl ? (templateDurationValue(initTpl) || null) : null);
+  const [selectedDuration, setSelectedDuration] = useState(initTpl ? (templateDurationValue(initTpl) || null) : (initDurationValue || null));
   const [uiModelLabel, setUiModelLabel] = useState(null);
   const [uiQualityLabel, setUiQualityLabel] = useState(null);
   const [uiDurationLabel, setUiDurationLabel] = useState(null);
-  const [uiDurationValue, setUiDurationValue] = useState(initTpl ? (templateDurationValue(initTpl) || null) : null);
+  const [uiDurationValue, setUiDurationValue] = useState(initTpl ? (templateDurationValue(initTpl) || null) : (initDurationValue || null));
   const [uiAspectLabel, setUiAspectLabel] = useState(null);
   const [qualityLocked, setQualityLocked] = useState(!!(initTpl && templateQualityValue(initTpl)));
   const [durationLocked, setDurationLocked] = useState(!!(initTpl && initTpl.durationLocked));
@@ -1032,7 +1071,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var templateDurationOptions = selectedTpl && Array.isArray(selectedTpl.durationOptions) && selectedTpl.durationOptions.length ? selectedTpl.durationOptions : null;
   var durationOptionsForUi = templateDurationOptions && (durationLocked || selectedTpl.durationUnlockable === false) ? templateDurationOptions : durationOptions;
   var visibleDurationOptions = durationOptionValues(durationOptionsForUi);
-  var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : ((selectedTpl && templateDurationValue(selectedTpl)) || fieldDefault(durationField)));
+  var rawDurationValue = uiDurationValue != null ? uiDurationValue : (selectedDuration != null ? selectedDuration : ((selectedTpl && templateDurationValue(selectedTpl)) || (durationField && initDurationField === durationField.name && initDurationValue != null ? initDurationValue : fieldDefault(durationField))));
   var durationValue = durationField ? normalizeFieldValue(durationField, rawDurationValue) : null;
   if (durationField && visibleDurationOptions.length && durationValue != null && visibleDurationOptions.indexOf(String(durationValue)) === -1) {
     var coercedDuration = coerceDurationValue(visibleDurationOptions, durationValue);
