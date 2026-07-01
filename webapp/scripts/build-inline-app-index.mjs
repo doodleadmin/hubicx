@@ -24,8 +24,15 @@ function escapeScript(source) {
 
 const template = await readFile(path.join(appDir, "index.source.html"), "utf8");
 const blocks = [];
+let buildId = "dev";
+try {
+  const meta = JSON.parse(await readFile(path.join(appDir, "build-id.json"), "utf8"));
+  if (meta && meta.buildId) buildId = String(meta.buildId);
+} catch (e) {
+  buildId = process.env.HUBICX_BUILD_ID || "dev";
+}
 
-blocks.push("<script>window.__HUBICX_INLINE_INDEX__='20260630-aspect-desktop1';</script>");
+blocks.push(`<script>window.__HUBICX_INLINE_INDEX__='${buildId}';</script>`);
 
 for (const [name, rel] of scripts) {
   const source = await readFile(path.join(appDir, rel), "utf8");

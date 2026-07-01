@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "build:static": "node scripts/build-static-app.mjs",
-    "build": "npm run build:static && node scripts/build-inline-app-index.mjs && next build",
+    "build": "node scripts/update-app-build-id.mjs && npm run build:static && node scripts/build-inline-app-index.mjs && next build",
     "start": "next start"
   },
   "dependencies": {

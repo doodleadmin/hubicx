@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260630-aspect-desktop1';
+  window.__APP_BUILD__ = '20260701-180950-gen-price-trace1';
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();
   var isWebappHost = host === 'webapp.hubicx.ru';

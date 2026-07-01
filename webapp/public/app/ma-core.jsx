@@ -205,6 +205,16 @@ function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority 
   return <img src={t && t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority} onError={onError}/>;
 }
 
+function writePriceTrace(source, payload) {
+  try {
+    window.__HUBICX_LAST_PRICE_TRACE__ = payload;
+    var enabled = false;
+    try { enabled = localStorage.getItem('hubicx_debug_pricing') === '1'; } catch(e) {}
+    if (enabled && window.console && console.table) console.table([Object.assign({ source:source }, payload || {})]);
+    else if (enabled && window.console && console.log) console.log('[Hubicx price trace]', source, payload);
+  } catch(e) {}
+}
+
 const TEMPLATES = [
   { code:'tv-broadcast', t:'ТВ трансляция', img:'assets/cov/hero1.png', coverVideo:'assets/templates/video/tv-broadcast/cover.mp4', type:'video', category:'Эффекты', requiresImage:true, inputLabel:'Селфи или фото человека', modelCode:'kling_30_i2v', qualityValue:'720p', aspectId:'16:9', duration:'10', durationOptions:['7','10','15'], durationLocked:true, templatePipeline:'tv_broadcast_kling_30', referenceSlots:[
     { label:'Селфи человека', hint:'Загрузите одно фото лица' }
@@ -401,4 +411,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };

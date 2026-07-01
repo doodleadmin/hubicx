@@ -1013,6 +1013,26 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var canPickBatch = mode === 'photo' && !isPhotoTemplate;
   var effectiveBatchCount = canPickBatch ? batchCount : 1;
   var price = curModel ? Math.max(1, onePrice * effectiveBatchCount) : 0;
+  useEffect(function() {
+    if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
+    window.MiraCore.writePriceTrace('desktop-create', {
+      build: window.__APP_BUILD__ || window.__HUBICX_INLINE_INDEX__ || '',
+      mode: mode,
+      modelsLoaded: !!modelsLoaded,
+      displayModelId: displayModelId,
+      concreteModelCode: curModel ? curModel.code : null,
+      selectedModelCode: selectedModelCode,
+      seedanceTier: seedanceTier,
+      quality: qField ? qField.name + '=' + String(qValue) : '',
+      duration: durationField ? durationField.name + '=' + String(durationValue) : '',
+      batchCount: batchCount,
+      effectiveBatchCount: effectiveBatchCount,
+      localPrice: localOnePrice,
+      serverPrice: serverOnePriceFresh,
+      finalPrice: price,
+      signature: priceSignature,
+    });
+  }, [priceSignature, price, displayModelId, selectedModelCode, seedanceTier, modelsLoaded, batchCount]);
 
   useEffect(function() {
     if (!curModel || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {

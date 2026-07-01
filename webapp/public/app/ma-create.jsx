@@ -550,6 +550,25 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : 0;
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
+  useEffect(function() {
+    if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
+    window.MiraCore.writePriceTrace('mobile-create', {
+      build: window.__APP_BUILD__ || window.__HUBICX_INLINE_INDEX__ || '',
+      mode: mode,
+      modelsLoaded: !!modelsLoaded,
+      displayModelId: displayModelId,
+      concreteModelCode: currentModelFull ? currentModelFull.code : null,
+      selectedModelCode: selectedModelCode,
+      uiModelId: uiModelId,
+      seedanceTier: seedanceTier,
+      quality: qField ? qField.name + '=' + String(qValue) : '',
+      duration: durationField ? durationField.name + '=' + String(durationValue) : '',
+      localPrice: localPrice,
+      serverPrice: serverPriceFresh,
+      finalPrice: currentPrice,
+      signature: priceSignature,
+    });
+  }, [priceSignature, currentPrice, displayModelId, selectedModelCode, uiModelId, seedanceTier, modelsLoaded]);
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
   var showModelPicker = !selectedTpl;
