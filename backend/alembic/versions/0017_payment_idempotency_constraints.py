@@ -1,6 +1,6 @@
 """payment idempotency constraints
 
-Revision ID: 0017_payment_idempotency_constraints
+Revision ID: 0017_payment_idempotency
 Revises: 0016_seedance_pricing_rules
 Create Date: 2026-07-01
 """
@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0017_payment_idempotency_constraints"
+revision = "0017_payment_idempotency"
 down_revision = "0016_seedance_pricing_rules"
 branch_labels = None
 depends_on = None
