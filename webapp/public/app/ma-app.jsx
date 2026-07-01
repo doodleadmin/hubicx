@@ -433,6 +433,7 @@ function App() {
   const [theme, setTheme] = uS(getInitialTheme);
   const [accessBlock, setAccessBlock] = uS(null);
   const [mobileNotice, setMobileNotice] = uS(null);
+  const [profileHistorySignal, setProfileHistorySignal] = uS(0);
   const mobileNoticeTimer = uR(null);
 
   // Desktop-only routing state (ignored on mobile)
@@ -589,6 +590,7 @@ function App() {
   const [createModelCode, setCreateModelCode] = uS(null);
   const [createKey, setCreateKey] = uS(0);
   const [templatesOpen, setTemplatesOpen] = uS(false);
+  const [templatesView, setTemplatesView] = uS(null);
 
   // Telegram BackButton: show it only inside nested Mini App screens.
   var bbHandlerRef = uR(null);
@@ -632,8 +634,8 @@ function App() {
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
-  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
-  const openTemplates = () => { setCreateOpen(false); setActiveChat(null); setTemplatesOpen(true); };
+  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setTemplatesView(null); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
+  const openTemplates = (view) => { setCreateOpen(false); setActiveChat(null); setTemplatesView(view || null); setTemplatesOpen(true); };
   const goTab = (t, opts) => {
     if (t === 'templates') { openTemplates(); return; }
     setTabSwipeDir(opts && opts.swipeDir ? opts.swipeDir : 0);
@@ -644,9 +646,13 @@ function App() {
     setMobileNotice(Object.assign({ id: Date.now() }, notice || {}));
     mobileNoticeTimer.current = setTimeout(function() { setMobileNotice(null); }, 5200);
   };
+  const goProfileHistory = () => {
+    setProfileHistorySignal(Date.now());
+    goTab('profile');
+  };
   const handleMobileGenerationQueued = (info) => {
     tgHaptic('success');
-    goTab('gen');
+    goProfileHistory();
     showMobileNotice({
       title: info && info.isVideo ? 'Видео запущено' : 'Генерация запущена',
       text: 'Результат появится в истории и придёт в Telegram, когда будет готов.',
@@ -654,20 +660,41 @@ function App() {
   };
 
   // Append streaming text chunk to last bot message
-  const appendBotChunk = (chatId, chunk) => {
+  const chatChunkBuffers = uR({});
+  const chatFlushFrames = uR({});
+
+  const flushBotChunks = (chatId) => {
+    var buf = chatChunkBuffers.current[chatId] || '';
+    if (!buf) return;
+    chatChunkBuffers.current[chatId] = '';
     setChats(cs => cs.map(c => {
       if (c.id !== chatId) return c;
       var msgs = c.msgs.slice();
       var last = msgs[msgs.length - 1];
       if (last && last.streaming) {
-        msgs[msgs.length - 1] = { ...last, text: last.text + chunk };
+        msgs[msgs.length - 1] = { ...last, text: last.text + buf };
       }
       return { ...c, msgs: msgs };
     }));
   };
 
+  const appendBotChunk = (chatId, chunk) => {
+    if (!chunk) return;
+    chatChunkBuffers.current[chatId] = (chatChunkBuffers.current[chatId] || '') + chunk;
+    if (chatFlushFrames.current[chatId]) return;
+    chatFlushFrames.current[chatId] = requestAnimationFrame(function() {
+      chatFlushFrames.current[chatId] = null;
+      flushBotChunks(chatId);
+    });
+  };
+
   // Mark last bot message as done
   const finishBotMsg = (chatId) => {
+    if (chatFlushFrames.current[chatId]) {
+      cancelAnimationFrame(chatFlushFrames.current[chatId]);
+      chatFlushFrames.current[chatId] = null;
+    }
+    flushBotChunks(chatId);
     setChats(cs => cs.map(c => {
       if (c.id !== chatId) return c;
       var msgs = c.msgs.map(function(m, i) {
@@ -675,6 +702,16 @@ function App() {
       });
       return { ...c, msgs: msgs };
     }));
+    if (window.HubicxApi && window.HubicxApi.agentGetChat) {
+      window.HubicxApi.agentGetChat(chatId).then(function(data) {
+        if (!data || !data.chat || !Array.isArray(data.chat.messages)) return;
+        var serverMsgs = serverMsgsToLocal(data.chat.messages);
+        setChats(cs => cs.map(c => c.id === chatId
+          ? { ...c, msgs: serverMsgs, loaded: true, title: data.chat.title || c.title, agent_mode: data.chat.agent_mode || c.agent_mode || 'general' }
+          : c
+        ));
+      }).catch(function() {});
+    }
     refreshBalance();
   };
 
@@ -819,6 +856,7 @@ function App() {
       onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} onQueued={handleMobileGenerationQueued} refreshBalance={refreshBalance}/>;
   } else if (templatesOpen) {
     body = <TemplatesScreen onBack={() => setTemplatesOpen(false)}
+      initialView={templatesView}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)}/>;
   } else if (tab === 'agent') {
     body = <AgentScreen tokens={tokens} onBuyPro={() => setTopup(true)}
@@ -832,7 +870,7 @@ function App() {
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={(modelCode) => openCreate('video', null, modelCode ? { modelCode:modelCode } : null)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser}/>;
+    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser} focusHistorySignal={profileHistorySignal}/>;
   }
 
   const swipeDisabled = !!(createOpen || templatesOpen || activeChat || topup || paymentResult);
@@ -903,7 +941,7 @@ function App() {
         <b>{mobileNotice.title}</b>
         <span>{mobileNotice.text}</span>
       </div>
-      <button className="gen-toast-main" onClick={() => { tgHaptic('selection'); setMobileNotice(null); goTab('profile'); }}>История</button>
+      <button className="gen-toast-main" onClick={() => { tgHaptic('selection'); setMobileNotice(null); goProfileHistory(); }}>История</button>
       <button className="gen-toast-x" onClick={() => setMobileNotice(null)} aria-label="Закрыть">×</button>
     </div>}
     {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 

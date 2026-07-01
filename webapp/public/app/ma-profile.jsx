@@ -142,7 +142,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
   </div>;
 }
 
-function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onUserUpdate }) {
+function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onUserUpdate, focusHistorySignal }) {
   const { Ic, Star, TopNav } = window.MiraCore;
   theme = theme || ((window.HubicxTheme && window.HubicxTheme.theme) || 'light');
   onToggleTheme = onToggleTheme || (window.HubicxTheme && window.HubicxTheme.toggle) || function() {};
@@ -159,6 +159,8 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
   const [bonusToast, setBonusToast] = useState(false);
   const [linkMode, setLinkMode] = useState(null);
   const bonusRef = useRef(null);
+  const historyRef = useRef(null);
+  const [historyPulse, setHistoryPulse] = useState(false);
   const saveTimerRef = useRef(null);
   const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
   const hasPassword = user && user.has_password;
@@ -239,6 +241,17 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
     }, 5000);
     return function() { clearInterval(timer); };
   }, [hasPending]);
+
+  useEffect(function() {
+    if (!focusHistorySignal) return;
+    var timer = setTimeout(function() {
+      var node = historyRef.current;
+      if (node && node.scrollIntoView) node.scrollIntoView({ behavior:'smooth', block:'center' });
+      setHistoryPulse(true);
+      setTimeout(function() { setHistoryPulse(false); }, 1600);
+    }, 220);
+    return function() { clearTimeout(timer); };
+  }, [focusHistorySignal]);
 
   const set = (k, v) => setP(s => ({ ...s, [k]:v }));
 
@@ -409,9 +422,10 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
         </div>}
       </div>
 
-      <div style={{ marginTop:18, marginBottom:6 }}>
-        <span className="label-sec">История генераций</span>
-      </div>
+      <div ref={historyRef} className={'profile-history-anchor' + (historyPulse ? ' pulse' : '')}>
+        <div style={{ marginTop:18, marginBottom:6 }}>
+          <span className="label-sec">История генераций</span>
+        </div>
       <div className="hist-rail" data-onb="mob-history">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
@@ -441,6 +455,7 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
             </div>
           </div>;
         })}
+      </div>
       </div>
 
       {bonus && <div ref={bonusRef} className="card bonus-card-v2" data-onb="mob-bonuses" style={{ marginTop:18 }}>

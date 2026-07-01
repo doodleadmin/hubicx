@@ -86,10 +86,13 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
 }
 window.GenerationScreen = GenerationScreen;
 
-function TemplatesScreen({ onBack, onTemplate }) {
+function TemplatesScreen({ onBack, onTemplate, initialView }) {
   const { Ic, TopNav, TEMPLATES, TemplateMedia, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
   const [filter, setFilter] = useState('all');
+  const [scopeView, setScopeView] = useState(initialView || null);
   const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
+  var scopedCodes = scopeView && Array.isArray(scopeView.codes) ? scopeView.codes.filter(Boolean) : null;
+  var scopedTitle = scopeView && scopeView.title ? scopeView.title : '';
   var favSet = new Set(favTplKeys);
   var toggleFavTpl = function(t) {
     var key = tplKey(t);
@@ -97,25 +100,34 @@ function TemplatesScreen({ onBack, onTemplate }) {
     var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
     setFavTplKeys(next); writeFavTemplateKeys(next);
   };
-  var list = TEMPLATES.filter(function(t) {
-    if (filter === 'all') return true;
-    if (filter === 'video') return t.type === 'video';
-    return t.type !== 'video';
-  });
+  var list = scopedCodes && scopedCodes.length
+    ? scopedCodes.map(function(code) {
+        return TEMPLATES.find(function(t) { return (t.code || t.t) === code; });
+      }).filter(Boolean)
+    : TEMPLATES.filter(function(t) {
+        if (filter === 'all') return true;
+        if (filter === 'video') return t.type === 'video';
+        return t.type !== 'video';
+      });
 
   return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
     <div className="cr-head">
       <div className="cr-back" onClick={onBack}><Ic n="back" s={20}/></div>
-      <div className="cr-title">Шаблоны</div>
+      <div className="cr-title">{scopedTitle || 'Шаблоны'}</div>
     </div>
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
-      <div className="tpl-filter" data-onb="mob-template-filter">
+      {scopedCodes && scopedCodes.length
+        ? <div className="tpl-scope-note" data-onb="mob-template-filter">
+            <span>{scopedTitle || 'Подборка'}</span>
+            <button onClick={() => { setScopeView(null); setFilter('all'); }}>Все шаблоны</button>
+          </div>
+        : <div className="tpl-filter" data-onb="mob-template-filter">
         <div className="seg">
           {[['all','Все'],['photo','Фото'],['video','Видео']].map(function(f) {
             return <button key={f[0]} className={filter === f[0] ? 'on' : ''} onClick={() => setFilter(f[0])}>{f[1]}</button>;
           })}
         </div>
-      </div>
+      </div>}
       {list.length > 0
         ? <div className="tpl-page-grid">
             {list.map(function(t, i) {

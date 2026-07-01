@@ -68,10 +68,11 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
   }
   function renderTemplateRail(list, label) {
     if (!list || !list.length) return null;
+    var codes = list.map(function(t) { return t && (t.code || t.t); }).filter(Boolean);
     return <div className="home-template-strip">
       <div className="home-strip-head">
         <span>{label}</span>
-        <button onClick={onTemplates}>Все</button>
+        <button onClick={() => onTemplates && onTemplates({ title: label, codes: codes })}>Все</button>
       </div>
       <div className="home-strip-rail">
         {list.map(function(t, i) {
@@ -84,12 +85,6 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
       </div>
     </div>;
   }
-  var categoryCards = [
-    { title:'Тренды', sub:'эффекты и стили', ic:'sparkle', bg:'#f6efd7', c:'#bd8a42', list: byCodes(['Полароид с вечеринки','Камера G7X','Аниме-кадр','Пластилин']) },
-    { title:'Портрет', sub:'лицо и образ', ic:'user', bg:'#e8f0ec', c:'#5f9184', list: byCodes(['Кино-портрет','Лента возраста','Метро','Волк']) },
-    { title:'Видео', sub:'сцены и движение', ic:'video', bg:'#e8e5f8', c:'#6f6cc8', list: byCategory(['Видео'], 5) },
-    { title:'Животные', sub:'кадры с питомцами', ic:'heart', bg:'#f7e7ee', c:'#c45c92', list: byCategory(['Животные'], 5) },
-  ].filter(function(c) { return c.list && c.list.length; });
   var trendTemplates = byCodes(['Полароид с вечеринки','Камера G7X','Аниме-кадр','Пластилин','Нео-нуар']);
   var portraitTemplates = byCodes(['Кино-портрет','Лента возраста','Метро','Волк','Розы']);
   var videoTemplates = byCategory(['Видео'], 6);
@@ -121,17 +116,6 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
             <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
             <div className="shade"></div>
             <div className="lbl">{t.t}</div>
-          </div>;
-        })}
-      </div>
-
-      <div className="home-cats rise" style={{ '--d':'.22s' }}>
-        {categoryCards.map(function(c, i) {
-          var first = c.list[0];
-          return <div className="home-cat-card" key={c.title} onClick={() => first ? onTemplate(first) : onTemplates()}>
-            <span className="home-cat-ic" style={{ background:c.bg, color:c.c }}><Ic n={c.ic} s={18} c={c.c}/></span>
-            <b>{c.title}</b>
-            <small>{c.sub}</small>
           </div>;
         })}
       </div>
