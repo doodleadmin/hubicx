@@ -873,6 +873,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const [err, setErr] = useState(null);
   const [errKind, setErrKind] = useState('error');
   const cancelRef = useRef(null);
+  const [serverOnePrice, setServerOnePrice] = useState(null);
+  const pricePreviewSeqRef = useRef(0);
 
   useEffect(function() {
     if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); setModelsLoaded(true); return; }
@@ -940,9 +942,32 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
-  var onePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
+  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
+  var onePrice = serverOnePrice != null ? serverOnePrice : localOnePrice;
   var effectiveBatchCount = isPhotoTemplate ? 1 : batchCount;
   var price = Math.max(1, onePrice * effectiveBatchCount);
+  var priceSignature = curModel
+    ? [curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    : '';
+
+  useEffect(function() {
+    if (!curModel || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
+      setServerOnePrice(null);
+      return;
+    }
+    var seq = ++pricePreviewSeqRef.current;
+    var timer = setTimeout(function() {
+      window.HubicxApi.modelPricePreview(curModel.code, priceInputs).then(function(data) {
+        if (seq !== pricePreviewSeqRef.current) return;
+        var next = data && (data.final_price_credits != null ? data.final_price_credits : data.price_tokens);
+        next = Number(next);
+        setServerOnePrice(next > 0 ? Math.ceil(next) : null);
+      }).catch(function() {
+        if (seq === pricePreviewSeqRef.current) setServerOnePrice(null);
+      });
+    }, 120);
+    return function() { clearTimeout(timer); };
+  }, [priceSignature]);
 
   const handleFile = function(file, target) {
     if (!file || uploading || !window.HubicxApi || !window.HubicxApi.hasAuth()) return;

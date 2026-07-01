@@ -407,6 +407,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   const [genError, setGenError] = useState(null);
   const [genErrorKind, setGenErrorKind] = useState('error'); // refunded | timeout | error
   const pollCancelRef = useRef(null);
+  const [serverPrice, setServerPrice] = useState(null);
+  const pricePreviewSeqRef = useRef(0);
 
   // Load models on mount
   useEffect(function() {
@@ -492,10 +494,33 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
-  var currentPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
+  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
+  var currentPrice = serverPrice != null ? serverPrice : localPrice;
+  var priceSignature = currentModelFull
+    ? [currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    : '';
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
   var showModelPicker = !selectedTpl;
+
+  useEffect(function() {
+    if (!currentModelFull || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
+      setServerPrice(null);
+      return;
+    }
+    var seq = ++pricePreviewSeqRef.current;
+    var timer = setTimeout(function() {
+      window.HubicxApi.modelPricePreview(currentModelFull.code, priceInputs).then(function(data) {
+        if (seq !== pricePreviewSeqRef.current) return;
+        var next = data && (data.final_price_credits != null ? data.final_price_credits : data.price_tokens);
+        next = Number(next);
+        setServerPrice(next > 0 ? Math.ceil(next) : null);
+      }).catch(function() {
+        if (seq === pricePreviewSeqRef.current) setServerPrice(null);
+      });
+    }, 120);
+    return function() { clearTimeout(timer); };
+  }, [priceSignature]);
 
   var pickTemplate = function(t) {
     if (!t) return;

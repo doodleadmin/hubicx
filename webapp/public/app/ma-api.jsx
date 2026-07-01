@@ -313,6 +313,9 @@
     profile:        function()          { return request('/profile'); },
     updateProfile:  function(data)      { return request('/profile', { method:'PATCH', body:JSON.stringify(data) }); },
     models:         function(category)  { return requestPublic('/models' + (category ? '?category=' + encodeURIComponent(category) : '')); },
+    modelPricePreview: function(code, inputs) {
+      return request('/models/' + encodeURIComponent(code) + '/price-preview', { method:'POST', body:JSON.stringify({ inputs: inputs || {} }) });
+    },
     history:        function()          { return request('/generations/history'); },
     createGeneration: function(p)       { return request('/generations', { method:'POST', body:JSON.stringify(p) }); },
     getTask:        function(id)        { return request('/generations/' + id); },
