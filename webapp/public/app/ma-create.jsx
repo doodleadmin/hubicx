@@ -266,6 +266,15 @@ function sanitizeDisplayModelId(rawId, mode, modelOptions, filteredModels) {
   var direct = (filteredModels || []).find(function(m) { return String(m.code) === raw && modelMatchesMode(m, mode); });
   return direct ? displaySeedanceAutoCode(direct.code) : null;
 }
+function findModeModel(models, code, mode) {
+  var list = Array.isArray(models) ? models : [];
+  var target = String(code || '');
+  if (!target) return null;
+  return list.find(function(m) { return String(m && m.code) === target && modelMatchesMode(m, mode); }) || null;
+}
+function firstModeModel(models, mode) {
+  return (Array.isArray(models) ? models : []).find(function(m) { return modelMatchesMode(m, mode); }) || null;
+}
 function modelDisplayTitle(m) {
   var code = String((m && m.code) || '');
   var titles = {
@@ -501,7 +510,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var requestedModelId = uiModelId || selectedModelCode || null;
   var displayModelId = sanitizeDisplayModelId(requestedModelId, mode, modelOptions, filteredModels) || defaultModelId;
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedFiles, seedanceTier);
-  var currentModelFull = filteredModels.find(function(m) { return m.code === currentModelCode; }) || filteredModels[0] || null;
+  var defaultModelFull = findModeModel(filteredModels, defaultModelId, mode) || firstModeModel(filteredModels, mode);
+  var currentModelFull = findModeModel(filteredModels, currentModelCode, mode) || defaultModelFull || null;
   var currentModelOpt = modelOptions.find(function(m) { return String(m.id) === String(displayModelId); }) || modelOptions.find(function(m) { return String(m.id) === String(currentModelCode); }) || modelOptions[0];
   var qField = getQualityField(currentModelFull);
   var durationField = getDurationField(currentModelFull);

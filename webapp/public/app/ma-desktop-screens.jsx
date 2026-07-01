@@ -147,6 +147,15 @@ function sanitizeDisplayModelId(rawId, mode, modelOptions, filteredModels) {
   var direct = (filteredModels || []).find(function(m) { return String(m.code) === raw && modelMatchesMode(m, mode); });
   return direct ? displaySeedanceAutoCode(direct.code) : null;
 }
+function findModeModel(models, code, mode) {
+  var list = Array.isArray(models) ? models : [];
+  var target = String(code || '');
+  if (!target) return null;
+  return list.find(function(m) { return String(m && m.code) === target && modelMatchesMode(m, mode); }) || null;
+}
+function firstModeModel(models, mode) {
+  return (Array.isArray(models) ? models : []).find(function(m) { return modelMatchesMode(m, mode); }) || null;
+}
 function fieldDefault(field) {
   if (!field) return null;
   if (field.default != null) return field.default;
@@ -977,7 +986,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var uploadedRefFiles = referenceSlots ? uploadedFiles.filter(Boolean) : (uploadedFile ? [uploadedFile] : []);
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles, seedanceTier);
   var curCode = displayModelId;
-  var curModel = filtered.find(function(m) { return m.code === currentModelCode; }) || filtered[0] || null;
+  var defaultModelFull = findModeModel(filtered, defaultModelId, mode) || firstModeModel(filtered, mode);
+  var curModel = findModeModel(filtered, currentModelCode, mode) || defaultModelFull || null;
   var curOpt = modelOpts.find(function(m) { return m.id === displayModelId; }) || modelOpts.find(function(m) { return m.id === currentModelCode; }) || modelOpts[0];
   var needsVideoFile = !!getModelField(curModel, ['video_url']);
   var aspectOpts = getAspectOptionsForModel(curModel, ASPECTS);

@@ -234,7 +234,7 @@ function mergeModelCatalog(remoteModels) {
   return Object.keys(byCode).map(function(code) { return byCode[code]; });
 }
 
-const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v2';
+const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v3';
 
 function readCachedModelCatalog() {
   try {
