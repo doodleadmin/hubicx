@@ -560,10 +560,11 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
    Главная (home)
    ============================================================ */
 function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
-  const { Ic, ASPECTS } = window.MiraCore;
+  const { Ic, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
   const [hmode, setHmode] = useState('photo'); // photo | video | chat
   const [val, setVal] = useState('');
-  const [apiModels, setApiModels] = useState(window.MiraCore.FALLBACK_MODELS || []);
+  const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
+  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [modelCode, setModelCode] = useState(null);
   const [aspectId, setAspectId] = useState('2:3');
   const [qualityValue, setQualityValue] = useState(null);
@@ -575,11 +576,14 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
 
   useEffect(function() {
-    if (!window.HubicxApi) { setApiModels(window.MiraCore.FALLBACK_MODELS); return; }
+    var mergeModels = mergeModelCatalog || function(remote) { return Array.isArray(remote) && remote.length ? remote : (FALLBACK_MODELS || []).slice(); };
+    if (!window.HubicxApi) { setModelsLoaded(true); return; }
     window.HubicxApi.models().then(function(m) {
-      if (Array.isArray(m) && m.length > 0) setApiModels(m);
-      else setApiModels(window.MiraCore.FALLBACK_MODELS);
-    }).catch(function() { setApiModels(window.MiraCore.FALLBACK_MODELS); });
+      var nextCatalog = mergeModels(m);
+      setApiModels(nextCatalog);
+      if (persistModelCatalog) persistModelCatalog(nextCatalog);
+      setModelsLoaded(true);
+    }).catch(function() { setModelsLoaded(true); });
   }, []);
 
   const filtered = apiModels.filter(function(m) {
@@ -587,7 +591,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
   var curCode = modelCode || (filtered[0] && filtered[0].code);
-  var curModel = filtered.find(function(m) { return m.code === curCode; }) || filtered[0];
+  var curModel = findModeModel(filtered, curCode, hmode) || firstModeModel(filtered, hmode);
   var modelLabel = uiModelLabel || (curModel ? curModel.title : 'Seedream 4.5');
   var aspectOpts = getAspectOptionsForModel(curModel, ASPECTS);
   var aspectObj = aspectOpts.find(function(a) { return a.id === aspectId; }) || aspectOpts[0] || ASPECTS[1];
@@ -601,6 +605,27 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   var onePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:hmode, displayModelId:curModel.code, concreteModelCode:curModel.code }) : 0;
   var effectiveHomeBatchCount = hmode === 'photo' ? batchCount : 1;
   var totalPrice = curModel ? Math.max(1, onePrice * effectiveHomeBatchCount) : 0;
+  useEffect(function() {
+    if (!window.MiraCore || !window.MiraCore.writePriceTrace || hmode === 'chat') return;
+    window.MiraCore.writePriceTrace('desktop-home', {
+      build: window.__APP_BUILD__ || window.__HUBICX_INLINE_INDEX__ || '',
+      mode: hmode,
+      modelsLoaded: !!modelsLoaded,
+      displayModelId: curModel ? curModel.code : null,
+      concreteModelCode: curModel ? curModel.code : null,
+      modelTaskType: curModel ? curModel.task_type : null,
+      modelCategory: curModel ? curModel.category : null,
+      modelPriceCredits: curModel ? curModel.price_credits : null,
+      hasPriceRules: !!(curModel && curModel.price_rules),
+      selectedModelCode: modelCode,
+      priceInputs: priceInputs,
+      quality: qField ? qField.name + '=' + String(qValue) : '',
+      batchCount: batchCount,
+      effectiveBatchCount: effectiveHomeBatchCount,
+      localPrice: onePrice,
+      finalPrice: totalPrice,
+    });
+  }, [hmode, modelsLoaded, curModel && curModel.code, qField && qField.name, qValue, batchCount, onePrice, totalPrice, modelCode]);
 
   const submit = function() {
     const t = val.trim();
@@ -633,7 +658,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
 
       <div className="dk-modes">
         {[['photo','Фото','image'],['video','Видео','video'],['chat','Чат','chat']].map(function(m) {
-          return <button key={m[0]} className={'dk-mode' + (hmode === m[0] ? ' on' : '')} onClick={() => { setHmode(m[0]); setModelCode(null); setQualityValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiAspectLabel(null); }}>
+          return <button key={m[0]} className={'dk-mode' + (hmode === m[0] ? ' on' : '')} onClick={() => { setHmode(m[0]); setModelCode(null); setQualityValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiAspectLabel(null); setOpen(null); }}>
             <Ic n={m[2]} s={17}/> {m[1]}
           </button>;
         })}
@@ -688,7 +713,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
               })}
             </div>}
           </div>}
-          <div className="dk-ask-pill-wrap">
+          {hmode === 'photo' && <div className="dk-ask-pill-wrap">
             <button className={'dk-ask-pill' + (open === 'batch' ? ' on' : '')}
               onClick={() => setOpen(open === 'batch' ? null : 'batch')}>
               <Ic n="image" s={14}/> {batchCount} шт <Ic n="chev" s={13}/>
@@ -701,7 +726,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
                 </div>;
               })}
             </div>}
-          </div>
+          </div>}
         </>}
         <button className="dk-ask-cta" onClick={submit}><Ic n="sparkle" s={16}/> Создать · {totalPrice} ★</button>
       </div>

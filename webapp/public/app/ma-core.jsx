@@ -327,7 +327,7 @@ function computeGenerationPrice(model, inputs, context) {
   return Math.max(1, Math.ceil(total || basePrice || 0));
 }
 
-const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v4';
+const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v5';
 
 function readCachedModelCatalog() {
   try {
