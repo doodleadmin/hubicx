@@ -249,8 +249,11 @@ function shortModelDescription(m) {
   if (code.indexOf('happy_horse') !== -1) return 'Оживляет фото со звуком и речью';
   return (m && m.description) ? String(m.description).replace(/\s+через\s+Fal\.?/ig, '').replace(/\s+высокая\s+стоимость\.?/ig, '') : '';
 }
-function estimateModelPrice(model, inputs) {
+function estimateModelPrice(model, inputs, context) {
   if (!model) return 0;
+  if (window.MiraCore && window.MiraCore.computeGenerationPrice) {
+    return window.MiraCore.computeGenerationPrice(model, inputs, context);
+  }
   var dbRules = model.price_rules;
   var basePrice = Number(model.price_credits || 0);
   if (dbRules && typeof dbRules === 'object') {
@@ -595,8 +598,9 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   var aspectLabel = uiAspectLabel || (aspectObj ? aspectObj.t : '2:3');
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
-  var onePrice = curModel ? estimateModelPrice(curModel, priceInputs) : 0;
-  var totalPrice = Math.max(1, onePrice * batchCount);
+  var onePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:hmode, displayModelId:curModel.code, concreteModelCode:curModel.code }) : 0;
+  var effectiveHomeBatchCount = hmode === 'photo' ? batchCount : 1;
+  var totalPrice = curModel ? Math.max(1, onePrice * effectiveHomeBatchCount) : 0;
 
   const submit = function() {
     const t = val.trim();
@@ -1018,7 +1022,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var priceSignature = curModel
     ? [mode, curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
-  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : 0;
+  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:curModel.code }) : 0;
   var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
   // Render from the catalog rules immediately. The async backend preview is a
   // diagnostic cross-check and cannot reset the user's live selection.
@@ -1034,8 +1038,13 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       modelsLoaded: !!modelsLoaded,
       displayModelId: displayModelId,
       concreteModelCode: curModel ? curModel.code : null,
+      modelTaskType: curModel ? curModel.task_type : null,
+      modelCategory: curModel ? curModel.category : null,
+      modelPriceCredits: curModel ? curModel.price_credits : null,
+      hasPriceRules: !!(curModel && curModel.price_rules),
       selectedModelCode: selectedModelCode,
       seedanceTier: seedanceTier,
+      priceInputs: priceInputs,
       quality: qField ? qField.name + '=' + String(qValue) : '',
       duration: durationField ? durationField.name + '=' + String(durationValue) : '',
       batchCount: batchCount,

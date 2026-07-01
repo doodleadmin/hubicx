@@ -156,8 +156,11 @@ function durationIndex(values, value) {
   var index = (values || []).findIndex(function(v) { return durationValuesMatch(v, selected); });
   return index < 0 ? 0 : index;
 }
-function estimateModelPrice(model, inputs) {
+function estimateModelPrice(model, inputs, context) {
   if (!model) return 0;
+  if (window.MiraCore && window.MiraCore.computeGenerationPrice) {
+    return window.MiraCore.computeGenerationPrice(model, inputs, context);
+  }
   var dbRules = model.price_rules;
   var basePrice = Number(model.price_credits || 0);
   if (dbRules && typeof dbRules === 'object') {
@@ -553,7 +556,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var priceSignature = currentModelFull
     ? [mode, currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
-  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : 0;
+  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:currentModelFull.code }) : 0;
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   // The catalog already contains the backend pricing rules. Keep the CTA synchronous:
   // an async preview may validate the value, but must never overwrite live controls.
@@ -566,9 +569,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       modelsLoaded: !!modelsLoaded,
       displayModelId: displayModelId,
       concreteModelCode: currentModelFull ? currentModelFull.code : null,
+      modelTaskType: currentModelFull ? currentModelFull.task_type : null,
+      modelCategory: currentModelFull ? currentModelFull.category : null,
+      modelPriceCredits: currentModelFull ? currentModelFull.price_credits : null,
+      hasPriceRules: !!(currentModelFull && currentModelFull.price_rules),
       selectedModelCode: selectedModelCode,
       uiModelId: uiModelId,
       seedanceTier: seedanceTier,
+      priceInputs: priceInputs,
       quality: qField ? qField.name + '=' + String(qValue) : '',
       duration: durationField ? durationField.name + '=' + String(durationValue) : '',
       localPrice: localPrice,

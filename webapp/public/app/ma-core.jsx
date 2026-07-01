@@ -234,7 +234,100 @@ function mergeModelCatalog(remoteModels) {
   return Object.keys(byCode).map(function(code) { return byCode[code]; });
 }
 
-const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v3';
+function priceRuleValue(inputs, names, fallback) {
+  inputs = inputs || {};
+  for (var i = 0; i < names.length; i++) {
+    if (inputs[names[i]] != null && inputs[names[i]] !== '') return inputs[names[i]];
+  }
+  return fallback;
+}
+
+function normalizeResolutionKey(value) {
+  var raw = String(value == null ? '' : value).trim();
+  if (!raw) return '';
+  var lower = raw.toLowerCase();
+  if (/^\d+k$/.test(lower)) return lower.toUpperCase();
+  return lower;
+}
+
+function normalizeDurationKey(value) {
+  var raw = String(value == null ? '' : value).trim().toLowerCase();
+  if (!raw) return '';
+  var match = raw.match(/^(\d+)(?:\s*(?:s|sec|сек|сек\.|seconds))?$/i);
+  return match ? String(parseInt(match[1], 10)) : raw;
+}
+
+function readRulePrice(table, key) {
+  if (!table || key == null) return null;
+  if (table[key] != null) return table[key];
+  var alt = String(key);
+  if (table[alt] != null) return table[alt];
+  if (table[alt.toLowerCase()] != null) return table[alt.toLowerCase()];
+  if (table[alt.toUpperCase()] != null) return table[alt.toUpperCase()];
+  return null;
+}
+
+function isModelForMode(model, mode) {
+  if (!model || !mode) return true;
+  var isVideo = model.task_type === 'video' || model.category === 'video';
+  var isPhoto = model.task_type === 'image' || (model.category === 'photo' && model.task_type !== 'video');
+  if (mode === 'video') return isVideo;
+  if (mode === 'photo') return isPhoto;
+  return true;
+}
+
+function computeGenerationPrice(model, inputs, context) {
+  if (!model || !isModelForMode(model, context && context.mode)) return 0;
+  inputs = inputs || {};
+  var basePrice = Number(model.price_credits || 0);
+  var dbRules = model.price_rules && typeof model.price_rules === 'object' ? model.price_rules : null;
+  var formRules = model.form_schema && model.form_schema.price_rules;
+  var rules = dbRules || (formRules && typeof formRules === 'object' ? formRules : null);
+  if (dbRules) {
+    var res = priceRuleValue(inputs, ['resolution', 'quality'], dbRules.default_resolution || '');
+    var resKey = normalizeResolutionKey(res);
+    var dur = priceRuleValue(inputs, ['duration', 'duration_seconds'], dbRules.default_duration || '5');
+    var durKey = normalizeDurationKey(dur);
+    if (dbRules.resolution_duration_prices) {
+      var byResolution = readRulePrice(dbRules.resolution_duration_prices, resKey) || readRulePrice(dbRules.resolution_duration_prices, res);
+      var tablePrice = byResolution ? readRulePrice(byResolution, durKey) || readRulePrice(byResolution, dur) : null;
+      if (tablePrice != null) return Math.max(1, Math.ceil(Number(tablePrice) || basePrice || 1));
+      return Math.max(1, Math.ceil(basePrice || 1));
+    }
+    if (dbRules.duration_prices) {
+      var durationPrice = readRulePrice(dbRules.duration_prices, durKey) || readRulePrice(dbRules.duration_prices, dur);
+      if (durationPrice != null) return Math.max(1, Math.ceil(Number(durationPrice) || basePrice || 1));
+      return Math.max(1, Math.ceil(basePrice || 1));
+    }
+    if (dbRules.resolution_prices) {
+      var resolutionPrice = readRulePrice(dbRules.resolution_prices, resKey) || readRulePrice(dbRules.resolution_prices, res);
+      var price = Number(resolutionPrice != null ? resolutionPrice : basePrice);
+      if (dbRules.multiply_by_num_images) price *= Math.max(1, Number(inputs.num_images) || 1);
+      return Math.max(1, Math.ceil(price || basePrice || 1));
+    }
+    if (dbRules.multiply_by_num_images) {
+      return Math.max(1, Math.ceil((basePrice || 1) * Math.max(1, Number(inputs.num_images) || 1)));
+    }
+  }
+  var total = Number((rules && rules.base) || basePrice || 0);
+  if (rules && Array.isArray(rules.multipliers)) {
+    rules.multipliers.forEach(function(rule) {
+      if (!rule || !rule.field) return;
+      var value = inputs[rule.field];
+      if (value == null) return;
+      var mult = 1;
+      if (rule.mode === 'multiply_by_value') mult = Number(value) || 1;
+      else if (rule.values) {
+        var key = String(value);
+        mult = Number(rule.values[key] != null ? rule.values[key] : rule.values[key.toLowerCase()]) || 1;
+      }
+      total *= mult;
+    });
+  }
+  return Math.max(1, Math.ceil(total || basePrice || 0));
+}
+
+const MODEL_CATALOG_CACHE_KEY = 'hbx_model_catalog_v4';
 
 function readCachedModelCatalog() {
   try {
@@ -492,4 +585,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };
