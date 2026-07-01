@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
+import json
 import logging
 from typing import Any
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.app.db.models import AIModel, GenerationTask, Template, User
+from backend.app.db.models import AIModel, GenerationTask, Template, User, UserProfileSettings
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
 from backend.app.services.business import is_bonus_eligible_model
 from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
@@ -41,6 +42,42 @@ async def _user_has_template_subscription(session, user_id: int) -> bool:
         )
     )
     return sub is not None
+
+
+async def _generation_access_limits(session: AsyncSession, user_id: int) -> dict[str, Any]:
+    settings = await session.scalar(select(UserProfileSettings).where(UserProfileSettings.user_id == user_id))
+    if not settings or not settings.hubicx_personality:
+        return {}
+    try:
+        data = json.loads(settings.hubicx_personality)
+    except (TypeError, ValueError):
+        return {}
+    limits = data.get("access_limits") if isinstance(data, dict) else None
+    return limits if isinstance(limits, dict) else {}
+
+
+async def _enforce_generation_access_limits(session: AsyncSession, user_id: int, task_type: str | None) -> None:
+    limits = await _generation_access_limits(session, user_id)
+    if not limits:
+        return
+
+    normalized_type = (task_type or "").lower()
+    if normalized_type == "video" and limits.get("disable_video"):
+        raise AppError("video_disabled_for_account", "Видео недоступно для этого тестового аккаунта", 403)
+
+    photo_limit = int(limits.get("photo_generation_limit") or 0)
+    if photo_limit <= 0 or normalized_type == "video":
+        return
+
+    used = await session.scalar(
+        select(func.count(GenerationTask.id)).where(
+            GenerationTask.user_id == user_id,
+            GenerationTask.task_type != "video",
+            GenerationTask.status.notin_(["failed", "refunded"]),
+        )
+    )
+    if int(used or 0) >= photo_limit:
+        raise AppError("generation_limit_reached", "Лимит тестовых фото-генераций исчерпан", 403)
 
 
 def _provider_prompt_preview(provider_input: dict[str, Any]) -> str | None:
@@ -144,6 +181,7 @@ async def create_generation_task(
     allow_bonus = is_bonus_eligible_model(model.code if model else None, task_type)
     if provider_input and provider_input.get("template_pipeline"):
         allow_bonus = False
+    await _enforce_generation_access_limits(session, user.id, task_type)
     if not await has_enough_balance(session, user.id, price, allow_bonus=allow_bonus):
         if allow_bonus:
             raise AppError("not_enough_balance", "Недостаточно кредитов на балансе")
