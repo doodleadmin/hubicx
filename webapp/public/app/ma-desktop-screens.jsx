@@ -1010,7 +1010,9 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     : '';
   var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : 0;
   var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
-  var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
+  // Render from the catalog rules immediately. The async backend preview is a
+  // diagnostic cross-check and cannot reset the user's live selection.
+  var onePrice = localOnePrice;
   var canPickBatch = mode === 'photo' && !isPhotoTemplate;
   var effectiveBatchCount = canPickBatch ? batchCount : 1;
   var price = curModel ? Math.max(1, onePrice * effectiveBatchCount) : 0;
@@ -1030,6 +1032,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       effectiveBatchCount: effectiveBatchCount,
       localPrice: localOnePrice,
       serverPrice: serverOnePriceFresh,
+      previewMismatch: serverOnePriceFresh != null && serverOnePriceFresh !== localOnePrice,
       finalPrice: price,
       signature: priceSignature,
     });
