@@ -216,8 +216,23 @@ function saveTemplateAspect(t, aspectId) {
   try { if (window.localStorage) window.localStorage.setItem(key, String(aspectId)); } catch (_) {}
 }
 function isSeedanceModelCode(code) { return /^seedance_2_/.test(String(code || '')) || String(code || '').indexOf('seedance') === 0; }
-function resolveSeedanceAutoCode(code, files) {
+function seedanceTierFromCode(code) {
+  var s = String(code || '');
+  if (s.indexOf('_mini') !== -1 || s === 'seedance_2_mini_auto') return 'mini';
+  if (s.indexOf('_fast') !== -1 || s === 'seedance_2_fast_auto') return 'fast';
+  return 'normal';
+}
+function seedanceAutoCodeForTier(tier) {
+  if (tier === 'mini') return 'seedance_2_mini_auto';
+  if (tier === 'fast') return 'seedance_2_fast_auto';
+  return 'seedance_2_auto';
+}
+function seedanceTierLabel(tier) {
+  return tier === 'mini' ? 'Mini' : (tier === 'fast' ? 'Fast' : 'Normal');
+}
+function resolveSeedanceAutoCode(code, files, tier) {
   var selected = String(code || '');
+  if (selected === 'seedance_2_auto' && tier) selected = seedanceAutoCodeForTier(tier);
   var list = Array.isArray(files) ? files.filter(Boolean) : [];
   var images = list.filter(function(f) { return !f || f.type !== 'video'; }).length;
   var videos = list.filter(function(f) { return f && f.type === 'video'; }).length;
@@ -233,26 +248,43 @@ function resolveSeedanceAutoCode(code, files) {
   if (images === 1) return isFast ? 'seedance_2_i2v_fast' : 'seedance_2_i2v';
   return isFast ? 'seedance_2_t2v_fast' : 'seedance_2_t2v';
 }
+function modelDisplayTitle(m) {
+  var code = String((m && m.code) || '');
+  var titles = {
+    nano_banana_edit:'Nano Banana · редактор',
+    gpt_image_2_edit:'GPT Image 2 · редактор',
+    flux_schnell:'Flux · быстрый',
+    kling_21_i2v:'Kling 2.1 · по фото',
+    kling_30_i2v:'Kling 3.0 · по фото',
+    kling_30_motion_control:'Kling 3.0 · движение',
+    grok_video_t2v:'Grok · по тексту',
+    grok_video_i2v:'Grok · по фото',
+    veo_31_t2v:'Veo 3.1 · по тексту',
+    veo_31_i2v:'Veo 3.1 · по фото',
+    happy_horse_i2v:'Happy Horse · по фото'
+  };
+  return titles[code] || (m && m.title) || code;
+}
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
-  if (code === 'nano_banana_2') return 'Быстрая генерация';
-  if (code === 'nano_banana_pro') return 'Pro · высокое разрешение';
-  if (code === 'nano_banana_edit') return 'Редактирование фото';
-  if (code === 'gpt_image_2') return 'Качественная генерация';
-  if (code === 'gpt_image_2_edit') return 'Редактирование фото';
-  if (code === 'seedream') return 'Фотореализм';
-  if (code.indexOf('seedance_2_mini') === 0) return 'Mini · доступное видео';
-  if (code === 'seedance_2_t2v_fast') return 'Fast · текст → видео';
-  if (code === 'flux_schnell') return 'Быстро и дёшево';
-  if (code === 'z_image') return 'Доступная генерация';
-  if (code === 'kling_21_i2v') return 'Image → video';
-  if (code === 'kling_30_i2v') return 'Image → video · 720p';
-  if (code === 'kling_30_motion_control') return 'Motion control';
-  if (code === 'grok_video_t2v') return 'Текст → видео';
-  if (code === 'grok_video_i2v') return 'Фото → видео';
-  if (code === 'veo_31_t2v') return 'Текст → видео';
-  if (code === 'veo_31_i2v') return 'Фото → видео';
-  if (code.indexOf('happy_horse') !== -1) return 'Липсинк-видео';
+  if (code === 'nano_banana_2') return 'Быстро создаёт изображения по описанию';
+  if (code === 'nano_banana_pro') return 'Создаёт и улучшает фото в высоком качестве';
+  if (code === 'nano_banana_edit') return 'Изменяет загруженное фото по описанию';
+  if (code === 'gpt_image_2') return 'Точные изображения и надписи';
+  if (code === 'gpt_image_2_edit') return 'Аккуратно изменяет загруженное фото';
+  if (code === 'seedream') return 'Реалистичные фото и портреты';
+  if (code.indexOf('seedance_2_mini') === 0) return 'Доступное видео для быстрых задач';
+  if (code.indexOf('seedance_2_') === 0 && code.indexOf('_fast') !== -1) return 'Быстрое видео по тексту или фото';
+  if (code === 'flux_schnell') return 'Быстрые изображения по описанию';
+  if (code === 'z_image') return 'Недорогая генерация изображений';
+  if (code === 'kling_21_i2v') return 'Оживляет загруженную фотографию';
+  if (code === 'kling_30_i2v') return 'Качественно оживляет фотографию';
+  if (code === 'kling_30_motion_control') return 'Переносит движение из видео на персонажа';
+  if (code === 'grok_video_t2v') return 'Создаёт видео по текстовому описанию';
+  if (code === 'grok_video_i2v') return 'Оживляет загруженное фото';
+  if (code === 'veo_31_t2v') return 'Кинематографичное видео по описанию';
+  if (code === 'veo_31_i2v') return 'Кинематографично оживляет фото';
+  if (code.indexOf('happy_horse') !== -1) return 'Оживляет фото со звуком и речью';
   return (m && m.description) ? String(m.description).replace(/\s+через\s+Fal\.?/ig, '').replace(/\s+высокая\s+стоимость\.?/ig, '') : '';
 }
 
@@ -438,24 +470,22 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
 
-  // Picker-compatible model options. Seedance endpoints are grouped into two user-facing choices;
+  const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(preset ? templateModelCode(preset) : null); });
+
+  // Picker-compatible model options. Seedance endpoints are grouped into one user-facing choice;
   // the concrete endpoint is selected right before generation from attached files.
-  var hasSeedance = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1 && String(m.code).indexOf('_mini') === -1; });
-  var hasSeedanceFast = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') !== -1; });
-  var hasSeedanceMini = filteredModels.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_mini') !== -1; });
+  var hasSeedance = filteredModels.some(function(m) { return isSeedanceModelCode(m.code); });
   const modelOptions = [];
-  if (hasSeedance) modelOptions.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Автовыбор: текст / фото / референсы', price:'от 250 ★' });
-  if (hasSeedanceFast) modelOptions.push({ id:'seedance_2_fast_auto', t:'Seedance 2.0 Fast', s:'Дешевле и быстрее, автовыбор режима', price:'от 180 ★' });
-  if (hasSeedanceMini) modelOptions.push({ id:'seedance_2_mini_auto', t:'Seedance 2.0 Mini', s:'Самый доступный режим, автовыбор', price:'от 120 ★' });
+  if (hasSeedance) modelOptions.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Видео по тексту, фото или референсам', price:'от 112 ★' });
   filteredModels.forEach(function(m) {
     if (isSeedanceModelCode(m.code)) return;
-    modelOptions.push({ id: m.code, t: m.title, s: shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
+    modelOptions.push({ id: m.code, t: modelDisplayTitle(m), s: shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
   });
 
   // Resolve current model
   var defaultModelId = (modelOptions[0] && modelOptions[0].id) || (filteredModels[0] && filteredModels[0].code) || null;
   var displayModelId = uiModelId || selectedModelCode || defaultModelId;
-  var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedFiles);
+  var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedFiles, seedanceTier);
   var currentModelFull = filteredModels.find(function(m) { return m.code === currentModelCode; }) || filteredModels[0];
   var currentModelOpt = modelOptions.find(function(m) { return String(m.id) === String(displayModelId); }) || modelOptions.find(function(m) { return String(m.id) === String(currentModelCode); }) || modelOptions[0];
   var qField = getQualityField(currentModelFull);
@@ -486,6 +516,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     durationValue = visibleDurationOptions.indexOf(String(coercedDuration)) !== -1 ? coercedDuration : (visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]));
   }
   var displayModelLabel = uiModelLabel || (currentModelOpt ? currentModelOpt.t : null);
+  var showSeedanceTier = !selectedTpl && isSeedanceModelCode(displayModelId) && hasSeedance;
   var displayQualityLabel = uiQualityLabel || (qField ? optionTitle(qOptions.find(function(o) { return String(optionValue(o)) === String(qValue); }) || qValue) : null);
   var displayDurationLabel = durationField && durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel && selectedAspect && String(selectedAspect.id) === String(effectiveAspectId)
@@ -913,9 +944,22 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
                 {displayModelLabel ? displayModelLabel
                   : 'Нет доступных моделей'}
               </div>
+              {showSeedanceTier && <div className="seedance-tier-note">Версия: {seedanceTierLabel(seedanceTier)}</div>}
             </div>
             {!templateLocked && modelOptions.length > 1 && <span className="chev"><Ic n="chev" s={20}/></span>}
           </div>
+          {showSeedanceTier && <SeedanceTierControl value={seedanceTier} onChange={function(next) {
+            setSeedanceTier(next);
+            setSelectedModelCode('seedance_2_auto');
+            setUiModelId('seedance_2_auto');
+            setUiModelLabel(null);
+            setSelectedQuality(null);
+            setUiQualityValue(null);
+            setUiQualityLabel(null);
+            setSelectedDuration(null);
+            setUiDurationValue(null);
+            setUiDurationLabel(null);
+          }}/>}
           <div className="divider"></div>
         </React.Fragment>}
         {qField && <React.Fragment>
@@ -996,7 +1040,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     {picker === 'model' && !templateLocked && modelOptions.length > 0 && <PickerSheet
       title="Модель" options={modelOptions}
       current={currentModelOpt || modelOptions[0]}
-      onSelect={function(opt) { setSelectedModelCode(opt.id); setUiModelId(opt.id); setUiModelLabel(opt.t || String(opt.id)); setSelectedQuality(null); setUiQualityValue(null); setUiQualityLabel(null); setQualityLocked(false); }}
+      onSelect={function(opt) { setSelectedModelCode(opt.id); setUiModelId(opt.id); setUiModelLabel(opt.id === 'seedance_2_auto' ? null : (opt.t || String(opt.id))); setSelectedQuality(null); setUiQualityValue(null); setUiQualityLabel(null); setQualityLocked(false); }}
       onClose={() => setPicker(null)}/>}
 
     {/* Quality picker */}
@@ -1024,6 +1068,22 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   </div>;
 }
 window.CreateScreen = CreateScreen;
+
+function SeedanceTierControl({ value, onChange }) {
+  var tiers = [
+    { id:'mini', t:'Mini', s:'дешевле' },
+    { id:'fast', t:'Fast', s:'быстрее' },
+    { id:'normal', t:'Normal', s:'максимум' }
+  ];
+  return <div className="seedance-tier">
+    {tiers.map(function(t) {
+      return <button key={t.id} type="button" className={value === t.id ? 'on' : ''}
+        onClick={function(e) { e.stopPropagation(); onChange && onChange(t.id); }}>
+        <b>{t.t}</b><span>{t.s}</span>
+      </button>;
+    })}
+  </div>;
+}
 
 function hbxDurationHaptic() {
   try {

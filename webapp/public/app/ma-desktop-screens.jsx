@@ -97,8 +97,23 @@ function templateModelCode(t) { return (t && t.modelCode) || 'nano_banana_pro'; 
 function templateQualityValue(t) { return t && (t.qualityValue || t.quality || t.resolution); }
 function templateDurationValue(t) { return t && (t.durationValue || t.duration); }
 function isSeedanceModelCode(code) { return /^seedance_2_/.test(String(code || '')) || String(code || '').indexOf('seedance') === 0; }
-function resolveSeedanceAutoCode(code, files) {
+function seedanceTierFromCode(code) {
+  var s = String(code || '');
+  if (s.indexOf('_mini') !== -1 || s === 'seedance_2_mini_auto') return 'mini';
+  if (s.indexOf('_fast') !== -1 || s === 'seedance_2_fast_auto') return 'fast';
+  return 'normal';
+}
+function seedanceAutoCodeForTier(tier) {
+  if (tier === 'mini') return 'seedance_2_mini_auto';
+  if (tier === 'fast') return 'seedance_2_fast_auto';
+  return 'seedance_2_auto';
+}
+function seedanceTierLabel(tier) {
+  return tier === 'mini' ? 'Mini' : (tier === 'fast' ? 'Fast' : 'Normal');
+}
+function resolveSeedanceAutoCode(code, files, tier) {
   var selected = String(code || '');
+  if (selected === 'seedance_2_auto' && tier) selected = seedanceAutoCodeForTier(tier);
   var list = Array.isArray(files) ? files.filter(Boolean) : [];
   var images = list.filter(function(f) { return !f || f.type !== 'video'; }).length;
   var videos = list.filter(function(f) { return f && f.type === 'video'; }).length;
@@ -117,9 +132,7 @@ function resolveSeedanceAutoCode(code, files) {
 function displaySeedanceAutoCode(code) {
   var s = String(code || '');
   if (!isSeedanceModelCode(s)) return s;
-  if (s === 'seedance_2_auto' || s === 'seedance_2_fast_auto' || s === 'seedance_2_mini_auto') return s;
-  if (s.indexOf('_mini') !== -1) return 'seedance_2_mini_auto';
-  return s.indexOf('_fast') !== -1 ? 'seedance_2_fast_auto' : 'seedance_2_auto';
+  return 'seedance_2_auto';
 }
 function fieldDefault(field) {
   if (!field) return null;
@@ -174,26 +187,43 @@ function durationIndex(values, value) {
   var index = (values || []).findIndex(function(v) { return durationValuesMatch(v, selected); });
   return index < 0 ? 0 : index;
 }
+function modelDisplayTitle(m) {
+  var code = String((m && m.code) || '');
+  var titles = {
+    nano_banana_edit:'Nano Banana · редактор',
+    gpt_image_2_edit:'GPT Image 2 · редактор',
+    flux_schnell:'Flux · быстрый',
+    kling_21_i2v:'Kling 2.1 · по фото',
+    kling_30_i2v:'Kling 3.0 · по фото',
+    kling_30_motion_control:'Kling 3.0 · движение',
+    grok_video_t2v:'Grok · по тексту',
+    grok_video_i2v:'Grok · по фото',
+    veo_31_t2v:'Veo 3.1 · по тексту',
+    veo_31_i2v:'Veo 3.1 · по фото',
+    happy_horse_i2v:'Happy Horse · по фото'
+  };
+  return titles[code] || (m && m.title) || code;
+}
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
-  if (code === 'nano_banana_2') return 'Быстрая генерация';
-  if (code === 'nano_banana_pro') return 'Pro · высокое разрешение';
-  if (code === 'nano_banana_edit') return 'Редактирование фото';
-  if (code === 'gpt_image_2') return 'Качественная генерация';
-  if (code === 'gpt_image_2_edit') return 'Редактирование фото';
-  if (code.indexOf('seedance_2_mini') === 0) return 'Mini · доступное видео';
-  if (code === 'seedance_2_t2v_fast') return 'Fast · текст → видео';
-  if (code === 'seedream') return 'Фотореализм';
-  if (code === 'flux_schnell') return 'Быстро и дёшево';
-  if (code === 'z_image') return 'Доступная генерация';
-  if (code === 'kling_21_i2v') return 'Image → video';
-  if (code === 'kling_30_i2v') return 'Image → video · 720p';
-  if (code === 'kling_30_motion_control') return 'Motion control';
-  if (code === 'grok_video_t2v') return 'Текст → видео';
-  if (code === 'grok_video_i2v') return 'Фото → видео';
-  if (code === 'veo_31_t2v') return 'Текст → видео';
-  if (code === 'veo_31_i2v') return 'Фото → видео';
-  if (code.indexOf('happy_horse') !== -1) return 'Липсинк-видео';
+  if (code === 'nano_banana_2') return 'Быстро создаёт изображения по описанию';
+  if (code === 'nano_banana_pro') return 'Создаёт и улучшает фото в высоком качестве';
+  if (code === 'nano_banana_edit') return 'Изменяет загруженное фото по описанию';
+  if (code === 'gpt_image_2') return 'Точные изображения и надписи';
+  if (code === 'gpt_image_2_edit') return 'Аккуратно изменяет загруженное фото';
+  if (code === 'seedream') return 'Реалистичные фото и портреты';
+  if (code.indexOf('seedance_2_mini') === 0) return 'Доступное видео для быстрых задач';
+  if (code.indexOf('seedance_2_') === 0 && code.indexOf('_fast') !== -1) return 'Быстрое видео по тексту или фото';
+  if (code === 'flux_schnell') return 'Быстрые изображения по описанию';
+  if (code === 'z_image') return 'Недорогая генерация изображений';
+  if (code === 'kling_21_i2v') return 'Оживляет загруженную фотографию';
+  if (code === 'kling_30_i2v') return 'Качественно оживляет фотографию';
+  if (code === 'kling_30_motion_control') return 'Переносит движение из видео на персонажа';
+  if (code === 'grok_video_t2v') return 'Создаёт видео по текстовому описанию';
+  if (code === 'grok_video_i2v') return 'Оживляет загруженное фото';
+  if (code === 'veo_31_t2v') return 'Кинематографичное видео по описанию';
+  if (code === 'veo_31_i2v') return 'Кинематографично оживляет фото';
+  if (code.indexOf('happy_horse') !== -1) return 'Оживляет фото со звуком и речью';
   return (m && m.description) ? String(m.description).replace(/\s+через\s+Fal\.?/ig, '').replace(/\s+высокая\s+стоимость\.?/ig, '') : '';
 }
 function estimateModelPrice(model, inputs) {
@@ -726,6 +756,22 @@ function DeskFloatingPicker({ kind, options, current, onPick }) {
   </div>;
 }
 
+function DeskSeedanceTierControl({ value, onChange }) {
+  var tiers = [
+    { id:'mini', t:'Mini', s:'дешевле' },
+    { id:'fast', t:'Fast', s:'быстрее' },
+    { id:'normal', t:'Normal', s:'максимум' }
+  ];
+  return <div className="dk-seedance-tier">
+    {tiers.map(function(t) {
+      return <button key={t.id} type="button" className={value === t.id ? 'on' : ''}
+        onClick={function(e) { e.stopPropagation(); onChange && onChange(t.id); }}>
+        <b>{t.t}</b><span>{t.s}</span>
+      </button>;
+    })}
+  </div>;
+}
+
 function DeskDurationInlineControl({ value, label, options, locked, template, onChange, onUnlock, onRelock }) {
   const { Ic } = window.MiraCore;
   var values = durationOptionValues(options);
@@ -838,6 +884,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const [apiModels, setApiModels] = useState(window.MiraCore.FALLBACK_MODELS || []);
   const [modelsLoaded, setModelsLoaded] = useState(true);
   const [selectedModelCode, setSelectedModelCode] = useState(initModelCode || (initTpl ? templateModelCode(initTpl) : null));
+  const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(initModelCode || (initTpl ? templateModelCode(initTpl) : null)); });
   const [selectedAspect, setSelectedAspect] = useState(
     (initAspectId && ASPECTS.find(function(a) { return String(a.id) === String(initAspectId); }))
       || (initTpl && initTpl.aspectId && ASPECTS.find(function(a) { return String(a.id) === String(initTpl.aspectId); }))
@@ -896,16 +943,12 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     if (mode === 'video') return m.task_type === 'video' || m.category === 'video';
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
-  var hasSeedance = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') === -1 && String(m.code).indexOf('_mini') === -1; });
-  var hasSeedanceFast = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_fast') !== -1; });
-  var hasSeedanceMini = filtered.some(function(m) { return isSeedanceModelCode(m.code) && String(m.code).indexOf('_mini') !== -1; });
+  var hasSeedance = filtered.some(function(m) { return isSeedanceModelCode(m.code); });
   const modelOpts = [];
-  if (mode === 'video' && hasSeedance) modelOpts.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Автовыбор: текст / фото / референсы', price:'от 250 ★' });
-  if (mode === 'video' && hasSeedanceFast) modelOpts.push({ id:'seedance_2_fast_auto', t:'Seedance 2.0 Fast', s:'Дешевле и быстрее, автовыбор режима', price:'от 180 ★' });
-  if (mode === 'video' && hasSeedanceMini) modelOpts.push({ id:'seedance_2_mini_auto', t:'Seedance 2.0 Mini', s:'Самый доступный режим, автовыбор', price:'от 120 ★' });
+  if (mode === 'video' && hasSeedance) modelOpts.push({ id:'seedance_2_auto', t:'Seedance 2.0', s:'Видео по тексту, фото или референсам', price:'от 112 ★' });
   filtered.forEach(function(m) {
     if (mode === 'video' && isSeedanceModelCode(m.code)) return;
-    modelOpts.push({ id:m.code, t:m.title, s:shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
+    modelOpts.push({ id:m.code, t:modelDisplayTitle(m), s:shortModelDescription(m), price:(m.price_credits || 0) + ' ★' });
   });
   var defaultModelId = (modelOpts[0] && modelOpts[0].id) || (filtered[0] && filtered[0].code) || null;
   var displayModelId = displaySeedanceAutoCode(selectedModelCode || defaultModelId);
@@ -913,7 +956,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var isPhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo';
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var uploadedRefFiles = referenceSlots ? uploadedFiles.filter(Boolean) : (uploadedFile ? [uploadedFile] : []);
-  var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles);
+  var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles, seedanceTier);
   var curCode = displayModelId;
   var curModel = filtered.find(function(m) { return m.code === currentModelCode; }) || filtered[0];
   var curOpt = modelOpts.find(function(m) { return m.id === displayModelId; }) || modelOpts.find(function(m) { return m.id === currentModelCode; }) || modelOpts[0];
@@ -936,6 +979,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     durationValue = visibleDurationOptions.indexOf(String(coercedDuration)) !== -1 ? coercedDuration : (visibleDurationOptions.indexOf('auto') !== -1 ? 'auto' : String(visibleDurationOptions[0]));
   }
   var displayModelLabel = uiModelLabel || (curOpt ? curOpt.t : null);
+  var showSeedanceTier = !selectedTpl && mode === 'video' && isSeedanceModelCode(displayModelId) && hasSeedance;
   var displayQualityLabel = uiQualityLabel || prettyOption(qValue);
   var displayDurationLabel = durationValue != null ? formatDurationLabel(durationValue) : null;
   var displayAspectLabel = uiAspectLabel || (selectedAspectSafe ? selectedAspectSafe.t + ' · ' + selectedAspectSafe.s : '');
@@ -1136,7 +1180,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
               ? <><div className="dk-drop-ic"><div className="gen-spinner" style={{ width:26, height:26 }}></div></div><div className="dk-drop-t">Загружаю…</div></>
               : <><div className="dk-drop-ic"><Ic n="video" s={22} c="var(--ink)"/></div>
                   <div className="dk-drop-t">Загрузите видео движения</div>
-                  <div className="dk-drop-s">Нужно для Motion Control</div></>}
+                  <div className="dk-drop-s">Нужно для переноса движения</div></>}
           </div>)}
 
       <div className="dk-seg" style={{ marginTop:14 }}>
@@ -1179,12 +1223,24 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className={'dk-row' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
             <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
-              <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '')}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel : 'Нет моделей'}</div></div>
+              <div className="dk-row-v" key={'gen-model-label-' + (selectedModelCode || curCode || 'init') + '-' + (displayModelLabel || '')}>{!modelsLoaded ? 'Загрузка…' : displayModelLabel ? displayModelLabel : 'Нет моделей'}</div>
+              {showSeedanceTier && <div className="dk-row-s">Версия: {seedanceTierLabel(seedanceTier)}</div>}</div>
             {selectedTpl && <button className={'dk-lock-btn' + (!templateLocked ? ' off' : '')} title={templateLocked ? 'Модель закреплена. Нажмите, чтобы разблокировать' : 'Модель разблокирована'} onClick={function(e){ e.stopPropagation(); setTemplateLocked(!templateLocked); if (templateLocked) setOpen('model'); }}>
               <Ic n={templateLocked ? 'lock' : 'unlock'} s={18}/>
             </button>}
             {!templateLocked && modelOpts.length > 0 && <span className="chev"><Ic n="chev" s={19}/></span>}
           </div>
+          {showSeedanceTier && <DeskSeedanceTierControl value={seedanceTier} onChange={function(next) {
+            setSeedanceTier(next);
+            setSelectedModelCode('seedance_2_auto');
+            setSelectedQuality(null);
+            setSelectedDuration(null);
+            setUiDurationValue(null);
+            setUiModelLabel(null);
+            setUiQualityLabel(null);
+            setUiDurationLabel(null);
+            setOpen(null);
+          }}/>}
           <div className="dk-row-div"></div>
         </React.Fragment>}
         {qField && <React.Fragment>
@@ -1238,7 +1294,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
         </div>
         {open === 'model' && !templateLocked && !isPhotoTemplate && <DeskFloatingPicker kind="model"
           options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:(o.s ? o.s + ' · ' : '') + (o.price || '') }; })} current={curCode}
-          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(opt ? opt.t : null); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>}
+          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(id === 'seedance_2_auto' ? null : (opt ? opt.t : null)); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>}
         {open === 'quality' && !qualityLocked && qField && <DeskFloatingPicker kind="quality"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>}

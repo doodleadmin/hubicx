@@ -47,9 +47,13 @@ async def _check(code: str, inputs: dict[str, Any], expected: int) -> None:
 
 async def main() -> None:
     await _check("nano_banana_pro", {"prompt": "test", "resolution": "1K", "num_images": 1}, 80)
-    await _check("nano_banana_pro", {"prompt": "test", "resolution": "2K", "num_images": 1}, 160)
-    await _check("nano_banana_pro", {"prompt": "test", "resolution": "4K", "num_images": 1}, 320)
-    await _check("nano_banana_pro", {"prompt": "test", "resolution": "2K", "num_images": 2}, 320)
+    await _check("nano_banana_pro", {"prompt": "test", "resolution": "2K", "num_images": 1}, 80)
+    await _check("nano_banana_pro", {"prompt": "test", "resolution": "4K", "num_images": 1}, 160)
+    await _check("nano_banana_pro", {"prompt": "test", "resolution": "2K", "num_images": 2}, 160)
+    await _check("seedance_2_t2v", {"prompt": "test", "resolution": "720p", "duration": "5"}, 460)
+    await _check("seedance_2_t2v", {"prompt": "test", "resolution": "1080p", "duration": "10"}, 2070)
+    await _check("seedance_2_t2v_fast", {"prompt": "test", "resolution": "480p", "duration": "5"}, 167)
+    await _check("seedance_2_mini_t2v", {"prompt": "test", "resolution": "720p", "duration": "15"}, 720)
     await _check("flux_schnell", {"prompt": "test", "num_images": 2}, 60)
     await _check("ai_chat", {"prompt": "test"}, 2)
     print("Pricing checks passed")

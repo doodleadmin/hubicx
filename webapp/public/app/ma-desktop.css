@@ -497,6 +497,29 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
   color:var(--card);
   border-color:var(--ink);
 }
+.dk-seedance-tier {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px;
+  padding:0 14px 13px 67px;
+}
+.dk-seedance-tier button {
+  border:1px solid var(--line);
+  background:#f1f0ea;
+  color:var(--muted);
+  border-radius:13px;
+  padding:8px 9px;
+  font:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.dk-seedance-tier button b { display:block; color:var(--ink); font-size:13px; line-height:1.05; }
+.dk-seedance-tier button span { display:block; font-size:10.5px; margin-top:2px; }
+.dk-seedance-tier button.on {
+  border-color:var(--accent);
+  background:color-mix(in srgb,var(--accent) 18%,var(--card));
+  box-shadow:0 8px 18px color-mix(in srgb,var(--accent) 18%,transparent);
+}
 .dk-floating-menu {
   position:absolute; left:calc(100% + 14px); width:260px; z-index:35;
   background:rgba(255,255,255,.96); border:1px solid rgba(222,220,211,.9); border-radius:18px;
@@ -998,6 +1021,8 @@ html.theme-dark .dk-conv-ask,
 html.theme-dark .dk-ref,
 html.theme-dark .dk-auth-in,
 html.theme-dark .dk-pack.on { background: #12151b; }
+html.theme-dark .dk-seedance-tier button { background:#20242c; }
+html.theme-dark .dk-seedance-tier button.on { background:#2b3024; }
 html.theme-dark .dk-ask-opt.on,
 html.theme-dark .dk-floating-opt.on,
 html.theme-dark .dk-agent-card.on,

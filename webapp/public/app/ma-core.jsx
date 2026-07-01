@@ -124,37 +124,37 @@ function TopNav({ active, onTab }) {
 /* ---- fallback models (matches production DB seed) ---- */
 const FALLBACK_MODELS = [
   { code:'nano_banana_2',      title:'Nano Banana 2',             category:'photo', task_type:'image', price_credits:40,  description:'Быстрая генерация' },
-  { code:'nano_banana_pro',    title:'Nano Banana Pro',           category:'photo', task_type:'image', price_credits:80,  description:'Pro · высокое разрешение', input_type:'image', form_schema:{ fields:[
+  { code:'nano_banana_pro',    title:'Nano Banana Pro',           category:'photo', task_type:'image', price_credits:80,  description:'Создаёт и улучшает фото в высоком качестве', input_type:'image', form_schema:{ fields:[
     { name:'prompt', type:'textarea' },
     { name:'image_urls', type:'files' },
     { name:'aspect_ratio', type:'select', default:'1:1', options:['1:1','4:5','3:4','9:16','16:9'] },
     { name:'resolution', type:'select', default:'1K', options:['1K','2K','4K'] },
     { name:'num_images', type:'select', default:1, options:[1,2,3,4] }
-  ], price_rules:{ base:80, multipliers:[{ field:'resolution', values:{ '1K':1, '2K':2, '4K':4 } }, { field:'num_images', mode:'multiply_by_value' }], min:1, round:'ceil' } } },
-  { code:'nano_banana_edit',   title:'Nano Banana Edit',          category:'photo', task_type:'image', price_credits:60,  description:'Редактирование фото', input_type:'image' },
-  { code:'gpt_image_2',        title:'GPT Image 2',               category:'photo', task_type:'image', price_credits:90,  description:'OpenAI · качественная генерация' },
-  { code:'gpt_image_2_edit',   title:'GPT Image 2 Edit',          category:'photo', task_type:'image', price_credits:110, description:'OpenAI · редактирование фото', input_type:'image' },
+  ], price_rules:{ base:80, multipliers:[{ field:'resolution', values:{ '1K':1, '2K':1, '4K':2 } }, { field:'num_images', mode:'multiply_by_value' }], min:1, round:'ceil' } } },
+  { code:'nano_banana_edit',   title:'Nano Banana · редактор',    category:'photo', task_type:'image', price_credits:60,  description:'Изменяет загруженное фото по описанию', input_type:'image' },
+  { code:'gpt_image_2',        title:'GPT Image 2',               category:'photo', task_type:'image', price_credits:90,  description:'Точные изображения и надписи' },
+  { code:'gpt_image_2_edit',   title:'GPT Image 2 · редактор',    category:'photo', task_type:'image', price_credits:110, description:'Аккуратно изменяет загруженное фото', input_type:'image' },
   { code:'seedream',           title:'Seedream',                  category:'photo', task_type:'image', price_credits:35,  description:'Фотореалистичный' },
-  { code:'flux_schnell',       title:'Fast Image',                category:'photo', task_type:'image', price_credits:30,  description:'Молниеносный' },
+  { code:'flux_schnell',       title:'Flux · быстрый',            category:'photo', task_type:'image', price_credits:30,  description:'Быстрые изображения по описанию' },
   { code:'z_image',            title:'Z-Image',                   category:'photo', task_type:'image', price_credits:25,  description:'Доступный' },
-  { code:'seedance_2_t2v',     title:'Seedance 2 Text to Video',  category:'video', task_type:'video', price_credits:250, description:'Текст → видео' },
-  { code:'seedance_2_t2v_fast',title:'Seedance 2 Fast Text→Video',category:'video', task_type:'video', price_credits:180, description:'Fast · текст → видео' },
-  { code:'seedance_2_mini_t2v',title:'Seedance 2 Mini Text→Video',category:'video', task_type:'video', price_credits:120, description:'Mini · текст → видео' },
-  { code:'seedance_2_i2v_fast',title:'Seedance 2 Fast Image→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрый Image → видео', input_type:'image' },
-  { code:'seedance_2_mini_i2v',title:'Seedance 2 Mini Image→Video',category:'video',task_type:'video', price_credits:120, description:'Mini · Image → видео', input_type:'image' },
-  { code:'seedance_2_reference',title:'Seedance 2 Reference→Video',category:'video',task_type:'video', price_credits:225, description:'Топовое видео по нескольким референсам', input_type:'image', form_schema:{ fields:[
+  { code:'seedance_2_t2v',     title:'Seedance 2.0 · по тексту',  category:'video', task_type:'video', price_credits:460, description:'Создаёт видео по текстовому описанию' },
+  { code:'seedance_2_t2v_fast',title:'Seedance 2.0 · быстро по тексту',category:'video', task_type:'video', price_credits:370, description:'Быстро создаёт видео по описанию' },
+  { code:'seedance_2_mini_t2v',title:'Seedance 2.0 · доступно по тексту',category:'video', task_type:'video', price_credits:240, description:'Доступное видео для быстрых задач' },
+  { code:'seedance_2_i2v_fast',title:'Seedance 2.0 · быстро по фото',category:'video',task_type:'video', price_credits:370, description:'Быстро оживляет фотографию', input_type:'image' },
+  { code:'seedance_2_mini_i2v',title:'Seedance 2.0 · доступно по фото',category:'video',task_type:'video', price_credits:240, description:'Доступно оживляет фотографию', input_type:'image' },
+  { code:'seedance_2_reference',title:'Seedance 2.0 · по референсам',category:'video',task_type:'video', price_credits:460, description:'Создаёт видео по нескольким референсам', input_type:'image', form_schema:{ fields:[
     { name:'image_urls', type:'files' },
     { name:'prompt', type:'textarea' },
     { name:'aspect_ratio', type:'select', default:'9:16', options:['21:9','16:9','4:3','1:1','3:4','9:16','auto'] },
     { name:'duration', type:'select', default:'5', options:['auto','4','5','6','7','8','9','10','11','12','13','14','15'] },
     { name:'resolution', type:'select', default:'480p', options:['480p','720p','1080p'] },
     { name:'generate_audio', type:'switch', default:true }
-  ], price_rules:{ base:225, multipliers:[{ field:'resolution', values:{ '480p':0.45, '720p':1, '1080p':2.25 } }, { field:'duration', values:{ auto:1, '4':0.8, '5':1, '6':1.2, '7':1.4, '8':1.6, '9':1.8, '10':2, '11':2.2, '12':2.4, '13':2.6, '14':2.8, '15':3 } }], min:1, round:'ceil' } } },
-  { code:'seedance_2_reference_fast',title:'Seedance 2 Fast Reference→Video',category:'video',task_type:'video', price_credits:180, description:'Быстрое видео по нескольким референсам', input_type:'image' },
-  { code:'seedance_2_mini_reference',title:'Seedance 2 Mini Reference→Video',category:'video',task_type:'video', price_credits:120, description:'Mini · видео по референсам', input_type:'image' },
-  { code:'seedance_2_i2v',     title:'Seedance 2 Image to Video', category:'video', task_type:'video', price_credits:250, description:'Качественный Image → видео', input_type:'image' },
-  { code:'kling_21_i2v',       title:'Kling 2.1 Image to Video',  category:'video', task_type:'video', price_credits:220, description:'Kling 2.1 Image → видео', input_type:'image' },
-  { code:'kling_30_i2v',       title:'Kling 3.0 Image to Video',  category:'video', task_type:'video', price_credits:260, description:'Kling 3.0 · image → video', input_type:'image', form_schema:{ fields:[
+  ], price_rules:{ base:460, multipliers:[{ field:'resolution', values:{ '480p':0.45, '720p':1, '1080p':2.25 } }, { field:'duration', values:{ auto:1, '4':0.8, '5':1, '6':1.2, '7':1.4, '8':1.6, '9':1.8, '10':2, '11':2.2, '12':2.4, '13':2.6, '14':2.8, '15':3 } }], min:1, round:'ceil' } } },
+  { code:'seedance_2_reference_fast',title:'Seedance 2.0 · быстро по референсам',category:'video',task_type:'video', price_credits:370, description:'Быстро создаёт видео по референсам', input_type:'image' },
+  { code:'seedance_2_mini_reference',title:'Seedance 2.0 · доступно по референсам',category:'video',task_type:'video', price_credits:240, description:'Доступное видео по референсам', input_type:'image' },
+  { code:'seedance_2_i2v',     title:'Seedance 2.0 · по фото',    category:'video', task_type:'video', price_credits:460, description:'Качественно оживляет фотографию', input_type:'image' },
+  { code:'kling_21_i2v',       title:'Kling 2.1 · по фото',       category:'video', task_type:'video', price_credits:220, description:'Оживляет загруженную фотографию', input_type:'image' },
+  { code:'kling_30_i2v',       title:'Kling 3.0 · по фото',       category:'video', task_type:'video', price_credits:260, description:'Качественно оживляет фотографию', input_type:'image', form_schema:{ fields:[
     { name:'image_url', type:'file' },
     { name:'prompt', type:'textarea' },
     { name:'duration', type:'select', default:'10', options:['3','4','5','6','7','8','9','10','11','12','13','14','15'] },
@@ -162,17 +162,17 @@ const FALLBACK_MODELS = [
     { name:'generate_audio', type:'switch', default:false },
     { name:'template_pipeline', type:'hidden' }
   ], price_rules:{ base:260, multipliers:[{ field:'duration', values:{ '3':0.4, '4':0.5, '5':0.6, '6':0.7, '7':0.8, '8':0.9, '9':1, '10':1, '11':1.1, '12':1.2, '13':1.3, '14':1.4, '15':1.5 } }], min:1, round:'ceil' } } },
-  { code:'kling_30_motion_control',title:'Kling 3.0 Motion Control',category:'video',task_type:'video', price_credits:260, description:'Kling · перенос движения', input_type:'image', form_schema:{ fields:[
+  { code:'kling_30_motion_control',title:'Kling 3.0 · движение',category:'video',task_type:'video', price_credits:260, description:'Переносит движение из видео на персонажа', input_type:'image', form_schema:{ fields:[
     { name:'image_url', type:'file' },
     { name:'video_url', type:'file' },
     { name:'prompt', type:'textarea' },
     { name:'character_orientation', type:'select', default:'image', options:['image','video'] },
     { name:'keep_original_sound', type:'switch', default:true }
   ] } },
-  { code:'grok_video_t2v',     title:'Grok Imagine Video',        category:'video', task_type:'video', price_credits:320, description:'Grok · текст → видео' },
-  { code:'grok_video_i2v',     title:'Grok Image to Video',       category:'video', task_type:'video', price_credits:340, description:'Grok · image → видео', input_type:'image' },
-  { code:'veo_31_t2v',         title:'Veo 3.1 Text to Video',     category:'video', task_type:'video', price_credits:900, description:'Google Veo · текст → видео' },
-  { code:'veo_31_i2v',         title:'Veo 3.1 Image to Video',    category:'video', task_type:'video', price_credits:900, description:'Google Veo · image → видео', input_type:'image' },
+  { code:'grok_video_t2v',     title:'Grok · по тексту',          category:'video', task_type:'video', price_credits:320, description:'Создаёт видео по текстовому описанию' },
+  { code:'grok_video_i2v',     title:'Grok · по фото',            category:'video', task_type:'video', price_credits:340, description:'Оживляет загруженное фото', input_type:'image' },
+  { code:'veo_31_t2v',         title:'Veo 3.1 · по тексту',       category:'video', task_type:'video', price_credits:900, description:'Кинематографичное видео по описанию' },
+  { code:'veo_31_i2v',         title:'Veo 3.1 · по фото',         category:'video', task_type:'video', price_credits:900, description:'Кинематографично оживляет фото', input_type:'image' },
 ];
 
 /* ---- data ---- */

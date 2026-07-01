@@ -461,6 +461,31 @@ html.theme-dark .duration-chip.on { background:var(--accent); color:var(--accent
 html.theme-dark .duration-range::-webkit-slider-runnable-track {
   background: linear-gradient(90deg, var(--accent) 0 var(--duration-progress, 0%), #2d332f var(--duration-progress, 0%) 100%);
 }
+.seedance-tier {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 16px 14px 70px;
+}
+.seedance-tier-note { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.seedance-tier button {
+  border: 1px solid var(--line);
+  background: var(--nav-bg);
+  color: var(--muted);
+  border-radius: 14px;
+  padding: 9px 8px;
+  font: inherit;
+  text-align: left;
+}
+.seedance-tier button b { display: block; color: var(--ink); font-size: 13px; line-height: 1.05; }
+.seedance-tier button span { display: block; font-size: 10.5px; margin-top: 2px; }
+.seedance-tier button.on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--card));
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+html.theme-dark .seedance-tier button { background: #20242c; }
+html.theme-dark .seedance-tier button.on { background: #2b3024; }
 
 @media (max-width: 380px) {
   .duration-control { margin-left: 0; grid-template-columns: 1fr; }
