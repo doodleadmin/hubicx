@@ -1055,6 +1055,10 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var canPickBatch = mode === 'photo' && !isPhotoTemplate;
   var effectiveBatchCount = canPickBatch ? batchCount : 1;
   var price = curModel ? Math.max(1, onePrice * effectiveBatchCount) : 0;
+  var createCtaKey = ['desktop-create-cta', priceSignature, String(price), canvas, curModel ? curModel.code : 'none'].join('|');
+  var createCtaLabel = canvas === 'generating'
+    ? 'Генерация…'
+    : (curModel ? 'Сгенерировать · ' + price + ' ★' : 'Модель временно недоступна');
   useEffect(function() {
     if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
     window.MiraCore.writePriceTrace('desktop-create', {
@@ -1395,8 +1399,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
       </div>
 
-      <button className="dk-cta" disabled={!ready || uploading || !curModel || canvas === 'generating'} onClick={start}>
-        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (curModel ? 'Сгенерировать · ' + price + ' ★' : 'Модель временно недоступна')}
+      <button key={createCtaKey} className="dk-cta" disabled={!ready || uploading || !curModel || canvas === 'generating'} onClick={start}>
+        <Ic n="sparkle" s={17}/> <span>{createCtaLabel}</span>
       </button>
     </div>
 

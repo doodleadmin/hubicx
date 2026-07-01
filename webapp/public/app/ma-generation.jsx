@@ -48,7 +48,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
       </div>
 
       <div className="card" data-onb="mob-create-card" style={{ marginTop:14, overflow:'hidden' }}>
-        <div className="row-link" onClick={onCreatePhoto}>
+        <div className="row-link" onClick={() => onCreatePhoto && onCreatePhoto()}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#e6efe9', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="image" s={21} c="#5f9184"/>
           </div>
@@ -59,7 +59,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
           <span className="chev"><Ic n="chev" s={20}/></span>
         </div>
         <div className="divider" style={{ marginLeft:0 }}></div>
-        <div className="row-link" onClick={onCreateVideo}>
+        <div className="row-link" onClick={() => onCreateVideo && onCreateVideo()}>
           <div style={{ width:42, height:42, borderRadius:13, background:'#eae8fb', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <Ic n="video" s={21} c="#6f6cc8"/>
           </div>

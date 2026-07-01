@@ -561,6 +561,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   // Show catalog price immediately, then prefer a fresh backend preview.
   var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
+  var createCtaKey = ['mobile-create-cta', priceSignature, String(currentPrice), currentModelFull ? currentModelFull.code : 'none'].join('|');
+  var createCtaLabel = currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Модель временно недоступна';
   useEffect(function() {
     if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
     window.MiraCore.writePriceTrace('mobile-create', {
@@ -1086,10 +1088,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       </div>
 
       <div style={{ height:20 }}/>
-      <button className="btn-primary"
+      <button key={createCtaKey} className="btn-primary"
         disabled={!ready || uploading || !currentModelFull}
         onClick={startGeneration}>
-        {currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Модель временно недоступна'}
+        <span>{createCtaLabel}</span>
       </button>
     </div>
 
