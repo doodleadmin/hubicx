@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   skipTrailingSlashRedirect: true,
+  experimental: {
+    cpus: 1,
+  },
   async redirects() {
     return [
       {
