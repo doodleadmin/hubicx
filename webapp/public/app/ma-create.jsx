@@ -161,6 +161,7 @@ function estimateModelPrice(model, inputs, context) {
   if (window.MiraCore && window.MiraCore.computeGenerationPrice) {
     return window.MiraCore.computeGenerationPrice(model, inputs, context);
   }
+  if (context && context.mode && !modelMatchesMode(model, context.mode)) return 0;
   var dbRules = model.price_rules;
   var basePrice = Number(model.price_credits || 0);
   if (dbRules && typeof dbRules === 'object') {
@@ -558,9 +559,8 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     : '';
   var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:currentModelFull.code }) : 0;
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
-  // The catalog already contains the backend pricing rules. Keep the CTA synchronous:
-  // an async preview may validate the value, but must never overwrite live controls.
-  var currentPrice = localPrice;
+  // Show catalog price immediately, then prefer a fresh backend preview.
+  var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
   useEffect(function() {
     if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
     window.MiraCore.writePriceTrace('mobile-create', {

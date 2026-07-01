@@ -254,6 +254,7 @@ function estimateModelPrice(model, inputs, context) {
   if (window.MiraCore && window.MiraCore.computeGenerationPrice) {
     return window.MiraCore.computeGenerationPrice(model, inputs, context);
   }
+  if (context && context.mode && !modelMatchesMode(model, context.mode)) return 0;
   var dbRules = model.price_rules;
   var basePrice = Number(model.price_credits || 0);
   if (dbRules && typeof dbRules === 'object') {
@@ -1049,9 +1050,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     : '';
   var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:curModel.code }) : 0;
   var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
-  // Render from the catalog rules immediately. The async backend preview is a
-  // diagnostic cross-check and cannot reset the user's live selection.
-  var onePrice = localOnePrice;
+  // Show catalog price immediately, then prefer a fresh backend preview.
+  var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
   var canPickBatch = mode === 'photo' && !isPhotoTemplate;
   var effectiveBatchCount = canPickBatch ? batchCount : 1;
   var price = curModel ? Math.max(1, onePrice * effectiveBatchCount) : 0;
