@@ -1327,8 +1327,8 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
       </div>
 
-      <button className="dk-cta" disabled={!ready || uploading || !modelsLoaded || !curModel || canvas === 'generating'} onClick={start}>
-        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (modelsLoaded && curModel ? 'Сгенерировать · ' + price + ' ★' : 'Загрузка моделей…')}
+      <button className="dk-cta" disabled={!ready || uploading || !curModel || canvas === 'generating'} onClick={start}>
+        <Ic n="sparkle" s={17}/> {canvas === 'generating' ? 'Генерация…' : (curModel ? 'Сгенерировать · ' + price + ' ★' : 'Загрузка моделей…')}
       </button>
     </div>
 

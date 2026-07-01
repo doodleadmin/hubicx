@@ -1053,7 +1053,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       <button className="btn-primary"
         disabled={!ready || uploading || !currentModelFull}
         onClick={startGeneration}>
-        {modelsLoaded && currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Загрузка моделей…'}
+        {currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Загрузка моделей…'}
       </button>
     </div>
 
