@@ -268,6 +268,7 @@ function modelDisplayTitle(m) {
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
   if (code === 'nano_banana_2') return 'Быстро создаёт изображения по описанию';
+  if (code === 'nano_banana_2_lite') return 'Быстро и дешевле создаёт изображения';
   if (code === 'nano_banana_pro') return 'Создаёт и улучшает фото в высоком качестве';
   if (code === 'nano_banana_edit') return 'Изменяет загруженное фото по описанию';
   if (code === 'gpt_image_2') return 'Точные изображения и надписи';
@@ -525,29 +526,31 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
-  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
-  var currentPrice = serverPrice != null ? serverPrice : localPrice;
   var priceSignature = currentModelFull
     ? [currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
+  var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs) : (mode === 'video' ? 5 : 2);
+  var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
+  var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
   var showModelPicker = !selectedTpl;
 
   useEffect(function() {
     if (!currentModelFull || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
-      setServerPrice(null);
+      setServerPrice({ signature: priceSignature, value: null });
       return;
     }
     var seq = ++pricePreviewSeqRef.current;
+    var signature = priceSignature;
     var timer = setTimeout(function() {
       window.HubicxApi.modelPricePreview(currentModelFull.code, priceInputs).then(function(data) {
         if (seq !== pricePreviewSeqRef.current) return;
         var next = data && (data.final_price_credits != null ? data.final_price_credits : data.price_tokens);
         next = Number(next);
-        setServerPrice(next > 0 ? Math.ceil(next) : null);
+        setServerPrice({ signature: signature, value: next > 0 ? Math.ceil(next) : null });
       }).catch(function() {
-        if (seq === pricePreviewSeqRef.current) setServerPrice(null);
+        if (seq === pricePreviewSeqRef.current) setServerPrice({ signature: signature, value: null });
       });
     }, 120);
     return function() { clearTimeout(timer); };

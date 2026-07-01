@@ -123,6 +123,7 @@ function TopNav({ active, onTab }) {
 
 /* ---- fallback models (matches production DB seed) ---- */
 const FALLBACK_MODELS = [
+  { code:'nano_banana_2_lite', title:'Nano Banana 2 Lite',        category:'photo', task_type:'image', price_credits:25,  description:'Быстрая и доступная генерация' },
   { code:'nano_banana_2',      title:'Nano Banana 2',             category:'photo', task_type:'image', price_credits:40,  description:'Быстрая генерация' },
   { code:'nano_banana_pro',    title:'Nano Banana Pro',           category:'photo', task_type:'image', price_credits:80,  description:'Создаёт и улучшает фото в высоком качестве', input_type:'image', form_schema:{ fields:[
     { name:'prompt', type:'textarea' },

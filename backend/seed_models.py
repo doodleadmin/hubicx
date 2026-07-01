@@ -1,5 +1,31 @@
 AI_MODELS_CATALOG = [
     {
+        "code": "nano_banana_2_lite",
+        "title": "Nano Banana 2 Lite",
+        "category": "photo",
+        "provider": "fal",
+        "provider_model_id": "google/nano-banana-2-lite",
+        "task_type": "image",
+        "input_type": "text",
+        "price_credits": 25,
+        "is_active": True,
+        "sort_order": 9,
+        "default_params": {"num_images": 1, "output_format": "png"},
+        "description": "Быстрая и доступная генерация изображений.",
+        "form_schema": {
+            "version": 1,
+            "submit_label": "Сгенерировать",
+            "result_type": "image",
+            "fields": [
+                {"name": "prompt", "provider_key": "prompt", "label": "Промт", "type": "textarea", "required": True, "placeholder": "Опишите, что нужно сгенерировать"},
+                {"name": "aspect_ratio", "provider_key": "aspect_ratio", "label": "Соотношение сторон", "type": "select", "default": "1:1", "options": ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"]},
+                {"name": "num_images", "provider_key": "num_images", "label": "Количество", "type": "select", "default": 1, "options": [1, 2, 3, 4]},
+            ],
+            "price_rules": {"base": 25, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+            "schema_source": {"provider": "fal", "provider_model_id": "google/nano-banana-2-lite", "verified_at": "2026-07-01", "verified_by": "official_fal_docs"},
+        },
+    },
+    {
         "code": "nano_banana_2",
         "title": "Nano Banana 2",
         "category": "photo",

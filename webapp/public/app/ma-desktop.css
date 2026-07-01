@@ -880,7 +880,7 @@ html.theme-dark .chat-setting-choice.on {
 
 /* ── picker modal (model / format) ── */
 .dk-picker {
-  width: 100%; max-width: 460px; max-height: 78vh; background: var(--card); border-radius: 22px;
+  width: calc(100vw - 56px); max-width: 560px; max-height: min(86vh, 760px); background: var(--card); border-radius: 22px;
   box-shadow: 0 30px 80px rgba(0,0,0,.28); display: flex; flex-direction: column; overflow: hidden;
 }
 .dk-picker-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--line); font-size: 17px; font-weight: 800; }
@@ -889,6 +889,23 @@ html.theme-dark .chat-setting-choice.on {
 .dk-picker-opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px; border-radius: 12px; cursor: pointer; }
 .dk-picker-opt:hover { background: #f6f5f0; }
 .dk-picker-opt.on { background: #f0efe8; }
+.dk-picker-model { max-width: 760px; }
+.dk-picker-model .dk-picker-list,
+.dk-picker-quality .dk-picker-list,
+.dk-picker-batch .dk-picker-list,
+.dk-picker-aspect .dk-picker-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+.dk-picker-model .dk-picker-opt,
+.dk-picker-quality .dk-picker-opt,
+.dk-picker-batch .dk-picker-opt,
+.dk-picker-aspect .dk-picker-opt {
+  min-height: 72px;
+  align-items: flex-start;
+}
 
 /* ════════════ AUTH (desktop login/register) ════════════ */
 .dk-auth { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }

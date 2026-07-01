@@ -46,6 +46,8 @@ async def _check(code: str, inputs: dict[str, Any], expected: int) -> None:
 
 
 async def main() -> None:
+    await _check("nano_banana_2_lite", {"prompt": "test", "num_images": 1}, 25)
+    await _check("nano_banana_2_lite", {"prompt": "test", "num_images": 4}, 100)
     await _check("nano_banana_pro", {"prompt": "test", "resolution": "1K", "num_images": 1}, 80)
     await _check("nano_banana_pro", {"prompt": "test", "resolution": "2K", "num_images": 1}, 80)
     await _check("nano_banana_pro", {"prompt": "test", "resolution": "4K", "num_images": 1}, 160)

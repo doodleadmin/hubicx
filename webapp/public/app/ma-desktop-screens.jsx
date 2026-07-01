@@ -207,6 +207,7 @@ function modelDisplayTitle(m) {
 function shortModelDescription(m) {
   var code = String((m && m.code) || '');
   if (code === 'nano_banana_2') return 'Быстро создаёт изображения по описанию';
+  if (code === 'nano_banana_2_lite') return 'Быстро и дешевле создаёт изображения';
   if (code === 'nano_banana_pro') return 'Создаёт и улучшает фото в высоком качестве';
   if (code === 'nano_banana_edit') return 'Изменяет загруженное фото по описанию';
   if (code === 'gpt_image_2') return 'Точные изображения и надписи';
@@ -724,10 +725,10 @@ function DeskTplCard({ t, onClick, fav, onFav }) {
 }
 
 /* ---- centered picker modal (model / format) ---- */
-function DeskPicker({ title, options, current, onPick, onClose }) {
+function DeskPicker({ title, options, current, onPick, onClose, kind }) {
   const { Ic } = window.MiraCore;
   return <div className="dk-modal-ov" onClick={onClose}>
-    <div className="dk-picker" onClick={e => e.stopPropagation()}>
+    <div className={'dk-picker dk-picker-' + (kind || 'default')} onClick={e => e.stopPropagation()}>
       <div className="dk-picker-top">
         <span>{title}</span>
         <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
@@ -986,28 +987,30 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
-  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
-  var onePrice = serverOnePrice != null ? serverOnePrice : localOnePrice;
-  var effectiveBatchCount = isPhotoTemplate ? 1 : batchCount;
-  var price = Math.max(1, onePrice * effectiveBatchCount);
   var priceSignature = curModel
     ? [curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
     : '';
+  var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs) : (mode === 'video' ? 5 : 2);
+  var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
+  var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
+  var effectiveBatchCount = isPhotoTemplate ? 1 : batchCount;
+  var price = Math.max(1, onePrice * effectiveBatchCount);
 
   useEffect(function() {
     if (!curModel || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
-      setServerOnePrice(null);
+      setServerOnePrice({ signature: priceSignature, value: null });
       return;
     }
     var seq = ++pricePreviewSeqRef.current;
+    var signature = priceSignature;
     var timer = setTimeout(function() {
       window.HubicxApi.modelPricePreview(curModel.code, priceInputs).then(function(data) {
         if (seq !== pricePreviewSeqRef.current) return;
         var next = data && (data.final_price_credits != null ? data.final_price_credits : data.price_tokens);
         next = Number(next);
-        setServerOnePrice(next > 0 ? Math.ceil(next) : null);
+        setServerOnePrice({ signature: signature, value: next > 0 ? Math.ceil(next) : null });
       }).catch(function() {
-        if (seq === pricePreviewSeqRef.current) setServerOnePrice(null);
+        if (seq === pricePreviewSeqRef.current) setServerOnePrice({ signature: signature, value: null });
       });
     }, 120);
     return function() { clearTimeout(timer); };
@@ -1292,18 +1295,18 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           </button>}
           {!aspectLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
         </div>
-        {open === 'model' && !templateLocked && !isPhotoTemplate && <DeskFloatingPicker kind="model"
+        {open === 'model' && !templateLocked && !isPhotoTemplate && <DeskPicker kind="model" title="Модель"
           options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:(o.s ? o.s + ' · ' : '') + (o.price || '') }; })} current={curCode}
-          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(id === 'seedance_2_auto' ? null : (opt ? opt.t : null)); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }}/>}
-        {open === 'quality' && !qualityLocked && qField && <DeskFloatingPicker kind="quality"
+          onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(id === 'seedance_2_auto' ? null : (opt ? opt.t : null)); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
+        {open === 'quality' && !qualityLocked && qField && <DeskPicker kind="quality" title="Качество"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
-          onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }}/>}
-        {open === 'batch' && !isPhotoTemplate && <DeskFloatingPicker kind="batch"
+          onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
+        {open === 'batch' && !isPhotoTemplate && <DeskPicker kind="batch" title="Количество"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:'Итоговая стоимость обновится в кнопке' }; })} current={String(batchCount)}
-          onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }}/>}
-        {open === 'aspect' && !aspectLocked && <DeskFloatingPicker kind="aspect"
+          onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
+        {open === 'aspect' && !aspectLocked && <DeskPicker kind="aspect" title="Формат"
           options={aspectOpts.map(function(a){ return { id:a.id, title:a.t, sub:a.s }; })} current={selectedAspectSafe.id}
-          onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }}/>}
+          onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
       </div>
 
       <button className="dk-cta" disabled={!ready || uploading || !modelsLoaded || !curModel || canvas === 'generating'} onClick={start}>
