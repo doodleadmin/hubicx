@@ -261,7 +261,9 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         if tbank_payment_id and '|' not in (payment.external_payment_id or ''):
             payment.external_payment_id = f"{order_id}|{tbank_payment_id}"
 
-        if status == "CONFIRMED" and payment.status in ("confirmed", "refunded", "reversed"):
+        terminal_statuses = {"confirmed", "refunded", "reversed"}
+
+        if status == "CONFIRMED" and payment.status in terminal_statuses:
             if payment.status in ("refunded", "reversed"):
                 logger.warning(
                     "Ignoring late CONFIRMED for terminal payment order_id=%s payment_id=%s current_status=%s",
@@ -271,6 +273,18 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                 )
             await session.commit()
             return
+
+        if status != "CONFIRMED" and payment.status in terminal_statuses:
+            if status not in ("REFUNDED", "REVERSED"):
+                logger.info(
+                    "Ignoring non-terminal payment status for terminal payment order_id=%s payment_id=%s event_status=%s current_status=%s",
+                    order_id,
+                    payment.id,
+                    status,
+                    payment.status,
+                )
+                await session.commit()
+                return
 
         # Начисляем токены при успешной оплате (ПРОВЕРЯЕМ ДО смены статуса!)
         if status == "CONFIRMED":

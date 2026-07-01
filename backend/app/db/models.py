@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -209,6 +209,17 @@ class Transaction(Base):
 
 class BalanceLedger(Base):
     __tablename__ = "balance_ledger"
+    __table_args__ = (
+        Index(
+            "uq_balance_ledger_payment_operation_once",
+            "payment_id",
+            "operation_type",
+            unique=True,
+            postgresql_where=text(
+                "payment_id IS NOT NULL AND operation_type IN ('payment_topup', 'payment_refund')"
+            ),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
@@ -333,6 +344,7 @@ class ReferralConversion(Base):
 
 class ReferralCommission(Base, TimestampMixin):
     __tablename__ = "referral_commissions"
+    __table_args__ = (Index("uq_referral_commissions_payment_id", "payment_id", unique=True),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     partner_id: Mapped[int] = mapped_column(ForeignKey("referral_partners.id"), index=True)
