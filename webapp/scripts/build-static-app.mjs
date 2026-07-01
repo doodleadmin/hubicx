@@ -68,6 +68,18 @@ async function buildTarget(target) {
   const outfile = path.join(root, target.outfile);
   await mkdir(path.dirname(outfile), { recursive: true });
   await writeFile(outfile, `${bundled.code}\n`, "utf8");
+  if (target.name === "app") {
+    try {
+      const meta = JSON.parse(await readFile(path.join(root, "public", "app", "build-id.json"), "utf8"));
+      if (meta && meta.buildId) {
+        const versionedOutfile = path.join(root, "public", "app", "assets", `app.bundle.${meta.buildId}.js`);
+        await writeFile(versionedOutfile, `${bundled.code}\n`, "utf8");
+        console.log(`Built public/app/assets/app.bundle.${meta.buildId}.js`);
+      }
+    } catch (e) {
+      // Keep the unversioned bundle as the required fallback if build metadata is absent.
+    }
+  }
   console.log(`Built ${target.outfile}`);
 }
 

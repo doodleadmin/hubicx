@@ -27,7 +27,8 @@ function makeBuildId() {
 const buildId = makeBuildId();
 const appDir = path.join(root, "public", "app");
 const assetVersionRe =
-  /(\/app\/(?:loader\.css|ma\.css|ma-desktop\.css|loader\.js|desktop-bootstrap\.js|assets\/app\.bundle\.js)\?v=)[^"'<>\s]+/g;
+  /(\/app\/(?:loader\.css|ma\.css|ma-desktop\.css|loader\.js|desktop-bootstrap\.js)\?v=)[^"'<>\s]+/g;
+const appBundleRe = /\/app\/assets\/app\.bundle(?:\.[^/"'<>\s?]+)?\.js(?:\?v=[^"'<>\s]+)?/g;
 
 async function updateTextFile(rel, transform) {
   const abs = path.join(root, rel);
@@ -49,7 +50,11 @@ for (const rel of ["public/app/desktop-bootstrap.js", "public/app/assets/bootstr
 }
 
 for (const rel of ["public/desktop.html", "public/app/desktop.html", "public/app/index.source.html"]) {
-  await updateTextFile(rel, (source) => source.replace(assetVersionRe, `$1${buildId}`));
+  await updateTextFile(rel, (source) =>
+    source
+      .replace(assetVersionRe, `$1${buildId}`)
+      .replace(appBundleRe, `/app/assets/app.bundle.${buildId}.js`),
+  );
 }
 
 console.log(`Synced Hubicx app build id: ${buildId}`);
