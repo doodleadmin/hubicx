@@ -30,3 +30,6 @@ $b/
 desktop.html.bak*
 
 webapp/public/app/assets/templates/photo/camera-g7x/*.gif
+
+# Local source media used to prepare template covers; never deployed.
+local-assets/template-source-videos/

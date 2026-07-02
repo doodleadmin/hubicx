@@ -1,183 +1,58 @@
-# Telegram AI Aggregator MVP
+# Hubicx
 
-MVP Telegram AI-агрегатора по типу Syntx AI / Yes AI: Telegram Bot служит меню и навигацией, а сложные генерации запускаются в Telegram WebApp через backend, очередь worker и провайдеры OpenRouter/Fal.ai.
+Hubicx is an AI creation service for people who want a result without learning model interfaces: choose a ready template or describe the task, upload media when required, and receive a photo, video or chat response.
 
-## Архитектура
+## Product surfaces
 
-- `bot/` - aiogram 3.x бот: `/start`, выбор языка, меню, баланс, история, админ-команды и WebApp-кнопки.
-- `backend/` - FastAPI API, SQLAlchemy async, Alembic, сервисы пользователей, баланса, Telegram WebApp auth, payments mock.
-- `worker/` - Celery worker для генераций, refund при ошибке, уведомления пользователю в Telegram.
-- `webapp/` - Next.js Telegram Mini App: формы генерации, шаблоны, баланс, история.
-- `postgres` - хранит пользователей, модели, шаблоны, задачи, транзакции, платежи, referral, внутри Compose доступен как `postgres:5432`.
-- `redis` - брокер Celery, внутри Compose доступен как `redis:6379`.
+- `hubicx.ru` - landing and desktop workspace.
+- `webapp.hubicx.ru` - Telegram Mini App.
+- `admin.hubicx.ru` - operations and moderation admin panel.
+- `partners.hubicx.ru` - partner links, analytics, commissions and payouts.
+- `api.hubicx.ru` - FastAPI backend.
 
-## Быстрый Запуск
+Detailed service and flow documentation: [docs/services.md](docs/services.md). Visual and interaction rules: [docs/design-system.md](docs/design-system.md). Pricing economics: [docs/pricing-policy.md](docs/pricing-policy.md). Deployment handoff: [DEPLOYMENT_CONTEXT.md](DEPLOYMENT_CONTEXT.md).
 
-1. Скопируйте env: `cp .env.example .env`.
-2. Заполните минимум `BOT_TOKEN`, `BOT_USERNAME`, `ADMIN_IDS`, `WEBAPP_URL`, `BACKEND_URL`.
-3. Запустите инфраструктуру: `docker compose up -d postgres redis`.
-4. Примените миграции: `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`.
-5. Заполните модели и шаблоны: `docker compose run --rm backend python -m backend.seed`.
-6. Запустите сервисы: `docker compose up backend bot worker webapp`.
+## Stack
 
-## Env Переменные
+- FastAPI, SQLAlchemy async, Alembic and PostgreSQL.
+- Celery and Redis for provider work, polling and reconciliation.
+- aiogram Telegram bot.
+- Next.js plus a static React workspace built with esbuild.
+- Fal.ai and OpenRouter providers.
+- T-Bank Internet Acquiring.
+- Docker Compose and nginx; KZ reverse proxy for Telegram Mini App delivery.
 
-- `BOT_TOKEN` - токен Telegram BotFather, обязателен для бота и проверки initData.
-- `BOT_USERNAME` - username бота без `@`, нужен для referral link.
-- `ADMIN_IDS` - Telegram ID админов через запятую.
-- `DEBUG` - `true` включает `/api/debug/models` и `/api/debug/me` для локальной приёмки.
-- `WEBAPP_URL` - публичный URL Mini App.
-- `BACKEND_URL` - публичный URL API.
-- `DATABASE_URL` - async SQLAlchemy URL PostgreSQL.
-- `REDIS_URL` - Redis broker/backend для Celery.
-- `OPENROUTER_API_KEY` - ключ OpenRouter. Если пустой, сервис стартует, но генерация вернёт понятную ошибку.
-- `FAL_KEY` - ключ Fal.ai. Если пустой, сервис стартует, но генерация вернёт понятную ошибку.
-- `S3_ENDPOINT` - endpoint S3-compatible storage, например Cloudflare R2 `https://<account_id>.r2.cloudflarestorage.com`.
-- `S3_ACCESS_KEY` - access key для bucket.
-- `S3_SECRET_KEY` - secret key для bucket.
-- `S3_BUCKET` - bucket для generated files.
-- `S3_PUBLIC_URL` - публичная база URL bucket/custom domain, например `https://files.example.com`.
+## Local start
 
-## Миграции И Seed
+1. Copy `.env.example` to `.env` and fill required local values.
+2. Start infrastructure: `docker compose up -d postgres redis`.
+3. Apply migrations: `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`.
+4. Seed the catalog when needed: `docker compose run --rm backend python -m backend.seed`.
+5. Start services: `docker compose up backend bot worker beat webapp`.
 
-- Миграции лежат в `backend/alembic/versions`.
-- Каталог моделей лежит в `backend/seed_models.py`.
-- Seed лежит в `backend/seed.py` и делает upsert моделей по `code`.
-- Обычный seed создаёт отсутствующие модели и обновляет безопасные поля, но не затирает реальный `provider_model_id`, если он уже не начинается с `placeholder/`.
-- Force seed полностью перезаписывает модели из каталога: `python -m backend.seed --force` или `SEED_FORCE=true python -m backend.seed`.
-- Модели и цены не захардкожены в handlers: бот читает активные модели/шаблоны из БД.
-- Если `provider_model_id` начинается с `placeholder/`, worker не отправляет запрос провайдеру и возвращает `Model provider ID is not configured` с refund.
+Do not run force seed in production unless the catalog overwrite is intentional.
 
-## Добавить Новую Модель
+## Checks
 
-1. Добавьте запись в `AI_MODELS_CATALOG` в `backend/seed_models.py` или создайте запись в таблице `ai_models`.
-2. Укажите `code`, `title`, `category`, `provider`, `provider_model_id`, `task_type`, `input_type`, `price_credits`, `is_active`, `sort_order`, `default_params`, `description`.
-3. Выполните seed повторно: `python -m backend.seed`.
-4. Для реальной генерации замените `provider_model_id` на ID провайдера.
-
-## Как Подключить Реальную Модель
-
-Каталог хранит безопасные placeholder id, чтобы production seed не запускал случайные внешние вызовы. Реальный provider id лучше менять в БД через админку или SQL:
-
-```sql
-update ai_models
-set provider_model_id = 'fal-ai/flux/schnell'
-where code = 'nano_banana';
+```powershell
+py -3 -m compileall backend bot worker
+docker compose config --quiet
+cd webapp
+npm run build
 ```
 
-После этого обычный seed не перетрёт значение, потому что оно больше не начинается с `placeholder/`:
+Relevant backend tests live under `backend/tests/`. Static bundles and the inline Mini App entry are generated by `npm run build`; do not hand-edit generated `app.bundle*.js` or `public/app/index.html`.
 
-```bash
-python -m backend.seed
-```
+## Adding models and templates
 
-Если нужно вернуть все модели строго к каталогу, используйте force seed:
+- Model schemas and fallback catalog: `backend/seed_models.py`.
+- Backend price source of truth: `model_pricing` records and `backend/app/services/pricing.py`.
+- Shared frontend templates: `webapp/public/app/ma-core.jsx` and `ma-video-templates.jsx`.
+- Template media: `webapp/public/app/assets/templates/`.
+- Optimize cover media with `cd webapp && npm run optimize:template-media`.
 
-```bash
-python -m backend.seed --force
-```
+Final generation cost is always recalculated by the backend after input validation. The frontend price is a preview only.
 
-Проверить текущие provider ids можно через SQL:
+## Deployment rule
 
-```sql
-select code, provider, provider_model_id, provider_model_id like 'placeholder/%' as is_placeholder
-from ai_models
-order by category, sort_order;
-```
-
-При `DEBUG=true` также доступен endpoint:
-
-```bash
-curl http://localhost:8000/api/debug/models
-```
-
-## Добавить Новый Шаблон
-
-1. Добавьте запись в `TEMPLATES` в `backend/seed.py` или в таблицу `templates`.
-2. Укажите `required_inputs`, `default_params`, `system_prompt`, `price_credits`.
-3. WebApp построит форму по `required_inputs`.
-
-## Логика Баланса
-
-- Перед созданием генерации проверяется баланс.
-- После создания `generation_task` баланс атомарно списывается через `charge_for_generation`.
-- Создаётся transaction `generation_charge` с отрицательной суммой.
-- Если worker получает ошибку провайдера, вызывается `refund_generation`.
-- Создаётся transaction `refund`, задача получает статус `refunded`, баланс не уходит в минус.
-
-## Постоянное Хранение Файлов
-
-Worker сохраняет generated files из provider URL в S3-compatible storage, если заполнены все env:
-
-```env
-S3_ENDPOINT=https://<account_id>.r2.cloudflarestorage.com
-S3_ACCESS_KEY=...
-S3_SECRET_KEY=...
-S3_BUCKET=ai-aggregator-generated
-S3_PUBLIC_URL=https://files.example.com
-```
-
-Для Cloudflare R2:
-
-1. Создайте bucket в R2.
-2. Создайте R2 API token с правами Object Read/Write для bucket.
-3. Настройте public access или custom domain для bucket.
-4. Укажите custom/public URL в `S3_PUBLIC_URL` без trailing slash.
-
-После успешной генерации worker:
-
-1. Скачивает `output_file_url` провайдера через `httpx`.
-2. Определяет `Content-Type` и расширение файла.
-3. Загружает bytes в ключ `generations/{user_id}/{task_id}/{uuid}.{ext}`.
-4. Сохраняет публичный storage URL в `generation_tasks.output_file_url`.
-5. Создаёт запись в таблице `files`.
-
-Если storage не настроен или upload не удался, генерация не падает: worker логирует warning/error и оставляет provider URL как fallback.
-
-Проверка после генерации:
-
-```sql
-select id, output_file_url
-from generation_tasks
-where output_file_url is not null
-order by id desc
-limit 5;
-
-select storage_url, mime_type, size_bytes
-from files
-order by id desc
-limit 5;
-```
-
-## Telegram WebApp Auth
-
-- Frontend отправляет `Authorization: tma {initData}`.
-- Backend проверяет подпись initData через `BOT_TOKEN` в `services/telegram_auth.py`.
-- Backend не доверяет `user_id` с frontend и сам находит или создаёт пользователя.
-
-## Провайдеры
-
-- `providers/base.py` задаёт единый интерфейс `generate_text`, `generate_image`, `generate_video`, `get_status`.
-- `providers/openrouter.py` реализует текст через Chat Completions.
-- `providers/fal.py` реализует queue-совместимую отправку image/video.
-- Добавление Replicate/RunPod/ComfyUI/OpenAI/Google делается новым классом provider и маршрутизацией в worker.
-
-## Admin В Telegram
-
-- `/admin` - статистика.
-- `/add_balance <telegram_id> <amount>` - ручное пополнение.
-- `/user <telegram_id>` - информация о пользователе.
-- `/tasks` - последние задачи.
-- `/errors` - последние ошибки.
-
-## Payments
-
-- `POST /api/payments/create` создаёт платёж через T-Bank Internet Acquiring.
-- `POST /api/payments/notify` принимает server-to-server уведомления T-Bank.
-- Desktop и Telegram Mini App используют отдельные терминалы, выбранные по return URL host.
-- Ручное пополнение для админских операций доступно через `/add_balance`.
-
-## Где Менять provider_model_id
-
-- Для каталога по умолчанию: `backend/seed_models.py`, затем выполнить `python -m backend.seed`.
-- Для production-значений: менять запись в таблице `ai_models` через админку или SQL, чтобы обычный seed не затирал реальный `provider_model_id`.
+All changes are made and checked locally, then committed and pushed. Production is updated with `git pull --ff-only`, migrations/build/restart and smoke tests. Project code is never edited directly over SSH.
