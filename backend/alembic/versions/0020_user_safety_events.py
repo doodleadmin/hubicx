@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "0020_user_safety_events"
-down_revision = "0019_unit_economics_model_pricing"
+down_revision = "0019_unit_pricing"
 branch_labels = None
 depends_on = None
 
