@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "optimize:template-media": "node scripts/optimize-template-media.mjs",
     "dev": "next dev -H 0.0.0.0",
     "build:static": "node scripts/build-static-app.mjs",
     "build": "node scripts/update-app-build-id.mjs && npm run build:static && node scripts/build-inline-app-index.mjs && next build",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "autoprefixer": "10.4.20",
     "esbuild": "^0.28.1",
+    "ffmpeg-static": "^5.3.0",
     "postcss": "8.5.10",
     "tailwindcss": "3.4.17"
   },

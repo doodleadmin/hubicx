@@ -382,14 +382,14 @@ function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority 
   }, [t && t.coverVideo, loading]);
 
   if (t && t.coverVideo) {
+    const coverPoster = t.coverPoster || t.coverVideo.replace(/\.mp4(?:\?.*)?$/i, '.webp');
     return (
-      <div ref={mediaRef} className={'tpl-media' + (videoReady ? ' ready' : ' loading') + (t.img ? ' has-fallback' : ' no-fallback')}>
-        {t.img && <img className="tpl-media-fallback" src={t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority}/>}
-        {!t.img && <div className="tpl-media-placeholder"><span></span></div>}
+      <div ref={mediaRef} className={'tpl-media' + (videoReady ? ' ready' : ' loading') + ' has-fallback'}>
+        <img className="tpl-media-fallback" src={coverPoster} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority}/>
         <video
           className={'tpl-media-video' + (videoReady ? ' ready' : '')}
           src={shouldLoadVideo ? t.coverVideo : undefined}
-          poster={t.img || ''}
+          poster={coverPoster}
           muted
           autoPlay
           playsInline
