@@ -977,7 +977,7 @@ function DeskStageCanvas({ mode, aspectId }) {
 }
 
 function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initDurationField, initDurationValue, initBatchCount, refreshBalance, searchQuery }) {
-  const { Ic, Star, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
+  const { Ic, Star, TemplateMedia, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
   const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
   const [modelsLoaded, setModelsLoaded] = useState(false);
@@ -1344,9 +1344,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
       {tab === 'tpl'
         ? <React.Fragment>
           {selectedTpl && <div className="dk-template-selected">
-            {selectedTpl.coverVideo
-              ? <video src={selectedTpl.coverVideo} muted autoPlay playsInline loop preload="metadata" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>
-              : <img src={selectedTpl.img} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>}
+            <TemplateMedia t={selectedTpl} loading="eager" decoding="async" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>
             <div className="dk-template-selected-tx">
               <div className="dk-template-selected-k">Выбран шаблон</div>
               <div className="dk-template-selected-v">{selectedTpl.t}</div>
@@ -1357,9 +1355,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className="dk-gen-tpls">
             {tplList.map(function(t, i) {
               return <div key={i} className={'dk-gen-tpl' + (selTpl === t.t ? ' on' : '')} onClick={() => pickTemplate(t)}>
-                {t.coverVideo
-                  ? <video src={t.coverVideo} muted autoPlay playsInline loop preload="metadata" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>
-                  : <img src={t.img} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>}
+                <TemplateMedia t={t} loading={i < 3 ? 'eager' : 'lazy'} decoding="async" onError={(e) => { e.target.style.visibility = 'hidden'; }}/>
                 <button className="dk-gen-tpl-fav on" title="Убрать из избранного" onClick={function(e) { e.stopPropagation(); toggleFavTpl(t); if (selTpl === t.t) setSelTpl(null); }}><Ic n="star" s={18} c="currentColor"/></button>
                 <div className="dk-gen-tpl-l">{t.t}</div>
               </div>;

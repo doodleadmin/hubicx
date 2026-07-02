@@ -354,21 +354,47 @@ function initialModelCatalog() {
 
 function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority = 'auto', onError }) {
   const [videoReady, setVideoReady] = useState(false);
-  useEffect(function() { setVideoReady(false); }, [t && t.coverVideo]);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const mediaRef = useRef(null);
+  useEffect(function() {
+    setVideoReady(false);
+    setShouldLoadVideo(false);
+  }, [t && t.coverVideo]);
+
+  useEffect(function() {
+    if (!(t && t.coverVideo)) return;
+    var conn = navigator.connection || navigator.webkitConnection || navigator.mozConnection;
+    var lowData = !!(conn && (conn.saveData || /(^|-)2g$/.test(String(conn.effectiveType || ''))));
+    if (lowData) return;
+    var node = mediaRef.current;
+    if (!node || !('IntersectionObserver' in window)) {
+      var fallbackTimer = setTimeout(function() { setShouldLoadVideo(true); }, loading === 'eager' ? 80 : 900);
+      return function() { clearTimeout(fallbackTimer); };
+    }
+    var observer = new IntersectionObserver(function(entries) {
+      if (entries.some(function(entry) { return entry.isIntersecting || entry.intersectionRatio > 0; })) {
+        setShouldLoadVideo(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: loading === 'eager' ? '280px 0px' : '180px 0px', threshold: 0.01 });
+    observer.observe(node);
+    return function() { observer.disconnect(); };
+  }, [t && t.coverVideo, loading]);
 
   if (t && t.coverVideo) {
     return (
-      <div className="tpl-media">
+      <div ref={mediaRef} className={'tpl-media' + (videoReady ? ' ready' : ' loading') + (t.img ? ' has-fallback' : ' no-fallback')}>
         {t.img && <img className="tpl-media-fallback" src={t.img} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority}/>}
+        {!t.img && <div className="tpl-media-placeholder"><span></span></div>}
         <video
           className={'tpl-media-video' + (videoReady ? ' ready' : '')}
-          src={t.coverVideo}
+          src={shouldLoadVideo ? t.coverVideo : undefined}
           poster={t.img || ''}
           muted
           autoPlay
           playsInline
           loop
-          preload="none"
+          preload={shouldLoadVideo ? 'metadata' : 'none'}
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => setVideoReady(true)}
           onError={onError}

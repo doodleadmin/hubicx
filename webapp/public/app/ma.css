@@ -526,6 +526,41 @@ html.theme-dark .seedance-tier button.on { background: #2b3024; }
 .tpl-media-fallback { z-index: 0; }
 .tpl-media-video { z-index: 1; opacity: 0; transition: opacity .22s ease; }
 .tpl-media-video.ready { opacity: 1; }
+.tpl-media-placeholder {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 26%, rgba(255,255,255,.55), transparent 28%),
+    linear-gradient(135deg, rgba(95,145,132,.18), rgba(111,108,200,.14)),
+    var(--nav-bg);
+}
+.tpl-media-placeholder::after {
+  content: ""; position: absolute; inset: 0; transform: translateX(-120%);
+  background: linear-gradient(105deg, transparent 18%, rgba(255,255,255,.34) 48%, transparent 78%);
+  animation: tpl-shimmer 1.25s ease-in-out infinite;
+}
+.tpl-media-placeholder span {
+  position: absolute; left: 50%; top: 50%; width: 30px; height: 30px;
+  transform: translate(-50%,-50%); border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.62); box-shadow: 0 8px 28px rgba(0,0,0,.16);
+}
+.tpl-media-placeholder span::before {
+  content: ""; position: absolute; left: 11px; top: 8px; width: 0; height: 0;
+  border-top: 6px solid transparent; border-bottom: 6px solid transparent; border-left: 9px solid rgba(255,255,255,.72);
+}
+.tpl-media.has-fallback.loading::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(105deg, transparent 18%, rgba(255,255,255,.20) 48%, transparent 78%);
+  transform: translateX(-120%); animation: tpl-shimmer 1.35s ease-in-out infinite;
+}
+.tpl-media.ready::after { display: none; }
+@keyframes tpl-shimmer {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tpl-media-placeholder::after,
+  .tpl-media.has-fallback.loading::after { animation: none; opacity: .35; transform: none; }
+}
 .thumb .lbl {
   position: absolute; left: 10px; right: 10px; bottom: 9px;
   font-weight: 700; font-size: 13px; line-height: 1.15;
