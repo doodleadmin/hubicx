@@ -382,10 +382,10 @@ function TemplateMedia({ t, loading = 'lazy', decoding = 'async', fetchPriority 
   }, [t && t.coverVideo, loading]);
 
   if (t && t.coverVideo) {
-    const coverPoster = t.coverPoster || t.coverVideo.replace(/\.mp4(?:\?.*)?$/i, '.webp');
+    const coverPoster = t.coverPoster || t.img || t.coverVideo.replace(/\.mp4(?:\?.*)?$/i, '.webp');
     return (
       <div ref={mediaRef} className={'tpl-media' + (videoReady ? ' ready' : ' loading') + ' has-fallback'}>
-        <img className="tpl-media-fallback" src={coverPoster} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority}/>
+        <img className="tpl-media-fallback" src={coverPoster} alt="" loading={loading} decoding={decoding} fetchPriority={fetchPriority} onError={(event) => { event.currentTarget.style.display = 'none'; }}/>
         <video
           className={'tpl-media-video' + (videoReady ? ' ready' : '')}
           src={shouldLoadVideo ? t.coverVideo : undefined}
