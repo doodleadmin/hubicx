@@ -150,6 +150,17 @@ def get_provider(provider: str):
     return None
 
 
+async def submit_fal_async(provider: FalProvider, model_id: str, payload: dict) -> ProviderResult:
+    result = await provider.submit_async(model_id, _strip_internal_provider_keys(payload))
+    if not result.success:
+        return result
+    if result.output_url:
+        return result
+    if not result.response_url:
+        return ProviderResult(False, error="Provider accepted task but did not return response_url")
+    return result
+
+
 @celery_app.task(name="worker.generation_worker.process_generation_task")
 def process_generation_task(task_id: int) -> None:
     asyncio.run(_run_process_generation_task(task_id))
@@ -217,25 +228,45 @@ async def _process_generation_task(task_id: int) -> None:
                 else None
             )
             if pro_edit_payload and isinstance(provider, FalProvider):
-                result = await provider.generate_image_v2("fal-ai/nano-banana-pro/edit", pro_edit_payload)
+                result = await submit_fal_async(provider, "fal-ai/nano-banana-pro/edit", pro_edit_payload)
+            elif task.provider_input and isinstance(provider, FalProvider):
+                result = await submit_fal_async(provider, provider_model_id, _with_task_input_image(task.provider_input, task.input_file_url))
             elif task.provider_input:
                 result = await provider.generate_image_v2(
                     provider_model_id,
                     _strip_internal_provider_keys(_with_task_input_image(task.provider_input, task.input_file_url)),
                 )
+            elif isinstance(provider, FalProvider):
+                payload = {"prompt": prompt or "", **provider_params}
+                if task.input_file_url:
+                    payload["image_url"] = task.input_file_url
+                result = await submit_fal_async(provider, provider_model_id, payload)
             else:
                 result = await provider.generate_image(provider_model_id, prompt, task.input_file_url, provider_params)
         elif task.task_type == "video":
             if provider_params.get("template_pipeline") == "tv_broadcast_kling_30" and isinstance(provider, FalProvider):
                 result = await _run_tv_broadcast_pipeline(provider, provider_params)
+            elif task.provider_input and isinstance(provider, FalProvider):
+                result = await submit_fal_async(provider, provider_model_id, task.provider_input)
             elif task.provider_input:
                 result = await provider.generate_video_v2(provider_model_id, _strip_internal_provider_keys(task.provider_input))
+            elif isinstance(provider, FalProvider):
+                payload = {"prompt": prompt or "", **provider_params}
+                if task.input_file_url:
+                    payload["image_url"] = task.input_file_url
+                result = await submit_fal_async(provider, provider_model_id, payload)
             else:
                 result = await provider.generate_video(provider_model_id, prompt, task.input_file_url, _strip_internal_provider_keys(provider_params))
         else:
             result = await provider.generate_text(provider_model_id, prompt, provider_params)
 
-        if result.success:
+        if result.success and result.response_url and not result.output_url:
+            task.status = "processing"
+            task.provider_task_id = result.provider_task_id
+            task.provider_response_url = result.response_url
+            await session.commit()
+            log_task(task, "submitted_async")
+        elif result.success:
             task.status = "completed"
             task.provider_task_id = result.provider_task_id
             task.output_file_url = await persist_generated_file(session, task, result.output_url) if result.output_url else None

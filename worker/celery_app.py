@@ -8,6 +8,7 @@ celery_app.conf.update(
     result_serializer="json",
     accept_content=["json"],
     timezone="UTC",
+    worker_prefetch_multiplier=1,
     imports=("worker.generation_worker", "worker.polling_worker", "worker.refund_worker"),
     beat_schedule={
         "poll-fal-tasks-every-20s": {

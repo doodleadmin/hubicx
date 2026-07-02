@@ -15,6 +15,7 @@ from backend.app.services.balance import admin_add_balance
 from backend.app.services.business import SUBSCRIPTION_PLANS_V2
 from backend.app.services.rate_limit import check_ip_rate_limit
 from backend.app.services.telegram_auth import get_current_user as telegram_current_user
+from backend.app.services.unit_economics import UnitEconomicsInput, calculate_unit_economics, fal_per_second_cost
 from backend.app.utils.errors import AppError
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -87,6 +88,37 @@ async def browser_admin_login(request: Request, payload: dict = Body(...), sessi
 @router.get("/auth/me")
 async def browser_admin_me(user: User = Depends(current_admin_user)) -> dict:
     return {"ok": True, "user": serialize_user(user)}
+
+
+@router.post("/pricing/economics-preview")
+async def pricing_economics_preview(
+    payload: dict = Body(...),
+    _admin: User = Depends(current_admin_user),
+) -> dict:
+    provider_cost_usd = payload.get("provider_cost_usd")
+    if provider_cost_usd is None and payload.get("usd_per_second") is not None:
+        provider_cost_usd = fal_per_second_cost(
+            seconds=float(payload.get("seconds") or payload.get("duration") or 0),
+            usd_per_second=float(payload.get("usd_per_second") or 0),
+        )
+    if provider_cost_usd is None:
+        raise AppError("provider_cost_required", "Укажите provider_cost_usd или seconds + usd_per_second", 422)
+    try:
+        return calculate_unit_economics(
+            UnitEconomicsInput(
+                provider_cost_usd=float(provider_cost_usd),
+                usd_rub=float(payload.get("usd_rub", 90.0)),
+                tax_rate=float(payload.get("tax_rate", 0.06)),
+                acquiring_rate=float(payload.get("acquiring_rate", 0.025)),
+                acquiring_vat_rate=float(payload.get("acquiring_vat_rate", 0.22)),
+                target_net_margin_rate=float(payload.get("target_net_margin_rate", 0.30)),
+                partner_share_from_profit_rate=float(payload.get("partner_share_from_profit_rate", 0.25)),
+                token_floor_rub=float(payload.get("token_floor_rub", 0.55)),
+                token_round_to=int(payload.get("token_round_to", 10)),
+            )
+        )
+    except (TypeError, ValueError) as exc:
+        raise AppError("invalid_unit_economics_input", str(exc), 422)
 
 
 @router.get("/users")

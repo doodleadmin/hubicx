@@ -10,6 +10,9 @@ from backend.app.providers.base import BaseProvider, ProviderResult, provider_mo
 class FalProvider(BaseProvider):
     base_url = "https://queue.fal.run"
 
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"Key {settings.fal_key}"}
+
     async def _submit(self, model_id: str, payload: dict[str, Any], poll_attempts: int = 30, output_kind: str | None = None) -> ProviderResult:
         if not settings.fal_key:
             return ProviderResult(False, error="API key is missing: FAL_KEY")
@@ -17,7 +20,7 @@ class FalProvider(BaseProvider):
             return ProviderResult(False, error="Model provider ID is not configured")
         try:
             async with httpx.AsyncClient(timeout=120, proxy=settings.proxy_url or None) as client:
-                response = await client.post(f"{self.base_url}/{model_id}", headers={"Authorization": f"Key {settings.fal_key}"}, json=payload)
+                response = await client.post(f"{self.base_url}/{model_id}", headers=self._headers(), json=payload)
                 response.raise_for_status()
                 data = response.json()
                 data = await self._wait_for_result(client, data, poll_attempts=poll_attempts)
@@ -40,7 +43,7 @@ class FalProvider(BaseProvider):
 
         for _ in range(poll_attempts):
             await asyncio.sleep(2)
-            response = await client.get(response_url, headers={"Authorization": f"Key {settings.fal_key}"})
+            response = await client.get(response_url, headers=self._headers())
             if response.status_code in {200, 201}:
                 result = response.json()
                 if isinstance(result, dict):
@@ -51,6 +54,57 @@ class FalProvider(BaseProvider):
             if response.status_code not in {202, 404}:
                 response.raise_for_status()
         raise TimeoutError("Fal result timeout")
+
+    async def submit_async(self, model_id: str, payload: dict[str, Any]) -> ProviderResult:
+        if not settings.fal_key:
+            return ProviderResult(False, error="API key is missing: FAL_KEY")
+        if not provider_model_configured(model_id):
+            return ProviderResult(False, error="Model provider ID is not configured")
+        try:
+            async with httpx.AsyncClient(timeout=120, proxy=settings.proxy_url or None) as client:
+                response = await client.post(f"{self.base_url}/{model_id}", headers=self._headers(), json=payload)
+                response.raise_for_status()
+                data = response.json()
+        except httpx.TimeoutException:
+            return ProviderResult(False, error="Provider timeout")
+        except httpx.HTTPStatusError as exc:
+            return ProviderResult(False, error=f"Provider HTTP {exc.response.status_code}: {exc.response.text[:300]}")
+        except Exception as exc:
+            return ProviderResult(False, error=f"Provider error: {exc}")
+
+        output_url = self._extract_output_url(data)
+        return ProviderResult(
+            True,
+            provider_task_id=data.get("request_id") or data.get("id"),
+            output_url=output_url,
+            response_url=data.get("response_url"),
+        )
+
+    async def fetch_result(self, response_url: str) -> ProviderResult | None:
+        if not settings.fal_key:
+            return ProviderResult(False, error="API key is missing: FAL_KEY")
+        if not response_url:
+            return ProviderResult(False, error="Fal response_url is missing")
+        try:
+            async with httpx.AsyncClient(timeout=60, proxy=settings.proxy_url or None) as client:
+                response = await client.get(response_url, headers=self._headers())
+        except httpx.TimeoutException:
+            return None
+        except Exception as exc:
+            return ProviderResult(False, error=f"Provider error: {exc}")
+
+        if response.status_code in {202, 404}:
+            return None
+        if response.status_code == 400 and "still in progress" in response.text.lower():
+            return None
+        if response.status_code not in {200, 201}:
+            return ProviderResult(False, error=f"Provider HTTP {response.status_code}: {response.text[:300]}")
+
+        data = response.json()
+        output_url = self._extract_output_url(data)
+        if not output_url:
+            return ProviderResult(False, error="Provider response has no output URL")
+        return ProviderResult(True, provider_task_id=data.get("request_id") or data.get("id"), output_url=output_url)
 
     async def generate_image(self, model_id: str, prompt: str | None, input_file_url: str | None, params: dict[str, Any] | None = None) -> ProviderResult:
         payload = {"prompt": prompt or ""}
