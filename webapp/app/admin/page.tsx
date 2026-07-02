@@ -5,7 +5,6 @@ import Layout from "@/components/Layout";
 import AdminTabs, { type TabKey } from "@/components/admin/AdminTabs";
 import UsersPanel from "@/components/admin/UsersPanel";
 import GenerationsPanel from "@/components/admin/GenerationsPanel";
-import ModelsPanel from "@/components/admin/ModelsPanel";
 import PricingPanel from "@/components/admin/PricingPanel";
 import TransactionsPanel from "@/components/admin/TransactionsPanel";
 import FilesPanel from "@/components/admin/FilesPanel";
@@ -61,7 +60,6 @@ export default function AdminPage() {
         {tab === "dashboard" && <DashboardPanel />}
         {tab === "users" && <UsersPanel />}
         {tab === "generations" && <GenerationsPanel />}
-        {tab === "models" && <ModelsPanel />}
         {tab === "pricing" && <PricingPanel />}
         {tab === "transactions" && <TransactionsPanel />}
         {tab === "files" && <FilesPanel />}

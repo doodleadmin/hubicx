@@ -167,6 +167,46 @@ def resolve_price_from_rules(price_rules: dict | None, validated_inputs: dict[st
         summary = f"× {num}" if num > 1 else "× 1"
         return price, "db_rules", summary
 
+    # ── generic multipliers/additions (same shape as form_schema.price_rules) ──
+    if price_rules.get("multipliers") or price_rules.get("additions"):
+        total = float(base_price_tokens)
+        summary_parts: list[str] = []
+        for rule in price_rules.get("multipliers") or []:
+            if not isinstance(rule, dict):
+                continue
+            field = rule.get("field")
+            if not field or field not in validated_inputs:
+                continue
+            value = validated_inputs.get(field)
+            multiplier = 1.0
+            if rule.get("mode") == "multiply_by_value":
+                multiplier = _as_number(value, 1)
+            elif isinstance(rule.get("values"), dict):
+                multiplier = _mapped_number(rule["values"], value, 1)
+            total *= multiplier
+            summary_parts.append(f"{field}={value} × {multiplier:g}")
+
+        for rule in price_rules.get("additions") or []:
+            if not isinstance(rule, dict):
+                continue
+            field = rule.get("field")
+            if not field or field not in validated_inputs:
+                continue
+            value = validated_inputs.get(field)
+            addition = _mapped_number(rule.get("values") or {}, value, 0) if isinstance(rule.get("values"), dict) else 0
+            total += addition
+            summary_parts.append(f"{field}={value} + {addition:g}")
+
+        minimum = int(_as_number(price_rules.get("min"), 1))
+        rounding = price_rules.get("round", "ceil")
+        if rounding == "floor":
+            price = math.floor(total)
+        elif rounding == "round":
+            price = round(total)
+        else:
+            price = math.ceil(total)
+        return max(minimum, int(price)), "db_rules", "; ".join(summary_parts) or "generic rules"
+
     # fallback
     return base_price_tokens, "db_fixed", f"flat {base_price_tokens}"
 

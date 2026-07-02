@@ -4,7 +4,6 @@ const TABS = [
   { key: "dashboard", label: "Дашборд" },
   { key: "users", label: "Юзеры" },
   { key: "generations", label: "Генерации" },
-  { key: "models", label: "Модели" },
   { key: "pricing", label: "Цены и пакеты" },
   { key: "transactions", label: "Транзакции" },
   { key: "files", label: "Файлы" },
