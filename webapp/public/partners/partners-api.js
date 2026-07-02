@@ -31,6 +31,12 @@
     links:      function()  { return this.request('/api/partners/links'); },
     stats:      function(p) { return this.request('/api/partners/stats?' + new URLSearchParams(p||{})); },
     commissions:function(p) { return this.request('/api/partners/commissions?' + new URLSearchParams(p||{})); },
-    payouts:    function()  { return this.request('/api/partners/payouts'); }
+    payouts:    function()  { return this.request('/api/partners/payouts'); },
+    requestPayout: function(details) {
+      return this.request('/api/partners/payouts/request', {
+        method: 'POST',
+        body: JSON.stringify({ payout_details: details || {} })
+      });
+    }
   };
 })();

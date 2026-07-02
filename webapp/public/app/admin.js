@@ -36,7 +36,16 @@
     else if(tab==='packages') state.data.packages=await request('/admin/token-packages');
     else if(tab==='transactions') state.data.transactions=await request('/admin/transactions?limit=100');
     else if(tab==='files') state.data.files=await request('/admin/files?limit=100');
-    else if(tab==='partners'){ state.data.partners=await request('/admin/referral/partners'); state.data.partnerRates=await request('/admin/referral/rates'); }
+    else if(tab==='partners'){
+      const [partners, rates, payouts] = await Promise.all([
+        request('/admin/referral/partners'),
+        request('/admin/referral/rates'),
+        request('/admin/referral/payouts'),
+      ]);
+      state.data.partners=partners;
+      state.data.partnerRates=rates;
+      state.data.partnerPayouts=payouts;
+    }
     state.loading=false; render();
   }catch(e){set({loading:false,error:e.message});}}
   function nav(){return tabs.map(([id,label])=>`<button class="ad-nav-i${state.tab===id?' on':''}" data-tab="${id}"><span class="ic"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/></svg></span>${label}</button>`).join('');}
@@ -58,6 +67,7 @@
   function partnersView(){
     const items = state.data.partners || [];
     const rates = state.data.partnerRates || [];
+    const payouts = state.data.partnerPayouts || [];
     const q = state.filters.partnerSearch.toLowerCase();
     let filtered = items;
     if(q) filtered = items.filter(p => (p.code||'').toLowerCase().includes(q) || (p.name||'').toLowerCase().includes(q));
@@ -73,22 +83,40 @@
       <div class="ad-kpi"><div class="ad-kpi-l">Шаблоны</div><div class="ad-kpi-v">${rateByCat.template_subscription||0}%</div></div>
       <div class="ad-kpi"><div class="ad-kpi-l">Общие тарифы</div><div class="ad-kpi-v">${rateByCat.full_subscription||0}%</div></div>
     </div>
-    ${table(['Code','Название','Статус','Контакты','Переходы','Регистрации','Комиссия','Действия'],
+    ${table(['Code','Название','Статус','Холд','Контакты','Переходы','Регистрации','Комиссия','К выплате','Действия'],
       filtered.map(p=>`<tr>
         <td><b>${esc(p.code)}</b></td>
         <td>${esc(p.name)}</td>
         <td>${badge(p.status)}</td>
+        <td><b>${esc(p.hold_days ?? 14)}</b> дн.</td>
         <td>${esc((p.contact_info||{}).telegram||(p.contact_info||{}).email||'')}</td>
         <td>${p.total_clicks||0}</td>
         <td>${p.total_conversions||0}</td>
         <td>${esc(p.total_commission||0)} ₽</td>
+        <td>${esc(p.unpaid_commission||0)} ₽</td>
         <td><div class="ad-row-act">
-          <button class="ad-mini" data-action="editPartner" data-id="${p.id}" data-code="${esc(p.code)}" data-name="${esc(p.name)}" data-status="${esc(p.status)}" data-contact="${esc(JSON.stringify(p.contact_info||{}))}" title="Ред.">✎</button>
+          <button class="ad-mini" data-action="editPartner" data-id="${p.id}" data-code="${esc(p.code)}" data-name="${esc(p.name)}" data-status="${esc(p.status)}" data-hold="${esc(p.hold_days ?? 14)}" data-contact="${esc(JSON.stringify(p.contact_info||{}))}" title="Ред.">✎</button>
+          <button class="ad-mini" data-action="partnerPayoutSummary" data-id="${p.id}" data-code="${esc(p.code)}" title="Выплаты">₽</button>
           <button class="ad-mini" data-action="partnerStats" data-id="${p.id}" data-code="${esc(p.code)}" title="Стат.">📊</button>
           <button class="ad-mini danger" data-action="togglePartner" data-id="${p.id}" data-status="${p.status==='active'?'blocked':'active'}" title="${p.status==='active'?'Блок.':(p.status==='blocked'?'Акт.':'Акт.')}">${p.status==='active'?'⏻':'▶'}</button>
         </div></td>
       </tr>`)
-    )}`);
+    )}
+    <div class="ad-card" style="margin-top:18px">
+      <div class="ad-card-h"><h3>Заявки на вывод</h3></div>
+      ${table(['ID','Партнёр','Сумма','Статус','Дата','Примечание','Действия'], payouts.map(p=>`<tr>
+        <td>#${p.id}</td>
+        <td><b>${esc(p.partner_code)}</b><br><span class="ad-muted">${esc(p.partner_name||'')}</span></td>
+        <td><b>${esc(p.amount_rub||0)} ₽</b></td>
+        <td>${badge(p.status)}</td>
+        <td>${esc(p.requested_at||p.created_at||'')}</td>
+        <td>${esc(p.admin_note||'')}</td>
+        <td><div class="ad-row-act">
+          ${p.status==='requested'?`<button class="ad-mini" data-action="setPayoutStatus" data-id="${p.id}" data-status="approved" title="Одобрить">✓</button>`:''}
+          ${p.status==='requested'||p.status==='approved'?`<button class="ad-mini" data-action="setPayoutStatus" data-id="${p.id}" data-status="paid" title="Оплачено">₽</button><button class="ad-mini danger" data-action="setPayoutStatus" data-id="${p.id}" data-status="rejected" title="Отклонить">×</button>`:''}
+        </div></td>
+      </tr>`))}
+    </div>`);
   }
 
   function closeModal(){
@@ -155,22 +183,24 @@
       modal('Новый партнёр', `<form id="partnerForm" style="display:flex;flex-direction:column;gap:14px">
         <label class="ad-field"><label>Код (уникальный)</label><input class="ad-input" name="code" placeholder="blogger123" required/></label>
         <label class="ad-field"><label>Имя</label><input class="ad-input" name="name" placeholder="Иван Петров" required/></label>
+        <label class="ad-field"><label>Холд выплат, дней</label><input class="ad-input" name="hold_days" type="number" min="0" max="365" value="14"/></label>
         <label class="ad-field"><label>Telegram (без @)</label><input class="ad-input" name="telegram" placeholder="blogger"/></label>
         <button class="ad-btn ad-btn-pri" type="submit">Создать</button>
       </form>`);
-      document.getElementById('partnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const code=fd.get('code'), name=fd.get('name'), tg=fd.get('telegram')||''; try{await request('/admin/referral/partners',{method:'POST',body:JSON.stringify({code,name,status:'active',contact_info:{telegram:'@'+tg}})}); document.getElementById('modal')?.remove(); toast('Партнёр создан'); loadTab('partners');}catch(e){alert(e.message);}};
+      document.getElementById('partnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const code=fd.get('code'), name=fd.get('name'), tg=fd.get('telegram')||''; try{await request('/admin/referral/partners',{method:'POST',body:JSON.stringify({code,name,status:'active',hold_days:Number(fd.get('hold_days')||14),contact_info:{telegram:'@'+tg}})}); closeModal(); toast('Партнёр создан'); loadTab('partners');}catch(e){alert(e.message);}};
       return;
     }
     if(a==='editPartner'){
-      const id=el.dataset.id, code=el.dataset.code, name=el.dataset.name, status=el.dataset.status; let contact={}; try{contact=JSON.parse(el.dataset.contact)}catch(e){}
+      const id=el.dataset.id, code=el.dataset.code, name=el.dataset.name, status=el.dataset.status, hold=el.dataset.hold||14; let contact={}; try{contact=JSON.parse(el.dataset.contact)}catch(e){}
       modal('Редактировать партнёра', `<form id="editPartnerForm" style="display:flex;flex-direction:column;gap:14px">
         <label class="ad-field"><label>Код</label><input class="ad-input" name="code" value="${esc(code)}" required/></label>
         <label class="ad-field"><label>Имя</label><input class="ad-input" name="name" value="${esc(name)}" required/></label>
         <label class="ad-field"><label>Статус</label><select class="ad-select" name="status"><option value="active" ${status==='active'?'selected':''}>active</option><option value="paused" ${status==='paused'?'selected':''}>paused</option><option value="blocked" ${status==='blocked'?'selected':''}>blocked</option></select></label>
+        <label class="ad-field"><label>Холд выплат, дней</label><input class="ad-input" name="hold_days" type="number" min="0" max="365" value="${esc(hold)}"/></label>
         <label class="ad-field"><label>Telegram</label><input class="ad-input" name="telegram" value="${esc((contact.telegram||'').replace('@',''))}"/></label>
         <button class="ad-btn ad-btn-pri" type="submit">Сохранить</button>
       </form>`);
-      document.getElementById('editPartnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const body={code:fd.get('code'),name:fd.get('name'),status:fd.get('status'),contact_info:{telegram:'@'+fd.get('telegram')}}; try{await request('/admin/referral/partners/'+id,{method:'PUT',body:JSON.stringify(body)}); document.getElementById('modal')?.remove(); toast('Партнёр обновлён'); loadTab('partners');}catch(e){alert(e.message);}};
+      document.getElementById('editPartnerForm').onsubmit = async function(ev){ev.preventDefault(); const fd=new FormData(ev.target); const body={code:fd.get('code'),name:fd.get('name'),status:fd.get('status'),hold_days:Number(fd.get('hold_days')||14),contact_info:{telegram:'@'+fd.get('telegram')}}; try{await request('/admin/referral/partners/'+id,{method:'PUT',body:JSON.stringify(body)}); closeModal(); toast('Партнёр обновлён'); loadTab('partners');}catch(e){alert(e.message);}};
       return;
     }
     if(a==='togglePartner'){
@@ -180,6 +210,14 @@
     if(a==='partnerStats'){
       const id=el.dataset.id, code=el.dataset.code;
       try{const r=await request('/admin/referral/stats?partner_id='+id); return modal(`Статистика: ${code}`, `<div class="ad-kpis"><div class="ad-kpi"><div class="ad-kpi-l">Переходы</div><div class="ad-kpi-v">${r.total_clicks||0}</div></div><div class="ad-kpi"><div class="ad-kpi-l">Регистрации</div><div class="ad-kpi-v">${r.total_conversions||0}</div></div><div class="ad-kpi"><div class="ad-kpi-l">Комиссия</div><div class="ad-kpi-v">${r.total_commission||0} ₽</div></div></div>`);}catch(e){alert(e.message);}
+    }
+    if(a==='partnerPayoutSummary'){
+      const id=el.dataset.id, code=el.dataset.code;
+      try{const r=await request('/admin/referral/partners/'+id+'/payout-summary'); return modal(`Выплаты: ${code}`, `<div class="ad-kpis"><div class="ad-kpi"><div class="ad-kpi-l">Доступно</div><div class="ad-kpi-v">${r.available_balance||0} ₽</div></div><div class="ad-kpi"><div class="ad-kpi-l">В холде</div><div class="ad-kpi-v">${r.pending_hold||0} ₽</div></div><div class="ad-kpi"><div class="ad-kpi-l">В обработке</div><div class="ad-kpi-v">${r.processing||0} ₽</div></div><div class="ad-kpi"><div class="ad-kpi-l">Холд</div><div class="ad-kpi-v">${r.hold_days||0} дн.</div></div></div>`);}catch(e){alert(e.message);}
+    }
+    if(a==='setPayoutStatus'){
+      const note = el.dataset.status==='paid' ? (prompt('Комментарий к выплате:', 'Оплачено вручную') || '') : '';
+      try{await request('/admin/referral/payouts/'+el.dataset.id,{method:'PUT',body:JSON.stringify({status:el.dataset.status,admin_note:note})}); toast('Статус выплаты обновлён'); return loadTab('partners');}catch(e){alert(e.message);}
     }
     if(a==='editRates'){
       const rates = state.data.partnerRates || [];

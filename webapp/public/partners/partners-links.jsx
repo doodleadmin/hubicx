@@ -11,11 +11,32 @@ function PartnerLinks({ partner }) {
     else prompt('Скопируйте ссылку:', url);
   };
 
+  var createLink = function() {
+    var source = (prompt('Название канала или площадки:', 'telegram') || '').trim();
+    if (!source || !data) return;
+    var safeSource = source.toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'campaign';
+    var code = data.code || (partner && partner.code) || PartnersApi.getCode();
+    var url = 'https://hubicx.ru/?ref=' + encodeURIComponent(code) + '&utm_source=' + encodeURIComponent(safeSource);
+    var next = Object.assign({}, data, {
+      links: (data.links || []).concat([{
+        type: 'custom',
+        label: source,
+        url: url,
+        clicks: 0,
+        conversions: 0,
+        payments: 0,
+        commission: 0
+      }])
+    });
+    setData(next);
+    copyLink(url);
+  };
+
   if (!data) return <div className="pa-card"><div className="pa-card-h"><h3>Мои ссылки</h3></div><div className="pa-load-sm">Загрузка...</div></div>;
 
   var links = data.links || [];
   return <div className="pa-card">
-    <div className="pa-card-h"><h3>Мои ссылки</h3><button className="pa-btn pa-btn-pri pa-btn-sm">Создать ссылку</button></div>
+    <div className="pa-card-h"><h3>Мои ссылки</h3><button className="pa-btn pa-btn-pri pa-btn-sm" onClick={createLink}>Создать ссылку</button></div>
     {links.length ? <div>
       <div className="pa-linkrow head"><div>Ссылка</div><div>Клики</div><div>Регистрации</div><div>Платежи</div><div>Комиссия</div><div></div></div>
       {links.map(function(link, i) { return <div key={i} className="pa-linkrow">

@@ -322,6 +322,7 @@ class ReferralPartner(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(32), default="active")
     contact_info: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    hold_days: Mapped[int] = mapped_column(Integer, default=14, server_default="14")
 
 
 class ReferralCommissionRate(Base, TimestampMixin):
@@ -371,6 +372,23 @@ class ReferralCommission(Base, TimestampMixin):
     rate_percent: Mapped[float] = mapped_column(Numeric(5, 2))
     commission_rub: Mapped[float] = mapped_column(Numeric(10, 2))
     status: Mapped[str] = mapped_column(String(32), default="pending")
+    payout_request_id: Mapped[int | None] = mapped_column(ForeignKey("referral_payout_requests.id"), nullable=True)
+
+    partner: Mapped["ReferralPartner"] = relationship()
+
+
+class ReferralPayoutRequest(Base, TimestampMixin):
+    __tablename__ = "referral_payout_requests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    partner_id: Mapped[int] = mapped_column(ForeignKey("referral_partners.id"), index=True)
+    amount_rub: Mapped[float] = mapped_column(Numeric(10, 2))
+    status: Mapped[str] = mapped_column(String(32), default="requested")
+    payout_details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    admin_note: Mapped[str | None] = mapped_column(Text)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
     partner: Mapped["ReferralPartner"] = relationship()
 

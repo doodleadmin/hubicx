@@ -175,6 +175,8 @@ button{font-family:inherit;cursor:pointer}
 .pa-bigbal .l{font-size:13px;font-weight:600;color:rgba(255,255,255,.6);position:relative}
 .pa-bigbal .v{font-size:40px;font-weight:900;letter-spacing:-.03em;position:relative}
 .pa-bigbal .row{display:flex;gap:10px;margin-top:14px;position:relative}
+.pa-help{position:relative;color:rgba(255,255,255,.66);font-size:13px;font-weight:700;margin-top:6px}
+.pa-note{position:relative;margin-top:8px;border:1px solid rgba(252,253,118,.26);background:rgba(252,253,118,.12);border-radius:12px;padding:10px 12px;color:#fff;font-size:13px;font-weight:800}
 .pa-stat-card{background:var(--card);border:1px solid var(--line);border-radius:var(--rl);padding:22px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:8px;justify-content:center}
 .pa-stat-card .l{font-size:13px;color:var(--mut);font-weight:600}
 .pa-stat-card .v{font-size:26px;font-weight:900;letter-spacing:-.02em}

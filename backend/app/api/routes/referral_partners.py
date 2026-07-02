@@ -10,9 +10,10 @@ from backend.app.db.models import (
     ReferralCommission,
     ReferralConversion,
     ReferralPartner,
+    ReferralPayoutRequest,
 )
 from backend.app.db.session import get_session
-from backend.app.services.referral import get_partner_by_code, get_partner_stats
+from backend.app.services.referral import create_payout_request, get_partner_by_code, get_partner_payout_summary, get_partner_stats
 
 router = APIRouter(prefix="/partners", tags=["partners"])
 
@@ -40,6 +41,7 @@ async def partner_me(
         "name": partner.name,
         "status": partner.status,
         "contacts": partner.contact_info,
+        "hold_days": partner.hold_days,
     }
 
 
@@ -58,8 +60,16 @@ async def partner_dashboard(
 @router.get("/links")
 async def partner_links(
     partner: ReferralPartner = Depends(current_partner),
+    session: AsyncSession = Depends(get_session),
 ) -> dict:
     ref_code = partner.code
+    stats = await get_partner_stats(session, partner.id)
+    common_stats = {
+        "clicks": stats.get("total_clicks", 0),
+        "conversions": stats.get("total_conversions", 0),
+        "payments": stats.get("total_payments", 0),
+        "commission": stats.get("total_commission", 0),
+    }
     return {
         "code": ref_code,
         "links": [
@@ -67,16 +77,19 @@ async def partner_links(
                 "type": "bot",
                 "label": "Telegram Bot",
                 "url": f"https://t.me/hubicx_bot?start=ref_{ref_code}",
+                **common_stats,
             },
             {
                 "type": "webapp",
                 "label": "Mini App",
                 "url": f"https://webapp.hubicx.ru/?ref={ref_code}",
+                **common_stats,
             },
             {
                 "type": "desktop",
                 "label": "Desktop App",
                 "url": f"https://hubicx.ru/?ref={ref_code}",
+                **common_stats,
             },
         ],
     }
@@ -145,59 +158,60 @@ async def partner_payouts(
     partner: ReferralPartner = Depends(current_partner),
     session: AsyncSession = Depends(get_session),
 ) -> dict:
-    # Pending balance
-    pending_stmt = await session.execute(
-        select(func.coalesce(func.sum(ReferralCommission.commission_rub), 0)).where(
-            and_(
-                ReferralCommission.partner_id == partner.id,
-                ReferralCommission.status == "pending",
-            )
-        )
-    )
-    pending_balance = float(pending_stmt.scalar() or 0)
-
-    # Total paid
-    paid_stmt = await session.execute(
-        select(func.coalesce(func.sum(ReferralCommission.commission_rub), 0)).where(
-            and_(
-                ReferralCommission.partner_id == partner.id,
-                ReferralCommission.status == "paid",
-            )
-        )
-    )
-    total_paid = float(paid_stmt.scalar() or 0)
-
-    # Recent payouts
+    summary = await get_partner_payout_summary(session, partner)
     stmt = (
-        select(ReferralCommission)
-        .where(
-            and_(
-                ReferralCommission.partner_id == partner.id,
-                ReferralCommission.status == "paid",
-            )
-        )
-        .order_by(ReferralCommission.updated_at.desc())
+        select(ReferralPayoutRequest)
+        .where(ReferralPayoutRequest.partner_id == partner.id)
+        .order_by(ReferralPayoutRequest.created_at.desc())
         .limit(20)
     )
     result = await session.execute(stmt)
-    paid_items = result.scalars().all()
+    payout_items = result.scalars().all()
 
     return {
-        "pending_balance": pending_balance,
-        "pending_balance_rub": pending_balance,
-        "total_paid": total_paid,
-        "total_paid_rub": total_paid,
-        "processing": 0,
+        "pending_balance": summary["available_balance"],
+        "pending_balance_rub": summary["available_balance"],
+        "available_balance": summary["available_balance"],
+        "available_balance_rub": summary["available_balance"],
+        "pending_hold": summary["pending_hold"],
+        "pending_hold_rub": summary["pending_hold"],
+        "total_paid": summary["total_paid"],
+        "total_paid_rub": summary["total_paid"],
+        "processing": summary["processing"],
+        "processing_rub": summary["processing"],
+        "hold_days": summary["hold_days"],
         "payouts": [
             {
-                "id": c.id,
-                "amount_rub": float(c.commission_rub),
-                "commission_rub": float(c.commission_rub),
-                "category": c.category,
-                "status": c.status,
-                "created_at": c.created_at.isoformat() if c.created_at else None,
-                "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                "id": p.id,
+                "amount_rub": float(p.amount_rub),
+                "status": p.status,
+                "note": p.admin_note,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "requested_at": p.requested_at.isoformat() if p.requested_at else None,
+                "processed_at": p.processed_at.isoformat() if p.processed_at else None,
             }
-            for c in paid_items
+            for p in payout_items
         ],
+    }
+
+
+@router.post("/payouts/request")
+async def request_partner_payout(
+    payload: dict | None = Body(default=None),
+    partner: ReferralPartner = Depends(current_partner),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    payload = payload or {}
+    payout = await create_payout_request(
+        session,
+        partner,
+        payout_details=payload.get("payout_details") or payload.get("details"),
+    )
+    await session.commit()
+    return {
+        "ok": True,
+        "id": payout.id,
+        "amount_rub": float(payout.amount_rub),
+        "status": payout.status,
+        "message": "Заявка на выплату отправлена",
     }
