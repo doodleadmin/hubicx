@@ -18,9 +18,6 @@ _backups/
 *.bak
 .env.bak*
 
-# Deployment artifacts
-Dockerfile.webapp
-
 # Large media files (serve from CDN)
 webapp/public/app/assets/video/
 *.mov
