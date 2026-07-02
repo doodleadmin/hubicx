@@ -596,6 +596,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     });
   }, [priceSignature, currentPrice, displayModelId, selectedModelCode, uiModelId, seedanceTier, modelsLoaded]);
   var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
+  var isVideoTemplate = !!(selectedTpl && selectedTpl.type === 'video');
+  var effectiveQualityLocked = !!(qualityLocked && !isVideoTemplate);
+  var effectiveAspectLocked = !!(aspectLocked && !isVideoTemplate);
   var showModelPicker = !selectedTpl;
 
   useEffect(function() {
@@ -1034,25 +1037,25 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
           <div className="divider"></div>
         </React.Fragment>}
         {qField && <React.Fragment>
-          <div key={'q-' + (uiQualityValue || 'init')} className={'row-link' + (qualityLocked ? ' locked' : '')} onClick={() => !qualityLocked && setPicker('quality')}>
+          <div key={'q-' + (uiQualityValue || 'init')} className={'row-link' + (effectiveQualityLocked ? ' locked' : '')} onClick={() => !effectiveQualityLocked && setPicker('quality')}>
             <div className="cr-detail-ic">
               <Ic n="sparkle" s={21}/>
             </div>
             <div style={{ minWidth:0, flex:1 }}>
               <div className="muted" style={{ fontSize:12 }}>Качество</div>
               <div style={{ fontWeight:700, fontSize:15 }}>{displayQualityLabel}</div>
-              {selectedTpl && qualityLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Качество закреплено за шаблоном</div>}
+              {selectedTpl && effectiveQualityLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Качество закреплено за шаблоном</div>}
             </div>
-            {selectedTpl && <button className={'m-lock-btn' + (!qualityLocked ? ' off' : '')}
+            {selectedTpl && !isVideoTemplate && <button className={'m-lock-btn' + (!qualityLocked ? ' off' : '')}
               title={qualityLocked ? 'Качество закреплено. Нажмите, чтобы разблокировать' : 'Качество разблокировано'}
               onClick={function(e) { e.stopPropagation(); setQualityLocked(!qualityLocked); setPicker(qualityLocked ? 'quality' : null); }}>
               <Ic n={qualityLocked ? 'lock' : 'unlock'} s={18}/>
             </button>}
-            {!qualityLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
+            {!effectiveQualityLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
           </div>
           <div className="divider"></div>
         </React.Fragment>}
-        {durationField && <React.Fragment>
+        {durationField && !isVideoTemplate && <React.Fragment>
           <DurationInlineControl
             value={String(durationValue)}
             label={displayDurationLabel}
@@ -1077,16 +1080,16 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
           />
           <div className="divider"></div>
         </React.Fragment>}
-        <div key={'a-' + (uiAspectId || 'init')} className={'row-link' + (aspectLocked ? ' locked' : '')} onClick={() => !aspectLocked && setPicker('aspect')}>
+        <div key={'a-' + (uiAspectId || 'init')} className={'row-link' + (effectiveAspectLocked ? ' locked' : '')} onClick={() => !effectiveAspectLocked && setPicker('aspect')}>
           <div className="cr-detail-ic">
             <Ic n="aspect" s={21}/>
           </div>
           <div style={{ minWidth:0, flex:1 }}>
             <div className="muted" style={{ fontSize:12 }}>Соотношение сторон</div>
             <div style={{ fontWeight:700, fontSize:15 }}>{displayAspectLabel}</div>
-            {selectedTpl && aspectLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Формат закреплён за шаблоном</div>}
+            {selectedTpl && effectiveAspectLocked && <div className="muted" style={{ fontSize:11.5, marginTop:2 }}>Формат закреплён за шаблоном</div>}
           </div>
-          {selectedTpl && <button className={'m-lock-btn' + (!aspectLocked ? ' off' : '')}
+          {selectedTpl && !isVideoTemplate && <button className={'m-lock-btn' + (!aspectLocked ? ' off' : '')}
             title={aspectLocked ? 'Формат закреплён. Нажмите, чтобы разблокировать' : 'Формат разблокирован'}
             onClick={function(e) {
               e.stopPropagation();
@@ -1095,7 +1098,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
             }}>
             <Ic n={aspectLocked ? 'lock' : 'unlock'} s={18}/>
           </button>}
-          {!aspectLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
+          {!effectiveAspectLocked && <span className="chev"><Ic n="chev" s={20}/></span>}
         </div>
       </div>
 
@@ -1115,14 +1118,14 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       onClose={() => setPicker(null)}/>}
 
     {/* Quality picker */}
-    {picker === 'quality' && !qualityLocked && qField && <PickerSheet
+    {picker === 'quality' && !effectiveQualityLocked && qField && <PickerSheet
       title="Качество" options={qOptions.map(function(o) { var v = optionValue(o); return { id:String(v), t:optionTitle(o), s:qField.label || 'Качество' }; })}
       current={{ id:String(qValue) }}
       onSelect={function(opt) { setSelectedQuality(opt.id); setUiQualityValue(opt.id); setUiQualityLabel(opt.t || prettyOption(opt.id)); }}
       onClose={() => setPicker(null)}/>}
 
     {/* Aspect picker */}
-    {picker === 'aspect' && !aspectLocked && <PickerSheet
+    {picker === 'aspect' && !effectiveAspectLocked && <PickerSheet
       title="Соотношение сторон" options={aspectOpts}
       current={selectedAspect}
       onSelect={function(opt) {
@@ -1249,6 +1252,7 @@ function PickerSheet({ title, options, current, onSelect, onClose }) {
         <div className="picker-grid">
         {options.map(function(o) {
           return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
+            {o.preview && <span className="aspect-mini" style={{ aspectRatio:o.preview }}></span>}
             <div className="pick-text">
               <div className="o-t">{o.t}</div>
               {o.s && <div className="o-s">{o.s}{o.price && <span className="o-price">{o.price}</span>}</div>}

@@ -828,6 +828,7 @@ function DeskPicker({ title, options, current, onPick, onClose, kind }) {
       <div className="dk-picker-list">
         {options.map(function(o) {
           return <div key={o.id} className={'dk-picker-opt' + (o.id === current ? ' on' : '')} onClick={() => onPick(o.id)}>
+            {o.preview && <span className="dk-aspect-mini" style={{ aspectRatio:o.preview }}></span>}
             <div><div className="dk-opt-t">{o.title}</div>{o.sub ? <div className="dk-opt-s">{o.sub}</div> : null}</div>
             {o.id === current && <Ic n="check" s={20} c="var(--ink)"/>}
           </div>;
@@ -1056,6 +1057,9 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var displayModelId = sanitizeDisplayModelId(selectedModelCode, mode, modelOpts, filtered) || defaultModelId;
   var selectedTpl = DESK_TPL.find(function(t) { return t.t === selTpl; }) || null;
   var isPhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo';
+  var isVideoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'video';
+  var effectiveQualityLocked = !!(qualityLocked && !isVideoTemplate);
+  var effectiveAspectLocked = !!(aspectLocked && !isVideoTemplate);
   var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var uploadedRefFiles = referenceSlots ? uploadedFiles.filter(Boolean) : (uploadedFile ? [uploadedFile] : []);
   var currentModelCode = resolveSeedanceAutoCode(displayModelId, uploadedRefFiles, seedanceTier);
@@ -1368,7 +1372,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
 
       <div className="dk-lbl">Детали</div>
       <div className="dk-card">
-        {!isPhotoTemplate && <React.Fragment>
+        {!isPhotoTemplate && !isVideoTemplate && <React.Fragment>
           <div className={'dk-row' + (templateLocked ? ' locked' : '')} onClick={() => !templateLocked && modelOpts.length > 0 && setOpen(open === 'model' ? null : 'model')}>
             <div className="dk-row-ic"><Ic n="model" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Модель</div>
@@ -1393,21 +1397,21 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           <div className="dk-row-div"></div>
         </React.Fragment>}
         {qField && <React.Fragment>
-          <div className={'dk-row' + (qualityLocked ? ' locked' : '')} onClick={() => !qualityLocked && setOpen(open === 'quality' ? null : 'quality')}>
+          <div className={'dk-row' + (effectiveQualityLocked ? ' locked' : '')} onClick={() => !effectiveQualityLocked && setOpen(open === 'quality' ? null : 'quality')}>
             <div className="dk-row-ic"><Ic n="sparkle" s={20} c="var(--ink)"/></div>
             <div className="dk-row-tx"><div className="dk-row-k">Качество</div>
               <div className="dk-row-v" key={'gen-quality-label-' + String(qValue) + '-' + displayQualityLabel}>{displayQualityLabel}</div>
-              {selectedTpl && qualityLocked && <div className="dk-row-s">Качество закреплено за шаблоном</div>}</div>
-            {selectedTpl && <button className={'dk-lock-btn' + (!qualityLocked ? ' off' : '')}
+              {selectedTpl && effectiveQualityLocked && <div className="dk-row-s">Качество закреплено за шаблоном</div>}</div>
+            {selectedTpl && !isVideoTemplate && <button className={'dk-lock-btn' + (!qualityLocked ? ' off' : '')}
               title={qualityLocked ? 'Качество закреплено. Нажмите, чтобы разблокировать' : 'Качество разблокировано'}
               onClick={function(e){ e.stopPropagation(); setQualityLocked(!qualityLocked); setOpen(qualityLocked ? 'quality' : null); }}>
               <Ic n={qualityLocked ? 'lock' : 'unlock'} s={18}/>
             </button>}
-            {!qualityLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
+            {!effectiveQualityLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
           </div>
           <div className="dk-row-div"></div>
         </React.Fragment>}
-        {durationField && !isPhotoTemplate && <React.Fragment>
+        {durationField && !isPhotoTemplate && !isVideoTemplate && <React.Fragment>
           <DeskDurationInlineControl
             value={String(durationValue)}
             label={displayDurationLabel}
@@ -1429,29 +1433,29 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           </div>
           <div className="dk-row-div"></div>
         </React.Fragment>}
-        <div className={'dk-row' + (aspectLocked ? ' locked' : '')} onClick={() => !aspectLocked && setOpen(open === 'aspect' ? null : 'aspect')}>
+        <div className={'dk-row' + (effectiveAspectLocked ? ' locked' : '')} onClick={() => !effectiveAspectLocked && setOpen(open === 'aspect' ? null : 'aspect')}>
           <div className="dk-row-ic"><Ic n="aspect" s={20} c="var(--ink)"/></div>
           <div className="dk-row-tx"><div className="dk-row-k">Формат</div>
             <div className="dk-row-v" key={'gen-aspect-label-' + (selectedAspectSafe && selectedAspectSafe.id) + '-' + displayAspectLabel}>{displayAspectLabel}</div>
-            {selectedTpl && aspectLocked && <div className="dk-row-s">Формат закреплён за шаблоном</div>}</div>
-          {selectedTpl && <button className={'dk-lock-btn' + (!aspectLocked ? ' off' : '')}
+            {selectedTpl && effectiveAspectLocked && <div className="dk-row-s">Формат закреплён за шаблоном</div>}</div>
+          {selectedTpl && !isVideoTemplate && <button className={'dk-lock-btn' + (!aspectLocked ? ' off' : '')}
             title={aspectLocked ? 'Формат закреплён. Нажмите, чтобы разблокировать' : 'Формат разблокирован'}
             onClick={function(e){ e.stopPropagation(); if (aspectLocked) { setAspectLocked(false); setOpen('aspect'); } else { setAspectLocked(true); setOpen(null); } }}>
             <Ic n={aspectLocked ? 'lock' : 'unlock'} s={18}/>
           </button>}
-          {!aspectLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
+          {!effectiveAspectLocked && <span className="chev"><Ic n="chev" s={19}/></span>}
         </div>
         {open === 'model' && !templateLocked && !isPhotoTemplate && <DeskPicker kind="model" title="Модель"
           options={modelOpts.map(function(o){ return { id:o.id, title:o.t, sub:(o.s ? o.s + ' · ' : '') + (o.price || '') }; })} current={curCode}
           onPick={function(id){ var opt = modelOpts.find(function(o){ return o.id === id; }); setSelectedModelCode(id); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(id === 'seedance_2_auto' ? null : (opt ? opt.t : null)); setUiQualityLabel(null); setUiDurationLabel(null); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
-        {open === 'quality' && !qualityLocked && qField && <DeskPicker kind="quality" title="Качество"
+        {open === 'quality' && !effectiveQualityLocked && qField && <DeskPicker kind="quality" title="Качество"
           options={qOptions.map(function(o){ return { id:String(o), title:prettyOption(o), sub:qField.label || 'Качество' }; })} current={String(qValue)}
           onPick={function(id){ var opt = qOptions.find(function(o){ return String(o) === String(id); }); var val = opt != null ? opt : id; setSelectedQuality(val); setUiQualityLabel(prettyOption(val)); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
         {open === 'batch' && canPickBatch && <DeskPicker kind="batch" title="Количество"
           options={[1,2,4].map(function(n){ return { id:String(n), title:String(n) + (n === 1 ? ' генерация' : ' генерации'), sub:'Итоговая стоимость обновится в кнопке' }; })} current={String(batchCount)}
           onPick={function(id){ setBatchCount(Number(id) || 1); setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
-        {open === 'aspect' && !aspectLocked && <DeskPicker kind="aspect" title="Формат"
-          options={aspectOpts.map(function(a){ return { id:a.id, title:a.t, sub:a.s }; })} current={selectedAspectSafe.id}
+        {open === 'aspect' && !effectiveAspectLocked && <DeskPicker kind="aspect" title="Формат"
+          options={aspectOpts.map(function(a){ return { id:a.id, title:a.t, sub:a.s, preview:a.preview }; })} current={selectedAspectSafe.id}
           onPick={function(id){ var a = aspectOpts.find(function(x){return x.id===id;}); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } setOpen(null); }} onClose={function(){ setOpen(null); }}/>}
       </div>
 

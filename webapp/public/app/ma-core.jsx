@@ -602,16 +602,16 @@ const MODELS = [
   { id:'seed', t:'Seedream 4.5', s:'Похожесть лица' },
 ];
 const ASPECTS = [
-  { id:'1:1', t:'1:1', s:'Квадрат' },
-  { id:'2:3', t:'2:3', s:'Портрет' },
-  { id:'3:4', t:'3:4', s:'Портрет' },
-  { id:'4:5', t:'4:5', s:'Портрет' },
-  { id:'3:2', t:'3:2', s:'Альбом' },
-  { id:'4:3', t:'4:3', s:'Альбом' },
-  { id:'5:4', t:'5:4', s:'Альбом' },
-  { id:'9:16', t:'9:16', s:'Сторис' },
-  { id:'16:9', t:'16:9', s:'Широкий' },
-  { id:'21:9', t:'21:9', s:'Кино' },
+  { id:'1:1', t:'1:1', s:'Квадрат', preview:'1 / 1' },
+  { id:'2:3', t:'2:3', s:'Портрет', preview:'2 / 3' },
+  { id:'3:4', t:'3:4', s:'Портрет', preview:'3 / 4' },
+  { id:'4:5', t:'4:5', s:'Портрет', preview:'4 / 5' },
+  { id:'3:2', t:'3:2', s:'Альбом', preview:'3 / 2' },
+  { id:'4:3', t:'4:3', s:'Альбом', preview:'4 / 3' },
+  { id:'5:4', t:'5:4', s:'Альбом', preview:'5 / 4' },
+  { id:'9:16', t:'9:16', s:'Сторис', preview:'9 / 16' },
+  { id:'16:9', t:'16:9', s:'Широкий', preview:'16 / 9' },
+  { id:'21:9', t:'21:9', s:'Кино', preview:'21 / 9' },
 ];
 
 window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, templatePromptForOutput };
