@@ -429,6 +429,7 @@ function App() {
   const [tabSwipeDir, setTabSwipeDir] = uS(0);
   const [user, setUser] = uS(null);
   const [topup, setTopup] = uS(false);
+  const [topupRequired, setTopupRequired] = uS(null);
   const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
   const [theme, setTheme] = uS(getInitialTheme);
   const [accessBlock, setAccessBlock] = uS(null);
@@ -610,7 +611,7 @@ function App() {
     if (paymentResult) {
       handler = withHaptic(function() { setPaymentResult(null); });
     } else if (topup) {
-      handler = withHaptic(function() { setTopup(false); });
+      handler = withHaptic(function() { setTopup(false); setTopupRequired(null); });
     } else if (activeChat) {
       handler = withHaptic(function() { setActiveChat(null); });
     } else if (createOpen) {
@@ -853,7 +854,8 @@ function App() {
   if (createOpen) {
     body = <CreateScreen key={createKey + ':' + mode + ':' + (preset && (preset.code || preset.t) || '') + ':' + (createModelCode || '')}
       tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
-      onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} onQueued={handleMobileGenerationQueued} refreshBalance={refreshBalance}/>;
+      onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} onQueued={handleMobileGenerationQueued} refreshBalance={refreshBalance}
+      onInsufficientBalance={(required) => { setTopupRequired(required); setTopup(true); }}/>;
   } else if (templatesOpen) {
     body = <TemplatesScreen onBack={() => setTemplatesOpen(false)}
       initialView={templatesView}
@@ -915,7 +917,7 @@ function App() {
 
     let dbody;
     if (dtab === 'home') dbody = <DeskHome tokens={tokens} onGen={goGen} onStartChat={dStartChat} onTemplate={onTemplate} onHistory={() => goDtab('history')}/>;
-    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} initModelCode={genInit.modelCode} initAspectId={genInit.aspectId} initQualityField={genInit.qualityField} initQualityValue={genInit.qualityValue} initDurationField={genInit.durationField} initDurationValue={genInit.durationValue} initBatchCount={genInit.batchCount} refreshBalance={refreshBalance} searchQuery={deskSearch}/>;
+    else if (dtab === 'gen') dbody = <DeskGen key={genKey} tokens={tokens} initMode={genInit.mode} initPrompt={genInit.prompt} initTpl={genInit.tpl} initModelCode={genInit.modelCode} initAspectId={genInit.aspectId} initQualityField={genInit.qualityField} initQualityValue={genInit.qualityValue} initDurationField={genInit.durationField} initDurationValue={genInit.durationValue} initBatchCount={genInit.batchCount} refreshBalance={refreshBalance} searchQuery={deskSearch} onInsufficientBalance={(required) => { setTopupRequired(required); setTopup(true); }}/>;
     else if (dtab === 'tpl') dbody = <DeskTemplates onTemplate={onTemplate} searchQuery={deskSearch}/>;
     else if (dtab === 'chat') dbody = <DeskChat chats={chats} activeChat={activeChat} onOpenChat={openChat} onStartChat={dStartChat} onSend={sendInChat} onDeleteChat={deleteChat} onSetAgent={setChatAgent}/>;
     else if (dtab === 'history') dbody = <DeskHistory/>;
@@ -929,7 +931,7 @@ function App() {
         theme={theme} onToggleTheme={toggleTheme} searchQuery={deskSearch} onSearchQuery={setDeskSearch}>
         {dbody}
       </DeskShell>
-      {topup && <DeskTopup tokens={tokens} onClose={() => setTopup(false)}/>}
+      {topup && <DeskTopup tokens={tokens} requiredCredits={topupRequired} onClose={() => { setTopup(false); setTopupRequired(null); }}/>}
       <DesktopOnboarding onTab={goDtab} onTopup={() => setTopup(true)}/>
       {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     </React.Fragment>;
@@ -946,7 +948,10 @@ function App() {
       <button className="gen-toast-main" onClick={() => { tgHaptic('selection'); setMobileNotice(null); goProfileHistory(); }}>История</button>
       <button className="gen-toast-x" onClick={() => setMobileNotice(null)} aria-label="Закрыть">×</button>
     </div>}
-    {topup && <Topup tokens={tokens} onClose={() => setTopup(false)}/>} 
+    {topup && (
+      <Topup tokens={tokens} requiredCredits={topupRequired}
+        onClose={() => { setTopup(false); setTopupRequired(null); }}/>
+    )}
     {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     <MobileOnboarding key="mob-onb" onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
   </div>;
@@ -1010,8 +1015,9 @@ function PaymentResultModal({ result, onClose }) {
   </div>;
 }
 
-function Topup({ tokens, onClose }) {
+function Topup({ tokens, requiredCredits, onClose }) {
   const { Star, Ic } = window.MiraCore;
+  const approxPhotos = value => Math.max(1, Math.floor(Number(value || 0) / 50));
   const fallbackPacks = [
     { code:'topup_300',   title:'300 токенов',    tokens:300,   price_rub:249,  bonus_tokens:0, total_tokens:300,   effective_price_per_token:0.83 },
     { code:'topup_1000',  title:'1 000 токенов',  tokens:1000,  price_rub:790,  bonus_tokens:0, total_tokens:1000,  effective_price_per_token:0.79 },
@@ -1146,6 +1152,10 @@ function Topup({ tokens, onClose }) {
         </div>
 
         <div className="topup-body">
+          {requiredCredits > Number(tokens || 0) && <div className="topup-bonus-lite">
+            <div className="topup-bonus-ic">★</div>
+            <div><b>Недостаточно токенов</b><span>Нужно {requiredCredits} ★, на балансе {tokens} ★. Не хватает {requiredCredits - Number(tokens || 0)} ★.</span></div>
+          </div>}
           {bonus && <div className="topup-bonus-lite">
             <div className="topup-bonus-ic">🎁</div>
             <div>
@@ -1165,7 +1175,7 @@ function Topup({ tokens, onClose }) {
                 <span className="topup-plan-radio"></span>
                 <span className="topup-plan-main">
                   <b>{p.title}</b>
-                  <small>Шаблоны + {p.tokens_per_month} токенов / месяц</small>
+                  <small>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото</small>
                 </span>
                 <span className="topup-plan-side">
                   {p.badge && <em>{p.badge}</em>}
@@ -1186,7 +1196,7 @@ function Topup({ tokens, onClose }) {
                 var realIndex = templateSubs.length + i;
                 return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(realIndex); setCustomAmount(''); setCustomError(''); }}>
                   <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-                  <p>Все сценарии + {p.tokens_per_month} токенов / месяц</p>
+                  <p>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото</p>
                   <strong>{p.price_rub} ₽/мес</strong>
                 </div>;
               })}
@@ -1207,7 +1217,7 @@ function Topup({ tokens, onClose }) {
                     <div style={{ flex:1, minWidth:0 }}>
                       <span>{p.total_tokens || p.tokens} токенов</span>
                       <div className="muted">
-                        {p.effective_price_per_token != null ? p.effective_price_per_token + ' ₽ за токен' : p.price_rub + ' ₽'}
+                        Примерно {approxPhotos(p.total_tokens || p.tokens)} фото · {p.effective_price_per_token != null ? p.effective_price_per_token + ' ₽ за токен' : p.price_rub + ' ₽'}
                       </div>
                     </div>
                     <strong>{p.price_rub} ₽</strong>
@@ -1225,7 +1235,7 @@ function Topup({ tokens, onClose }) {
                 {customError && <div className="topup-error">{customError}</div>}
                 {customValid && <div className="topup-custom-preview">
                   <span>{customNum} ₽</span>
-                  <b>{customNum} токенов</b>
+                  <b>{customNum} токенов · примерно {approxPhotos(customNum)} фото</b>
                 </div>}
               </React.Fragment>}
             </React.Fragment>}

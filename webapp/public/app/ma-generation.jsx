@@ -72,14 +72,14 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
       </div>
 
       <div className="sec-h rise" style={{ '--d':'.12s', marginTop:22 }}>
-        <h2>Видео шаблоны</h2>
+        <h2>Фото шаблоны</h2>
         <span className="all" onClick={() => onTab && onTab('templates')}>Показать все</span>
       </div>
-      {renderTplRail(videoTpls, 'Нет видео-шаблонов')}
-      <div className="sec-h rise" style={{ '--d':'.16s', marginTop:22 }}>
-        <h2>Фото шаблоны</h2>
-      </div>
       {renderTplRail(photoTpls, 'Нет фото-шаблонов')}
+      <div className="sec-h rise" style={{ '--d':'.16s', marginTop:22 }}>
+        <h2>Видео шаблоны</h2>
+      </div>
+      {renderTplRail(videoTpls, 'Нет видео-шаблонов')}
       <div style={{ height:8 }}/>
     </div>
   </div>;
@@ -109,6 +109,12 @@ function TemplatesScreen({ onBack, onTemplate, initialView }) {
         if (filter === 'video') return t.type === 'video';
         return t.type !== 'video';
       });
+  var grouped = list.reduce(function(acc, t) {
+    var category = t.category || 'Другое';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(t);
+    return acc;
+  }, {});
 
   return <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
     <div className="cr-head">
@@ -129,8 +135,10 @@ function TemplatesScreen({ onBack, onTemplate, initialView }) {
         </div>
       </div>}
       {list.length > 0
-        ? <div className="tpl-page-grid">
-            {list.map(function(t, i) {
+        ? Object.keys(grouped).map(function(category) { return <section className="tpl-category" key={category}>
+          <div className="tpl-category-title">{category}</div>
+          <div className="tpl-page-grid">
+            {grouped[category].map(function(t, i) {
               var isFav = favSet.has(tplKey(t));
               return <div className="thumb" key={i} onClick={() => onTemplate(t)}
                 style={{ aspectRatio:'0.82', cursor:'pointer', position:'relative' }}>
@@ -145,6 +153,7 @@ function TemplatesScreen({ onBack, onTemplate, initialView }) {
               </div>;
             })}
           </div>
+        </section>; })
         : <div className="card" style={{ padding:'24px 18px', textAlign:'center', marginTop:14 }}>
             <div style={{ fontSize:30 }}>📂</div>
             <div style={{ fontWeight:800, fontSize:15, marginTop:6 }}>Нет шаблонов</div>

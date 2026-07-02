@@ -561,6 +561,9 @@ html.theme-dark .seedance-tier button.on { background: #2b3024; }
   .tpl-media-placeholder::after,
   .tpl-media.has-fallback.loading::after { animation: none; opacity: .35; transform: none; }
 }
+.tpl-category { margin-top: 18px; }
+.tpl-category:first-of-type { margin-top: 12px; }
+.tpl-category-title { margin: 0 2px 10px; color: var(--text); font-size: 17px; font-weight: 850; }
 .thumb .lbl {
   position: absolute; left: 10px; right: 10px; bottom: 9px;
   font-weight: 700; font-size: 13px; line-height: 1.15;

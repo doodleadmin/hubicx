@@ -415,6 +415,12 @@ function writePriceTrace(source, payload) {
   } catch(e) {}
 }
 
+function isInsufficientBalanceError(error) {
+  var text = [error && error.message, error && error.code, error && error.detail]
+    .filter(Boolean).join(' ').toLowerCase();
+  return /insufficient|not enough|balance|недостат|не хватает|нехват/.test(text);
+}
+
 const TEMPLATES = (window.HubicxVideoTemplates || []).concat([
   { code:'tv-broadcast', t:'ТВ трансляция', img:'assets/cov/hero1.png', coverVideo:'assets/templates/video/tv-broadcast/cover.mp4', type:'video', category:'Эффекты', requiresImage:true, inputLabel:'Селфи или фото человека', modelCode:'kling_30_i2v', qualityValue:'720p', aspectId:'16:9', duration:'10', durationOptions:['7','10','15'], durationLocked:true, templatePipeline:'tv_broadcast_kling_30', referenceSlots:[
     { label:'Селфи человека', hint:'Загрузите одно фото лица' }
@@ -640,4 +646,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино', preview:'21 / 9' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, templatePromptForOutput };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, isInsufficientBalanceError, templatePromptForOutput };

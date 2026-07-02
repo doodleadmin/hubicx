@@ -976,7 +976,7 @@ function DeskStageCanvas({ mode, aspectId }) {
   </div>;
 }
 
-function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initDurationField, initDurationValue, initBatchCount, refreshBalance, searchQuery }) {
+function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAspectId, initQualityField, initQualityValue, initDurationField, initDurationValue, initBatchCount, refreshBalance, searchQuery, onInsufficientBalance }) {
   const { Ic, Star, TemplateMedia, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog } = window.MiraCore;
   const [mode, setMode] = useState(initMode || 'photo');
   const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
@@ -1201,6 +1201,10 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
 
   const start = function() {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth() || !curModel) { alert('Модели не загружены'); return; }
+    if (price > Number(tokens || 0)) {
+      if (onInsufficientBalance) onInsufficientBalance(price);
+      return;
+    }
     cancelRunning();
     var inputs = {};
     var aspectField = getAspectField(curModel);
@@ -1263,7 +1267,15 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
           function(t) { setTask(t); updateItem(tempId, { status:'done', task:t }); },
           function(m, k) { updateItem(tempId, { status:k || 'error', error:m }); });
         if (Array.isArray(cancelRef.current)) cancelRef.current.push(stop);
-        }).catch(function(e) { updateItem(tempId, { status:'error', error:(e && e.message) || 'Ошибка создания задачи' }); });
+        }).catch(function(e) {
+          if (window.MiraCore.isInsufficientBalanceError && window.MiraCore.isInsufficientBalanceError(e)) {
+            if (refreshBalance) refreshBalance();
+            if (onInsufficientBalance) onInsufficientBalance(price);
+            updateItem(tempId, { status:'error', error:'Недостаточно токенов' });
+            return;
+          }
+          updateItem(tempId, { status:'error', error:(e && e.message) || 'Ошибка создания задачи' });
+        });
       }, delayMs || 0);
     }
     ids.forEach(function(tempId, i) { createOne(tempId, i * 350); });
@@ -1704,16 +1716,24 @@ function DeskTemplates({ onTemplate, searchQuery }) {
     var typeOk = filter === 'all' || t.type === filter || (filter === 'fav' && favSet.has(tplKey(t)));
     return typeOk && matchesTplSearch(t, searchQuery);
   });
+  const grouped = list.reduce(function(acc, t) {
+    var category = t.category || 'Другое';
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(t);
+    return acc;
+  }, {});
   return <div className="dk-page dk-templates-page">
     <div className="dk-tpl-tabs">
       {[['all','Все'],['photo','Фото'],['video','Видео'],['fav','Избранное']].map(function(f) {
         return <button key={f[0]} className={'dk-tpl-tab' + (filter === f[0] ? ' on' : '')} onClick={() => setFilter(f[0])}>{f[1]}</button>;
       })}
     </div>
-    <div className="dk-tpl-grid wide">
-      {list.map(function(t, i) { return <DeskTplCard key={i} t={t} fav={favSet.has(tplKey(t))} onFav={toggleFavTpl} onClick={() => onTemplate(t)}/>; })}
-      {list.length === 0 && <div className="dk-gen-tpl-empty">{filter === 'fav' ? 'В избранном пока нет шаблонов. Нажмите ★ на карточке шаблона.' : 'Ничего не найдено'}</div>}
-    </div>
+    {list.length > 0 ? Object.keys(grouped).map(function(category) { return <section className="dk-tpl-category" key={category}>
+      <h2>{category}</h2>
+      <div className="dk-tpl-grid wide">
+        {grouped[category].map(function(t, i) { return <DeskTplCard key={i} t={t} fav={favSet.has(tplKey(t))} onFav={toggleFavTpl} onClick={() => onTemplate(t)}/>; })}
+      </div>
+    </section>; }) : <div className="dk-gen-tpl-empty">{filter === 'fav' ? 'В избранном пока нет шаблонов. Нажмите ★ на карточке шаблона.' : 'Ничего не найдено'}</div>}
   </div>;
 }
 
@@ -2083,8 +2103,9 @@ function DeskProfile({ tokens, user, onTopup, onUserUpdate }) {
 /* ============================================================
    Topup modal (centered, horizontal packages)
    ============================================================ */
-function DeskTopup({ tokens, onClose }) {
+function DeskTopup({ tokens, requiredCredits, onClose }) {
   const { Star, Ic } = window.MiraCore;
+  const approxPhotos = value => Math.max(1, Math.floor(Number(value || 0) / 50));
   const fallback = [
     { code:'topup_300', tokens:300, price_rub:249, bonus_tokens:0, total_tokens:300, effective_price_per_token:0.83 },
     { code:'topup_1000', tokens:1000, price_rub:790, bonus_tokens:0, total_tokens:1000, effective_price_per_token:0.79 },
@@ -2184,6 +2205,10 @@ function DeskTopup({ tokens, onClose }) {
       <button className="dk-modal-x" onClick={onClose}><Ic n="close" s={18}/></button>
       <div className="dk-modal-title">Тарифы Hubicx</div>
       <div className="dk-modal-sub">Баланс сейчас: {tokens} ★</div>
+      {requiredCredits > Number(tokens || 0) && <div className="dk-bonus-card dk-topup-bonus">
+        <div className="dk-bonus-title">Недостаточно токенов для генерации</div>
+        <div className="dk-bonus-note">Нужно {requiredCredits} ★, на балансе {tokens} ★. Не хватает {requiredCredits - Number(tokens || 0)} ★.</div>
+      </div>}
 
       {packs === null
         ? <div style={{ padding:'40px 0', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>
@@ -2217,7 +2242,7 @@ function DeskTopup({ tokens, onClose }) {
             {p.badge && <div className="dk-sub-badge">{p.badge}</div>}
             <div className="dk-sub-title">{p.title}</div>
             <div className="dk-sub-n"><Star s={22} c="#c9c7f4"/> {p.tokens_per_month}</div>
-            <div className="dk-sub-meta">токенов / месяц</div>
+            <div className="dk-sub-meta">токенов / месяц · ≈ {approxPhotos(p.tokens_per_month)} фото</div>
             <div className="dk-sub-price">{p.price_rub} ₽/мес</div>
           </div>; })}
         </div>
@@ -2234,7 +2259,7 @@ function DeskTopup({ tokens, onClose }) {
               {p.badge && <div className="dk-sub-badge">{p.badge}</div>}
               <div className="dk-sub-title">{p.title}</div>
               <div className="dk-sub-n"><Star s={22} c="#c9c7f4"/> {p.tokens_per_month}</div>
-              <div className="dk-sub-meta">токенов / месяц</div>
+              <div className="dk-sub-meta">токенов / месяц · ≈ {approxPhotos(p.tokens_per_month)} фото</div>
               <div className="dk-sub-price">{p.price_rub} ₽/мес</div>
             </div>;
           })}
@@ -2249,6 +2274,7 @@ function DeskTopup({ tokens, onClose }) {
               {best && <div className="dk-pack-best">Выгодно</div>}
               <Star s={22} c="#c9c7f4"/>
               <div className="dk-pack-n">{p.total_tokens || p.tokens}</div>
+              <div className="dk-sub-meta">≈ {approxPhotos(p.total_tokens || p.tokens)} фото</div>
               {p.bonus_tokens > 0 && <div className="dk-pack-bonus">+{p.bonus_tokens} бонус</div>}
               <div className="dk-pack-price">{p.price_rub} ₽</div>
             </div>;
@@ -2260,7 +2286,7 @@ function DeskTopup({ tokens, onClose }) {
         </button>
         {customOpen && <div className="dk-custom-box">
           <input className="dk-auth-in" type="number" min="99" placeholder="Введите сумму от 99 ₽" value={customAmount} onChange={function(e) { handleCustomChange(e.target.value); }}/>
-          {customValidView && <div className="dk-custom-preview"><span>{customNumView} ₽</span><b>{customNumView} токенов</b></div>}
+          {customValidView && <div className="dk-custom-preview"><span>{customNumView} ₽</span><b>{customNumView} токенов · ≈ {approxPhotos(customNumView)} фото</b></div>}
           {customErr && <div className="dk-pay-err">{customErr}</div>}
         </div>}
 

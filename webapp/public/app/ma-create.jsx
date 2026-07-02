@@ -414,7 +414,7 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
   </div>;
 }
 
-function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, onQueued, refreshBalance }) {
+function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, onQueued, refreshBalance, onInsufficientBalance }) {
   const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
 
   // Models from API
@@ -735,6 +735,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Start generation
   var startGeneration = function() {
+    if (currentPrice > Number(tokens || 0)) {
+      if (onInsufficientBalance) onInsufficientBalance(currentPrice);
+      return;
+    }
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) return;
     if (!currentModelFull) { alert('Модели не загружены, попробуйте позже'); return; }
 
@@ -811,6 +815,12 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       );
       pollCancelRef.current = cancel;
     }).catch(function(err) {
+      if (window.MiraCore.isInsufficientBalanceError && window.MiraCore.isInsufficientBalanceError(err)) {
+        if (refreshBalance) refreshBalance();
+        if (onInsufficientBalance) onInsufficientBalance(currentPrice);
+        setGenState('idle');
+        return;
+      }
       // Task was never created — nothing was charged, so no refund to report.
       setGenState('error');
       setGenError((err && err.message) || 'Ошибка создания задачи');
