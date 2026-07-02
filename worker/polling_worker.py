@@ -10,7 +10,7 @@ from backend.app.db.session import async_session, engine
 from backend.app.providers.fal import FalProvider
 from backend.app.services.generations import mark_failed_and_refund
 from worker.celery_app import celery_app
-from worker.generation_worker import notify_user, persist_generated_file
+from worker.generation_worker import advance_seedance_reference_pipeline, notify_user, persist_generated_file
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,14 @@ async def _poll_fal_tasks() -> dict:
                         failed += 1
                         continue
 
-                poll_result = await provider.fetch_result(task_fresh.provider_response_url)
+                pipeline_action, pipeline_result = await advance_seedance_reference_pipeline(provider, task_fresh)
+                if pipeline_action == "waiting":
+                    continue
+                if pipeline_action == "transitioned":
+                    await session.commit()
+                    logger.info("poll: task %s reference sheets completed, Seedance submitted", task_fresh.id)
+                    continue
+                poll_result = pipeline_result if pipeline_action == "result" else await provider.fetch_result(task_fresh.provider_response_url)
 
                 if poll_result is None:
                     # Still in progress — skip until next cycle

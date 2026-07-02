@@ -13,6 +13,7 @@ const targets = [
     files: [
       "public/app/ma-api.jsx",
       "public/app/hbx-i18n.jsx",
+      "public/app/ma-video-templates.jsx",
       "public/app/ma-core.jsx",
       "public/app/ma-chat.jsx",
       "public/app/ma-agent.jsx",

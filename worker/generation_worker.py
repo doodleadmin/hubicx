@@ -16,6 +16,7 @@ from backend.app.db.models import File, GenerationTask
 from backend.app.db.session import async_session, engine
 from backend.app.providers.base import ProviderResult, provider_model_configured
 from backend.app.providers.fal import FalProvider
+from backend.app.services.pricing import SEEDANCE_REFERENCE_PIPELINE
 from backend.app.providers.openrouter import OpenRouterProvider
 from backend.app.services.generations import mark_failed_and_refund
 from backend.app.services.storage import storage_configured, storage_service
@@ -125,6 +126,106 @@ async def _run_tv_broadcast_pipeline(provider: FalProvider, provider_params: dic
         "sync_mode": False,
     }
     return await provider.generate_video_v2("fal-ai/kling-video/v3/standard/image-to-video", kling_params)
+
+
+REFERENCE_SHEET_PROMPT = (
+    "Create a photorealistic character reference sheet on one clean white canvas. "
+    "Show the exact same person from the source image in four consistent views: front portrait, "
+    "three-quarter view, side profile, and waist-up view. Preserve identity, facial geometry, "
+    "hair, skin tone, body proportions, and clothing exactly. Neutral studio lighting, natural "
+    "skin texture, no text, no labels, no watermark, no extra people."
+)
+PIPELINE_STATE_KEY = "_template_pipeline_state"
+
+
+async def _start_seedance_reference_pipeline(provider: FalProvider, provider_params: dict) -> tuple[ProviderResult, dict | None]:
+    source_images = _as_image_urls(provider_params.get("image_urls")) or _as_image_urls(provider_params.get("image_url"))
+    if not source_images:
+        return ProviderResult(False, error="Seedance reference pipeline requires source images"), None
+
+    async def submit_reference(source_image: str) -> ProviderResult:
+        return await submit_fal_async(
+            provider,
+            "openai/gpt-image-2/edit",
+            {
+                "image_urls": [source_image],
+                "prompt": REFERENCE_SHEET_PROMPT,
+                "image_size": "auto",
+                "quality": "low",
+                "num_images": 1,
+                "output_format": "png",
+            },
+        )
+
+    reference_results = await asyncio.gather(*(submit_reference(url) for url in source_images))
+    failed = next((item for item in reference_results if not item.success), None)
+    if failed:
+        return failed, None
+
+    video_input = dict(provider_params)
+    video_input.pop("template_pipeline", None)
+    video_input.pop("__reference_preprocess_count", None)
+    state = {
+        "kind": SEEDANCE_REFERENCE_PIPELINE,
+        "stage": "references",
+        "reference_jobs": [
+            {
+                "source_url": source_images[index],
+                "response_url": result.response_url,
+                "provider_task_id": result.provider_task_id,
+                "output_url": result.output_url,
+            }
+            for index, result in enumerate(reference_results)
+        ],
+        "video_input": video_input,
+    }
+    first_pending = next((result for result in reference_results if result.response_url), None)
+    return ProviderResult(
+        True,
+        provider_task_id=first_pending.provider_task_id if first_pending else None,
+        response_url=first_pending.response_url if first_pending else "pipeline://references-ready",
+    ), state
+
+
+async def advance_seedance_reference_pipeline(provider: FalProvider, task: GenerationTask) -> tuple[str, ProviderResult | None]:
+    state = (task.params or {}).get(PIPELINE_STATE_KEY)
+    if not isinstance(state, dict) or state.get("kind") != SEEDANCE_REFERENCE_PIPELINE:
+        return "not_pipeline", None
+    if state.get("stage") == "video":
+        return "result", await provider.fetch_result(task.provider_response_url)
+
+    jobs = state.get("reference_jobs") or []
+    output_urls: list[str] = []
+    for job in jobs:
+        if job.get("output_url"):
+            output_urls.append(job["output_url"])
+            continue
+        response_url = job.get("response_url")
+        if not response_url:
+            return "result", ProviderResult(False, error="Reference job has no response URL")
+        result = await provider.fetch_result(response_url)
+        if result is None:
+            return "waiting", None
+        if not result.success or not result.output_url:
+            return "result", result if not result.success else ProviderResult(False, error="Reference generation returned no image")
+        job["output_url"] = result.output_url
+        output_urls.append(result.output_url)
+
+    video_input = dict(state.get("video_input") or {})
+    video_input["image_urls"] = output_urls
+    submit_result = await submit_fal_async(provider, task.model.provider_model_id, video_input)
+    if not submit_result.success:
+        return "result", submit_result
+    if submit_result.output_url:
+        return "result", submit_result
+
+    state["stage"] = "video"
+    state["reference_jobs"] = jobs
+    task.params = {**(task.params or {}), PIPELINE_STATE_KEY: state}
+    task.provider_task_id = submit_result.provider_task_id
+    task.provider_response_url = submit_result.response_url
+    task.started_at = datetime.now(timezone.utc)
+    return "transitioned", None
 
 
 def log_task(task: GenerationTask, status: str, error: str | None = None) -> None:
@@ -246,6 +347,10 @@ async def _process_generation_task(task_id: int) -> None:
         elif task.task_type == "video":
             if provider_params.get("template_pipeline") == "tv_broadcast_kling_30" and isinstance(provider, FalProvider):
                 result = await _run_tv_broadcast_pipeline(provider, provider_params)
+            elif provider_params.get("template_pipeline") == SEEDANCE_REFERENCE_PIPELINE and isinstance(provider, FalProvider):
+                result, pipeline_state = await _start_seedance_reference_pipeline(provider, provider_params)
+                if result.success and pipeline_state:
+                    task.params = {**(task.params or {}), PIPELINE_STATE_KEY: pipeline_state}
             elif task.provider_input and isinstance(provider, FalProvider):
                 result = await submit_fal_async(provider, provider_model_id, task.provider_input)
             elif task.provider_input:

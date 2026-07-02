@@ -993,9 +993,9 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const [uiDurationLabel, setUiDurationLabel] = useState(null);
   const [uiDurationValue, setUiDurationValue] = useState(initTpl ? (templateDurationValue(initTpl) || null) : (initDurationValue || null));
   const [uiAspectLabel, setUiAspectLabel] = useState(null);
-  const [qualityLocked, setQualityLocked] = useState(!!(initTpl && templateQualityValue(initTpl)));
+  const [qualityLocked, setQualityLocked] = useState(!!(initTpl && templateQualityValue(initTpl) && initTpl.qualityLocked !== false));
   const [durationLocked, setDurationLocked] = useState(!!(initTpl && initTpl.durationLocked));
-  const [aspectLocked, setAspectLocked] = useState(!!(initTpl && initTpl.aspectId));
+  const [aspectLocked, setAspectLocked] = useState(!!(initTpl && initTpl.aspectId && initTpl.aspectLocked !== false));
   const [batchCount, setBatchCount] = useState(initBatchCount || 1);
   const [open, setOpen] = useState(null); // 'model' | 'quality' | 'duration' | 'batch' | 'aspect'
   const [tab, setTab] = useState(initTpl ? 'tpl' : (initPrompt ? 'prompt' : 'tpl'));
@@ -1089,10 +1089,16 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
+  var templateReferenceCount = selectedTpl && selectedTpl.templatePipeline && referenceSlots ? referenceSlots.length : 0;
+  if (templateReferenceCount) {
+    priceInputs.template_pipeline = selectedTpl.templatePipeline;
+    priceInputs.reference_preprocess_count = templateReferenceCount;
+  }
   var priceSignature = curModel
-    ? [mode, curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    ? [mode, curModel.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : '', selectedTpl && selectedTpl.templatePipeline ? selectedTpl.templatePipeline : '', String(templateReferenceCount)].join('|')
     : '';
   var localOnePrice = curModel ? estimateModelPrice(curModel, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:curModel.code }) : 0;
+  if (templateReferenceCount) localOnePrice += Number(selectedTpl.referencePrepCredits || 0) * templateReferenceCount;
   var serverOnePriceFresh = serverOnePrice && serverOnePrice.signature === priceSignature && serverOnePrice.value != null ? serverOnePrice.value : null;
   // Show catalog price immediately, then prefer a fresh backend preview.
   var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
@@ -1183,7 +1189,7 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
   const pickTemplate = function(t) {
     setTab('tpl'); setSelTpl(t.t); setMode(t.type === 'video' ? 'video' : 'photo');
     setUploadedFile(null); setUploadedFiles([]); if (t.type === 'photo') setBatchCount(1);
-    setSelectedModelCode(templateModelCode(t)); setSelectedQuality(templateQualityValue(t) || null); setSelectedDuration(templateDurationValue(t) || null); setUiDurationValue(templateDurationValue(t) || null); setUiModelLabel(null); setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null); setUiDurationLabel(null); setUiAspectLabel(null); setQualityLocked(!!templateQualityValue(t)); setDurationLocked(!!t.durationLocked); setAspectLocked(!!t.aspectId); if (t.aspectId) { var a = ASPECTS.find(function(x){ return String(x.id) === String(t.aspectId); }); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } } setTemplateLocked(true); setOpen(null);
+    setSelectedModelCode(templateModelCode(t)); setSelectedQuality(templateQualityValue(t) || null); setSelectedDuration(templateDurationValue(t) || null); setUiDurationValue(templateDurationValue(t) || null); setUiModelLabel(null); setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null); setUiDurationLabel(null); setUiAspectLabel(null); setQualityLocked(!!templateQualityValue(t) && t.qualityLocked !== false); setDurationLocked(!!t.durationLocked); setAspectLocked(!!t.aspectId && t.aspectLocked !== false); if (t.aspectId) { var a = ASPECTS.find(function(x){ return String(x.id) === String(t.aspectId); }); if (a) { setSelectedAspect(a); setUiAspectLabel(a.t + ' · ' + a.s); } } setTemplateLocked(true); setOpen(null);
   };
   const clearTemplate = function() {
     setSelTpl(null); setTemplateLocked(false); setTab('prompt'); setPrompt(''); setUploadedFiles([]); setSelectedModelCode(null); setSelectedQuality(null); setSelectedDuration(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setQualityLocked(false); setDurationLocked(false); setAspectLocked(false); setOpen(null);
@@ -1216,8 +1222,14 @@ function DeskGen({ tokens, initMode, initPrompt, initTpl, initModelCode, initAsp
     }
     if (qField && qValue != null) inputs[qField.name] = qValue;
     if (durationField && durationValue != null) inputs[durationField.name] = String(durationValue);
-    if (selectedTpl && selectedTpl.templatePipeline) inputs.template_pipeline = selectedTpl.templatePipeline;
-    var finalPrompt = (tab === 'prompt' ? prompt.trim() : ((selectedTpl && selectedTpl.prompt) || selTpl)) || null;
+    if (selectedTpl && selectedTpl.templatePipeline) {
+      inputs.template_pipeline = selectedTpl.templatePipeline;
+      inputs.reference_preprocess_count = referenceSlots ? referenceSlots.length : 1;
+    }
+    var templatePrompt = selectedTpl && window.MiraCore && window.MiraCore.templatePromptForOutput
+      ? window.MiraCore.templatePromptForOutput(selectedTpl, selectedAspectSafe && selectedAspectSafe.id, qValue)
+      : ((selectedTpl && selectedTpl.prompt) || selTpl);
+    var finalPrompt = (tab === 'prompt' ? prompt.trim() : templatePrompt) || null;
     var makePayload = function() { return {
       model_code: curModel.code,
       prompt: finalPrompt,

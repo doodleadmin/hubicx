@@ -746,6 +746,8 @@ set_model(
             field("duration", "Длительность", "select", default="5", options=SEEDANCE_DURATION, advanced=False),
             field("resolution", "Разрешение", "select", default="480p", options=["480p", "720p", "1080p"], advanced=False),
             field("generate_audio", "Генерировать звук", "switch", default=True, advanced=False),
+            field("template_pipeline", "Template pipeline", "hidden", required=False, advanced=True),
+            field("reference_preprocess_count", "Reference preprocess count", "hidden", provider_key="__reference_preprocess_count", required=False, advanced=True),
         ],
         submit_label="Создать видео по референсам",
         result_type="video",

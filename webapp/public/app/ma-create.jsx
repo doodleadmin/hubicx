@@ -431,9 +431,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   const [uiDurationLabel, setUiDurationLabel] = useState(null);
   const [uiAspectLabel, setUiAspectLabel] = useState(null);
   const [templateLocked, setTemplateLocked] = useState(!!preset);
-  const [qualityLocked, setQualityLocked] = useState(!!(preset && templateQualityValue(preset)));
+  const [qualityLocked, setQualityLocked] = useState(!!(preset && templateQualityValue(preset) && preset.qualityLocked !== false));
   const [durationLocked, setDurationLocked] = useState(!!(preset && preset.durationLocked));
-  const [aspectLocked, setAspectLocked] = useState(!!(preset && preset.aspectId));
+  const [aspectLocked, setAspectLocked] = useState(!!(preset && preset.aspectId && preset.aspectLocked !== false));
 
   // Aspect ratio
   const [selectedAspectId, setSelectedAspectId] = useState(function() {
@@ -525,6 +525,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var singleVideoField = getSingleVideoField(currentModelFull);
   var allTplList = CREATE_TPL.filter(function(t) { return mode === 'video' ? t.type === 'video' : t.type !== 'video'; });
   var selectedTpl = allTplList.find(function(t) { return t.t === selTpl; }) || null;
+  var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var tplList = allTplList.filter(function(t) { return favSet.has(tplKey(t)); });
   if (selectedTpl && !tplList.some(function(t) { return t.t === selectedTpl.t; })) tplList = [selectedTpl].concat(tplList);
   // Single source of truth for the visible and sent aspect is React state.
@@ -554,10 +555,16 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
   var priceInputs = {};
   if (qField && qValue != null) priceInputs[qField.name] = qValue;
   if (durationField && durationValue != null) priceInputs[durationField.name] = String(durationValue);
+  var templateReferenceCount = selectedTpl && selectedTpl.templatePipeline && referenceSlots ? referenceSlots.length : 0;
+  if (templateReferenceCount) {
+    priceInputs.template_pipeline = selectedTpl.templatePipeline;
+    priceInputs.reference_preprocess_count = templateReferenceCount;
+  }
   var priceSignature = currentModelFull
-    ? [mode, currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : ''].join('|')
+    ? [mode, currentModelFull.code, qField ? qField.name + '=' + String(qValue) : '', durationField ? durationField.name + '=' + String(durationValue) : '', selectedTpl && selectedTpl.templatePipeline ? selectedTpl.templatePipeline : '', String(templateReferenceCount)].join('|')
     : '';
   var localPrice = currentModelFull ? estimateModelPrice(currentModelFull, priceInputs, { mode:mode, displayModelId:displayModelId, concreteModelCode:currentModelFull.code }) : 0;
+  if (templateReferenceCount) localPrice += Number(selectedTpl.referencePrepCredits || 0) * templateReferenceCount;
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   // Show catalog price immediately, then prefer a fresh backend preview.
   var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
@@ -588,7 +595,6 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
       signature: priceSignature,
     });
   }, [priceSignature, currentPrice, displayModelId, selectedModelCode, uiModelId, seedanceTier, modelsLoaded]);
-  var referenceSlots = selectedTpl && Array.isArray(selectedTpl.referenceSlots) ? selectedTpl.referenceSlots : null;
   var singlePhotoTemplate = tab === 'tpl' && selectedTpl && selectedTpl.type === 'photo' && selectedTpl.requiresImage && !referenceSlots;
   var showModelPicker = !selectedTpl;
 
@@ -627,9 +633,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     setUiQualityLabel(templateQualityValue(t) ? prettyOption(templateQualityValue(t)) : null);
     setUiDurationLabel(null);
     setTemplateLocked(true);
-    setQualityLocked(!!templateQualityValue(t));
+    setQualityLocked(!!templateQualityValue(t) && t.qualityLocked !== false);
     setDurationLocked(!!t.durationLocked);
-    setAspectLocked(!!t.aspectId);
+    setAspectLocked(!!t.aspectId && t.aspectLocked !== false);
     if (t.aspectId) {
       var nextAspect = readTemplateAspect(t) || t.aspectId;
       setSelectedAspectId(nextAspect);
@@ -739,7 +745,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     }
     if (qField && qValue != null) inputs[qField.name] = qValue;
     if (durationField && durationValue != null) inputs[durationField.name] = String(durationValue);
-    if (selectedTpl && selectedTpl.templatePipeline && hasField('template_pipeline')) inputs.template_pipeline = selectedTpl.templatePipeline;
+    if (selectedTpl && selectedTpl.templatePipeline && hasField('template_pipeline')) {
+      inputs.template_pipeline = selectedTpl.templatePipeline;
+      if (hasField('reference_preprocess_count')) inputs.reference_preprocess_count = referenceSlots ? referenceSlots.length : 1;
+    }
     var cleanFiles = uploadedFiles.filter(Boolean);
     var mediaUrls = cleanFiles.map(function(f) { return f.url; });
     var imageFiles = cleanFiles.filter(function(f) { return f.type !== 'video'; });
@@ -765,7 +774,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     }
     if (mediaUrls.length && hasField('media_urls')) inputs.media_urls = mediaUrls;
 
-    var finalPrompt = (tab === 'prompt' ? prompt.trim() : ((selectedTpl && selectedTpl.prompt) || selTpl)) || null;
+    var templatePrompt = selectedTpl && window.MiraCore && window.MiraCore.templatePromptForOutput
+      ? window.MiraCore.templatePromptForOutput(selectedTpl, selectedAspect && selectedAspect.id, qValue)
+      : ((selectedTpl && selectedTpl.prompt) || selTpl);
+    var finalPrompt = (tab === 'prompt' ? prompt.trim() : templatePrompt) || null;
     var payload = {
       model_code: currentModelFull.code,
       prompt: finalPrompt,

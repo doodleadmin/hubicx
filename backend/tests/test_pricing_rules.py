@@ -1,9 +1,17 @@
 import unittest
 
-from backend.app.services.pricing import resolve_price_from_rules
+from backend.app.services.pricing import SEEDANCE_REFERENCE_PIPELINE, reference_preprocess_surcharge, resolve_price_from_rules
 
 
 class PricingRulesTests(unittest.TestCase):
+    def test_seedance_reference_preprocess_surcharge_counts_each_photo(self):
+        self.assertEqual(
+            reference_preprocess_surcharge(
+                {"template_pipeline": SEEDANCE_REFERENCE_PIPELINE, "reference_preprocess_count": 2}
+            ),
+            220,
+        )
+
     def test_generic_multipliers_are_supported_in_db_rules(self):
         price, source, summary = resolve_price_from_rules(
             {

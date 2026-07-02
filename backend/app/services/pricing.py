@@ -9,6 +9,17 @@ from backend.app.db.models import AIModel, ModelPricing
 from backend.app.utils.errors import AppError
 
 
+SEEDANCE_REFERENCE_PIPELINE = "seedance_gpt_image_reference_sheet_v1"
+GPT_IMAGE_REFERENCE_PRICE_CREDITS = 110
+
+
+def reference_preprocess_surcharge(validated_inputs: dict[str, Any]) -> int:
+    if validated_inputs.get("template_pipeline") != SEEDANCE_REFERENCE_PIPELINE:
+        return 0
+    count = max(0, min(9, int(_as_number(validated_inputs.get("reference_preprocess_count"), 0))))
+    return count * GPT_IMAGE_REFERENCE_PRICE_CREDITS
+
+
 def _as_number(value: Any, default: float = 0) -> float:
     try:
         if isinstance(value, bool):
@@ -234,24 +245,35 @@ async def calculate_generation_cost_breakdown_from_db(session: AsyncSession, mod
     if pricing and pricing.price_rules and isinstance(pricing.price_rules, dict):
         # ── новые price_rules из DB ──
         price, source, summary = resolve_price_from_rules(pricing.price_rules, validated_inputs, int(pricing.price_tokens))
+        surcharge = reference_preprocess_surcharge(validated_inputs)
+        price += surcharge
         return price, [
             {"type": "base", "label": "price_tokens", "amount": int(pricing.price_tokens)},
             {"type": "source", "label": "pricing_source", "value": source},
             {"type": "summary", "label": "applied_rules", "value": summary},
+            {"type": "addition", "label": "reference_preprocess", "amount": surcharge},
             {"type": "total", "label": "final", "amount": price},
         ]
 
     if pricing:
         # ── фиксированная цена из DB ──
         base = int(pricing.price_tokens)
+        surcharge = reference_preprocess_surcharge(validated_inputs)
+        base += surcharge
         return base, [
             {"type": "base", "label": "db_fixed", "amount": base},
             {"type": "source", "label": "pricing_source", "value": "db_fixed"},
+            {"type": "addition", "label": "reference_preprocess", "amount": surcharge},
             {"type": "total", "label": "final", "amount": base},
         ]
 
     # ── fallback: старая логика ──
-    return calculate_generation_cost_breakdown(model, validated_inputs, await effective_model_base_price(session, model))
+    price, breakdown = calculate_generation_cost_breakdown(model, validated_inputs, await effective_model_base_price(session, model))
+    surcharge = reference_preprocess_surcharge(validated_inputs)
+    if surcharge:
+        price += surcharge
+        breakdown = [*breakdown[:-1], {"type": "addition", "label": "reference_preprocess", "amount": surcharge}, {"type": "total", "label": "final", "amount": price}]
+    return price, breakdown
 
 
 async def calculate_generation_cost_from_db(session: AsyncSession, model: AIModel, validated_inputs: dict[str, Any]) -> int:

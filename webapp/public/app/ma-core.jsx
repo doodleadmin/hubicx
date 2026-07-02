@@ -389,7 +389,7 @@ function writePriceTrace(source, payload) {
   } catch(e) {}
 }
 
-const TEMPLATES = [
+const TEMPLATES = (window.HubicxVideoTemplates || []).concat([
   { code:'tv-broadcast', t:'ТВ трансляция', img:'assets/cov/hero1.png', coverVideo:'assets/templates/video/tv-broadcast/cover.mp4', type:'video', category:'Эффекты', requiresImage:true, inputLabel:'Селфи или фото человека', modelCode:'kling_30_i2v', qualityValue:'720p', aspectId:'16:9', duration:'10', durationOptions:['7','10','15'], durationLocked:true, templatePipeline:'tv_broadcast_kling_30', referenceSlots:[
     { label:'Селфи человека', hint:'Загрузите одно фото лица' }
   ], prompt:'Человек смотрит матч' },
@@ -539,7 +539,15 @@ Negative prompt: different person, face swap, inconsistent identity, duplicate f
 
 Рендер: фотореалистичный 3D, мягкое студийное освещение с небольшими тенями, макро-съёмка с боке на фоне, резкость на фигурке. Финальный результат — будто реальная коллекционная LEGO-фигурка сфотографирована в студии на оригинальном фоне из референса.` },
   { code:'skin-retouch', t:'Ретушь кожи', coverVideo:'assets/templates/photo/skin-retouch/cover.mp4', type:'photo', category:'Портрет', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Skin enhancement retouch, preserve original identity and structure, refine skin texture without smoothing, maintain pores, freckles, and natural variation, reduce temporary blemishes and redness only, even out tone subtly without flattening depth, retain natural highlights and shadow transitions, keep under-eye detail intact with slight softening not removal, avoid plastic or airbrushed finish, maintain original lighting and color balance, enhance micro-contrast for realistic texture, lips and eyes untouched except for natural clarity, no reshaping of facial features, no artificial glow, no over-sharpening, seamless integration with original image, invisible edit with high realism.` },
-].map(function(t) {
+]).map(function(t) {
+  if (t && t.code === 'catastrophic-love') {
+    t = Object.assign({}, t, {
+      templatePipeline:'seedance_gpt_image_reference_sheet_v1',
+      referencePrepCredits:110,
+      qualityLocked:false,
+      aspectLocked:false,
+    });
+  }
   if (!t || t.type !== 'photo') return t;
   return Object.assign({}, t, {
     aspectId: t.aspectId || '3:4',
@@ -565,6 +573,27 @@ function readFavTemplateKeys() {
 function writeFavTemplateKeys(keys) {
   try { localStorage.setItem(MOB_FAV_KEY, JSON.stringify(keys || [])); } catch (e) {}
 }
+function videoFormatPrompt(aspectId) {
+  var descriptions = {
+    '1:1':'Square 1:1 video, balanced centered framing.',
+    '2:3':'Vertical portrait 2:3 video, full-height composition.',
+    '3:4':'Vertical portrait 3:4 video, portrait composition.',
+    '4:5':'Vertical portrait 4:5 video, social-feed composition.',
+    '3:2':'Horizontal landscape 3:2 video, wide composition.',
+    '4:3':'Horizontal landscape 4:3 video, classic composition.',
+    '5:4':'Horizontal landscape 5:4 video, compact wide composition.',
+    '9:16':'Vertical smartphone video, 9:16 portrait framing.',
+    '16:9':'Horizontal widescreen video, 16:9 landscape framing.',
+    '21:9':'Ultra-wide cinematic video, 21:9 framing.'
+  };
+  return descriptions[String(aspectId)] || ('Video aspect ratio ' + String(aspectId || 'auto') + '.');
+}
+function templatePromptForOutput(t, aspectId, quality) {
+  var prompt = String((t && t.prompt) || '');
+  return prompt
+    .replace(/\{\{VIDEO_FORMAT\}\}/g, videoFormatPrompt(aspectId))
+    .replace(/\{\{VIDEO_QUALITY\}\}/g, 'Output resolution: ' + String(quality || 'provider default') + '.');
+}
 const MODELS = [
   { id:'gpt', t:'GPT Image 2', s:'Генерация текста' },
   { id:'nano', t:'Nano Banana', s:'Базовая' },
@@ -585,4 +614,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, templatePromptForOutput };
