@@ -45,14 +45,18 @@ async function buildTarget(target) {
   for (const rel of target.files) {
     const abs = path.join(root, rel);
     const source = await readFile(abs, "utf8");
-    parts.push(`\n/* ${rel} */\n;(function(){\n${source}\n})();\n`);
+    parts.push(target.name === "partners"
+      ? `\n/* ${rel} */\n${source}\n`
+      : `\n/* ${rel} */\n;(function(){\n${source}\n})();\n`);
   }
 
-  const prelude = [
-    "(function(){",
-    "var useState=React.useState,useEffect=React.useEffect,useMemo=React.useMemo,useRef=React.useRef;",
-    "var uS=React.useState,uE=React.useEffect,uM=React.useMemo,uR=React.useRef;",
-  ].join("\n");
+  const prelude = target.name === "partners"
+    ? "(function(){"
+    : [
+        "(function(){",
+        "var useState=React.useState,useEffect=React.useEffect,useMemo=React.useMemo,useRef=React.useRef;",
+        "var uS=React.useState,uE=React.useEffect,uM=React.useMemo,uR=React.useRef;",
+      ].join("\n");
   const source = `${prelude}\n${parts.join("\n")}\n})();`;
   const commonOptions = {
     jsx: "transform",
