@@ -148,6 +148,10 @@ async def calculate_commission(
     if existing:
         return existing
 
+    partner = await session.get(ReferralPartner, payment.referral_partner_id)
+    if not partner or partner.status != "active":
+        return None
+
     rate = await get_commission_rate(session, payment.referral_partner_id, category)
     if rate <= 0:
         return None

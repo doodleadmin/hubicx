@@ -22,9 +22,9 @@ async def current_partner(
     session: AsyncSession = Depends(get_session),
 ) -> ReferralPartner:
     partner = await get_partner_by_code(session, code)
-    if not partner or partner.status == "blocked":
+    if not partner or partner.status != "active":
         from backend.app.utils.errors import AppError
-        raise AppError("partner_not_found", "Партнёр не найден или заблокирован", 401)
+        raise AppError("partner_not_found", "Партнёр не найден или неактивен", 401)
     return partner
 
 
