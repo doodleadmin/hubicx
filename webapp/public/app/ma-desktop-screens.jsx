@@ -880,6 +880,9 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
+  var selectedAtMin = selected !== 'auto' && selectedIndex === 0;
+  var selectedAtMax = selected !== 'auto' && selectedIndex === numericValues.length - 1;
+  var middleLabel = selectedAtMin || selectedAtMax ? '' : (selectedLabel || label);
   var controlClass = 'dk-duration-control' + (autoEnabled ? '' : ' no-auto');
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
@@ -914,7 +917,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
               value={selected === 'auto' ? 0 : selectedIndex}
               onInput={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}
               onChange={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}/>
-            <div className="dk-duration-scale" key={'dk-dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="dk-duration-scale" key={'dk-dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span className={selectedAtMin ? 'active' : ''}>{minLabel}</span><b>{middleLabel}</b><span className={selectedAtMax ? 'active' : ''}>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
             {numericValues.map(function(v){ return <button key={v} type="button" className={durationValuesMatch(v, selected) ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}

@@ -437,6 +437,7 @@ html.theme-dark .row-link:active { background: #20242c; }
   font-size: 13px;
   font-weight: 950;
 }
+.duration-scale span.active { color:var(--ink); font-weight:950; }
 .duration-chips {
   grid-column: 1 / -1;
   display: flex;

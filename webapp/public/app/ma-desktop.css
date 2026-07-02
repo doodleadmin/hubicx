@@ -483,6 +483,7 @@ html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: #343946; }
   font-weight:800;
 }
 .dk-duration-scale b { color:var(--ink); font-size:13px; font-weight:950; }
+.dk-duration-scale span.active { color:var(--ink); font-weight:950; }
 .dk-duration-chips { grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px; }
 .dk-duration-chip {
   height:32px;

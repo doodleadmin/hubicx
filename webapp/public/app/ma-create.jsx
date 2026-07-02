@@ -1168,6 +1168,9 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
   var maxLabel = numericValues.length ? formatDurationLabel(numericValues[numericValues.length - 1]) : '';
   var canUnlock = !(template && template.durationUnlockable === false);
   var selectedLabel = formatDurationLabel(selectedForLabel);
+  var selectedAtMin = selected !== 'auto' && selectedIndex === 0;
+  var selectedAtMax = selected !== 'auto' && selectedIndex === numericValues.length - 1;
+  var middleLabel = selectedAtMin || selectedAtMax ? '' : (selectedLabel || label);
   var controlClass = 'duration-control' + (autoEnabled ? '' : ' no-auto');
   var changeDuration = function(next) {
     var nextValue = coerceDurationValue(values, next);
@@ -1210,7 +1213,7 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
                 var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
                 changeDuration(String(next));
               }}/>
-            <div className="duration-scale" key={'dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="duration-scale" key={'dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span className={selectedAtMin ? 'active' : ''}>{minLabel}</span><b>{middleLabel}</b><span className={selectedAtMax ? 'active' : ''}>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="duration-chips">
             {numericValues.map(function(v) {
