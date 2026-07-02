@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { transform } from "esbuild";
+import { build, transform } from "esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
@@ -54,16 +54,30 @@ async function buildTarget(target) {
     "var uS=React.useState,uE=React.useEffect,uM=React.useMemo,uR=React.useRef;",
   ].join("\n");
   const source = `${prelude}\n${parts.join("\n")}\n})();`;
-
-  const bundled = await transform(source, {
-    loader: "jsx",
+  const commonOptions = {
     jsx: "transform",
     target: "es2018",
     format: "iife",
     minify: true,
     legalComments: "none",
-    sourcefile: `${target.name}.bundle.jsx`,
-  });
+  };
+  const bundled = target.name === "partners"
+    ? await build({
+        ...commonOptions,
+        bundle: true,
+        write: false,
+        stdin: {
+          contents: `import * as ReactModule from "react";\nimport { createRoot } from "react-dom/client";\nvar React = ReactModule;\nvar ReactDOM = { createRoot };\n${source}`,
+          loader: "jsx",
+          resolveDir: root,
+          sourcefile: `${target.name}.bundle.jsx`,
+        },
+      }).then((result) => ({ code: result.outputFiles[0].text }))
+    : await transform(source, {
+        ...commonOptions,
+        loader: "jsx",
+        sourcefile: `${target.name}.bundle.jsx`,
+      });
 
   const outfile = path.join(root, target.outfile);
   await mkdir(path.dirname(outfile), { recursive: true });
