@@ -9,6 +9,7 @@ from backend.app.db.models import GenerationTask
 from backend.app.db.session import async_session, engine
 from backend.app.providers.fal import FalProvider
 from backend.app.services.generations import mark_failed_and_refund
+from backend.app.services.safety import handle_generation_failure
 from worker.celery_app import celery_app
 from worker.generation_worker import advance_seedance_reference_pipeline, notify_user, persist_generated_file
 
@@ -110,9 +111,20 @@ async def _poll_fal_tasks() -> dict:
                     await notify_user(task_fresh.user.telegram_id, "✅ Генерация готова")
                     completed += 1
                 else:
-                    logger.warning("poll: task %s failed: %s", task_fresh.id, poll_result.error)
-                    await mark_failed_and_refund(session, task_fresh, poll_result.error or "generation_failed")
-                    await notify_user(task_fresh.user.telegram_id, "❌ Генерация не удалась, кредиты возвращены")
+                    error = poll_result.error or "generation_failed"
+                    pipeline_state = (task_fresh.params or {}).get("_template_pipeline_state") or {}
+                    source = "generation"
+                    if pipeline_action == "result" and isinstance(pipeline_state, dict):
+                        source = "seedance_video" if pipeline_state.get("stage") == "video" else "reference_preprocess"
+                    logger.warning("poll: task %s failed: %s", task_fresh.id, error)
+                    user_message = await handle_generation_failure(
+                        session,
+                        task_fresh,
+                        error,
+                        mark_failed_and_refund,
+                        source=source,
+                    )
+                    await notify_user(task_fresh.user.telegram_id, f"❌ {user_message}")
                     failed += 1
 
         except Exception:

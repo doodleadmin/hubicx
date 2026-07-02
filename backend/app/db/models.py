@@ -49,6 +49,22 @@ class User(Base, TimestampMixin):
         return bool(self.password_hash)
 
 
+class UserSafetyEvent(Base):
+    __tablename__ = "user_safety_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    generation_task_id: Mapped[int | None] = mapped_column(ForeignKey("generation_tasks.id"), nullable=True, index=True)
+    source: Mapped[str] = mapped_column(String(64), index=True)
+    category: Mapped[str] = mapped_column(String(64), default="provider_safety", index=True)
+    message: Mapped[str | None] = mapped_column(Text)
+    metadata_: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped[User] = relationship()
+    task: Mapped["GenerationTask | None"] = relationship()
+
+
 class EmailVerificationCode(Base):
     __tablename__ = "email_verification_codes"
 

@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from backend.app.config import settings
 from backend.app.api.routes.pricing import serialize_model_price, serialize_package
-from backend.app.db.models import AIModel, BalanceLedger, File, GenerationTask, ModelPricing, TokenPackage, Transaction, User
+from backend.app.db.models import AIModel, BalanceLedger, File, GenerationTask, ModelPricing, TokenPackage, Transaction, User, UserSafetyEvent
 from backend.app.db.session import get_session
 from backend.app.services.balance import admin_add_balance
 from backend.app.services.business import SUBSCRIPTION_PLANS_V2
@@ -134,6 +134,27 @@ async def list_users(
     result = await session.execute(
         select(User).order_by(desc(User.created_at)).offset(offset).limit(limit)
     )
+    user_rows = result.scalars().all()
+    user_ids = [u.id for u in user_rows]
+    safety_by_user: dict[int, dict] = {}
+    if user_ids:
+        safety_result = await session.execute(
+            select(
+                UserSafetyEvent.user_id,
+                func.count(UserSafetyEvent.id),
+                func.max(UserSafetyEvent.created_at),
+            )
+            .where(UserSafetyEvent.user_id.in_(user_ids))
+            .group_by(UserSafetyEvent.user_id)
+        )
+        safety_by_user = {
+            int(user_id): {
+                "count": int(count or 0),
+                "last_at": last_at.isoformat() if last_at else None,
+                "review_required": int(count or 0) >= 3,
+            }
+            for user_id, count, last_at in safety_result.all()
+        }
     users = [
         {
             "id": u.id,
@@ -147,10 +168,11 @@ async def list_users(
             "ban_reason": u.ban_reason,
             "banned_at": u.banned_at.isoformat() if u.banned_at else None,
             "banned_by_user_id": u.banned_by_user_id,
+            "safety_flags": safety_by_user.get(u.id, {"count": 0, "last_at": None, "review_required": False}),
             "ref_code": u.ref_code,
             "created_at": u.created_at.isoformat() if u.created_at else None,
         }
-        for u in result.scalars().all()
+        for u in user_rows
     ]
     return {"items": users, "total": total or 0, "page": page, "limit": limit}
 
@@ -192,6 +214,7 @@ def serialize_ledger(item: BalanceLedger) -> dict:
 
 
 def serialize_task_admin(t: GenerationTask) -> dict:
+    safety_review = (t.params or {}).get("_safety_review") if isinstance(t.params, dict) else None
     return {
         "id": t.id,
         "user_id": t.user_id,
@@ -205,6 +228,7 @@ def serialize_task_admin(t: GenerationTask) -> dict:
         "prompt": t.prompt[:120] if t.prompt else None,
         "cost_credits": t.cost_credits,
         "error_message": t.error_message,
+        "safety_review": safety_review if isinstance(safety_review, dict) else None,
         "output_file_url": t.output_file_url,
         "output_text": t.output_text[:240] if t.output_text else None,
         "created_at": t.created_at.isoformat() if t.created_at else None,

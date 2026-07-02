@@ -19,6 +19,7 @@ from backend.app.providers.fal import FalProvider
 from backend.app.services.pricing import SEEDANCE_REFERENCE_PIPELINE
 from backend.app.providers.openrouter import OpenRouterProvider
 from backend.app.services.generations import mark_failed_and_refund
+from backend.app.services.safety import handle_generation_failure
 from backend.app.services.storage import storage_configured, storage_service
 from worker.celery_app import celery_app
 
@@ -381,9 +382,21 @@ async def _process_generation_task(task_id: int) -> None:
             log_task(task, "completed")
             await notify_user(task.user.telegram_id, "✅ Генерация готова")
         else:
-            log_task(task, "refunded", result.error or "generation_failed")
-            await mark_failed_and_refund(session, task, result.error or "generation_failed")
-            await notify_user(task.user.telegram_id, "❌ Генерация не удалась, кредиты возвращены")
+            error = result.error or "generation_failed"
+            source = (
+                "reference_preprocess"
+                if provider_params.get("template_pipeline") == SEEDANCE_REFERENCE_PIPELINE
+                else "generation"
+            )
+            log_task(task, "refunded", error)
+            user_message = await handle_generation_failure(
+                session,
+                task,
+                error,
+                mark_failed_and_refund,
+                source=source,
+            )
+            await notify_user(task.user.telegram_id, f"❌ {user_message}")
 
 
 def _extension_from_content_type(content_type: str, url: str) -> str:
