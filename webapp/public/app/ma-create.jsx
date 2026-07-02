@@ -1210,7 +1210,7 @@ function DurationInlineControl({ value, label, options, locked, template, onChan
                 var next = numericValues[Number(e.currentTarget.value)] || numericValues[0];
                 changeDuration(String(next));
               }}/>
-            <div className="duration-scale"><span>{minLabel}</span><b key={'dur-scale-' + String(selectedForLabel)}>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="duration-scale" key={'dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="duration-chips">
             {numericValues.map(function(v) {

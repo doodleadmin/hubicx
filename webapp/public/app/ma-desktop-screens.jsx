@@ -622,6 +622,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
   var onePrice = serverOnePriceFresh != null ? serverOnePriceFresh : localOnePrice;
   var effectiveHomeBatchCount = hmode === 'photo' ? batchCount : 1;
   var totalPrice = curModel ? Math.max(1, onePrice * effectiveHomeBatchCount) : 0;
+  var homeCtaKey = ['desktop-home-cta', priceSignature, String(totalPrice)].join('|');
   useEffect(function() {
     if (!curModel || hmode === 'chat' || !window.HubicxApi || !window.HubicxApi.modelPricePreview || !window.HubicxApi.hasAuth()) {
       setServerOnePrice({ signature: priceSignature, value: null });
@@ -768,7 +769,7 @@ function DeskHome({ tokens, onGen, onStartChat, onTemplate, onHistory }) {
             </div>}
           </div>}
         </>}
-        <button className="dk-ask-cta" onClick={submit}><Ic n="sparkle" s={16}/> Создать · {totalPrice} ★</button>
+        <button key={homeCtaKey} className="dk-ask-cta" onClick={submit}><Ic n="sparkle" s={16}/> Создать · {totalPrice} ★</button>
       </div>
 
       <div className="dk-chips">
@@ -913,7 +914,7 @@ function DeskDurationInlineControl({ value, label, options, locked, template, on
               value={selected === 'auto' ? 0 : selectedIndex}
               onInput={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}
               onChange={function(e){ var next = numericValues[Number(e.currentTarget.value)] || numericValues[0]; changeDuration(String(next)); }}/>
-            <div className="dk-duration-scale"><span>{minLabel}</span><b key={'dk-dur-scale-' + String(selectedForLabel)}>{selectedLabel || label}</b><span>{maxLabel}</span></div>
+            <div className="dk-duration-scale" key={'dk-dur-scale-' + numericValues.join('|') + '-' + String(selectedForLabel)}><span>{minLabel}</span><b>{selectedLabel || label}</b><span>{maxLabel}</span></div>
           </React.Fragment>
         : <div className="dk-duration-chips">
             {numericValues.map(function(v){ return <button key={v} type="button" className={durationValuesMatch(v, selected) ? 'on' : ''} onClick={function(){ changeDuration(String(v)); }}>{formatDurationLabel(v)}</button>; })}
