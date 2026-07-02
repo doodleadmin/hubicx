@@ -1,6 +1,6 @@
 """reprice active models with unit economics
 
-Revision ID: 0019_unit_economics_model_pricing
+Revision ID: 0019_unit_pricing
 Revises: 0018_safe_provider_pricing
 Create Date: 2026-07-02
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 
-revision = "0019_unit_economics_model_pricing"
+revision = "0019_unit_pricing"
 down_revision = "0018_safe_provider_pricing"
 branch_labels = None
 depends_on = None
