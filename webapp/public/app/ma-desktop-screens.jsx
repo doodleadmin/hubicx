@@ -1731,7 +1731,7 @@ function DeskTemplates({ onTemplate, searchQuery }) {
     {list.length > 0 ? Object.keys(grouped).map(function(category) { return <section className="dk-tpl-category" key={category}>
       <h2>{category}</h2>
       <div className="dk-tpl-grid wide">
-        {grouped[category].map(function(t, i) { return <DeskTplCard key={i} t={t} fav={favSet.has(tplKey(t))} onFav={toggleFavTpl} onClick={() => onTemplate(t)}/>; })}
+        {grouped[category].map(function(t, i) { return <DeskTplCard key={tplKey(t) || (category + '-' + i)} t={t} fav={favSet.has(tplKey(t))} onFav={toggleFavTpl} onClick={() => onTemplate(t)}/>; })}
       </div>
     </section>; }) : <div className="dk-gen-tpl-empty">{filter === 'fav' ? 'В избранном пока нет шаблонов. Нажмите ★ на карточке шаблона.' : 'Ничего не найдено'}</div>}
   </div>;

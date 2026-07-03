@@ -140,7 +140,7 @@ function TemplatesScreen({ onBack, onTemplate, initialView }) {
           <div className="tpl-page-grid">
             {grouped[category].map(function(t, i) {
               var isFav = favSet.has(tplKey(t));
-              return <div className="thumb" key={i} onClick={() => onTemplate(t)}
+              return <div className="thumb" key={tplKey(t) || (category + '-' + i)} onClick={() => onTemplate(t)}
                 style={{ aspectRatio:'0.82', cursor:'pointer', position:'relative' }}>
                 <TemplateMedia t={t} loading="lazy" decoding="async"/>
                 <button className="mob-tpl-fav" title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}

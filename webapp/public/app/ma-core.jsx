@@ -581,7 +581,7 @@ Lighting: harsh on-camera flash from the front, plus moody blue ambient lighting
 CAMERA: point-and-shoot / early-2000s digicam look, 35mm equiv, f/2.8, 1/60s, ISO 1600, direct flash.
 
 PROCESSING: cold blue tint overall, very high contrast, strongly underexposed background, very heavy analog-style film grain and digital noise across the entire image, clearly visible even in highlights, slight blur from movement, mild vignette, crunchy over-sharpened edges, raw imperfect aesthetic.` },
-  { code:'camera-g7x', t:'Камера G7X', img:'assets/templates/photo/camera-g7x/cover.webp', type:'photo', category:'Эффекты', requiresImage:true, modelCode:'nano_banana_pro', qualityValue:'1K', inputLabel:'Любое фото', prompt:`Use the uploaded image as the main reference. Preserve the exact person, face, facial features, body shape, figure, proportions, pose, clothing, background, framing, and overall composition as accurately as possible. Keep the subject fully recognizable as the same person. Do not change the person, do not replace the face or body, and do not redesign the scene. Apply only the visual style described below.
+  { code:'camera-g7x', t:'Мягкая вспышка', img:'assets/templates/photo/camera-g7x/cover.webp', type:'photo', category:'Эффекты', requiresImage:true, modelCode:'nano_banana_pro', qualityValue:'1K', inputLabel:'Любое фото', prompt:`Use the uploaded image as the main reference. Preserve the exact person, face, facial features, body shape, figure, proportions, pose, clothing, background, framing, and overall composition as accurately as possible. Keep the subject fully recognizable as the same person. Do not change the person, do not replace the face or body, and do not redesign the scene. Apply only the visual style described below.
 
 Apply a photorealistic Canon PowerShot G7X Mark III signature look to the uploaded image. Create a 1-inch sensor creamy bokeh feel, f/1.8–2.8 24–100mm lens look, and a built-in flash pop directly on the skin for a flattering glow and specular highlights. Make the background slightly underexposed, dark, and softly blurred, around -1.3 to -2 EV. Give the skin soft warm tones with golden-hour peach undertones, translucent pores, and a subtle natural oil sheen. Use low-contrast natural SOOC-style grading, creamy colors with no harsh saturation, subtle low film grain, and a dreamy haze glow around the subject. Create shallow depth-of-field portrait perfection with a trendy 2025 vlog / Instagram aesthetic. Keep the result hyper-real but with organic imperfections and a professional human photo vibe.` },
   { code:'cinematic-portrait', t:'Кино-портрет', coverVideo:'assets/templates/photo/cinematic-portrait/cover.mp4', type:'photo', category:'Эффекты', requiresImage:true, inputLabel:'Любое фото', modelCode:'gpt_image_2_edit', qualityValue:'low', prompt:`Улучшите портрет, полностью сохранив индивидуальность модели, геометрию лица, его выразительность и индивидуальность. Допускайте только незначительные уточнения, не изменяя черт лица. Сохраняйте фон на 100% идентичным — никаких замен, дополнений или изменений. Повторный рендеринг, как при съемке на Sony A1 с объективом 85 мм f/1.4 (f/1.6, ISO 100, 1/200), с кинематографической малой глубиной резкости, четким фокусом на лице и нейтральным цветовым профилем. Подбирайте оригинальное направление освещения и настроение, усиливая его мягким направленным светом, теплыми бликами, холодными тенями, более глубоким контрастом, широким динамическим диапазоном, естественной микроконтрастностью и плавными тональными переходами. Сохраняйте реалистичную текстуру кожи, естественные цвета, тонкую зернистость пленки и оригинальную атмосферу. Увеличьте реалистичность, глубину и детализацию без изменения сцены. Никаких изменений фона, изменения формы лица, искусственного свечения, резкого или ровного освещения, искусственной кожи или чрезмерного сглаживания. Кинематографическое качество изображения в формате 4K.@Создать изображение` },
@@ -645,10 +645,15 @@ Negative prompt: different person, face swap, inconsistent identity, duplicate f
     });
   }
   if (!t || t.type !== 'photo') return t;
-  return Object.assign({}, t, {
+  var normalized = Object.assign({}, t, {
     aspectId: t.aspectId || '3:4',
     aspectLocked: t.aspectLocked !== false,
   });
+  if (normalized.modelCode === 'nano_banana_pro' && normalized.requiresImage && normalized.prompt) {
+    var identityLock = `IDENTITY PRESERVATION IS THE HIGHEST PRIORITY. Use the uploaded person as a strict identity reference. Preserve the exact same face, facial geometry, bone structure, eye shape and spacing, nose, lips, jawline, skin tone, age, distinctive features, hairstyle, and natural asymmetry. The result must be instantly recognizable as the same real person. Do not beautify, idealize, average, face-swap, reinterpret, or replace the identity. Do not alter facial proportions. Preserve natural skin texture and avoid plastic skin. If any style instruction conflicts with identity preservation, identity preservation wins.\n\n`;
+    normalized.prompt = identityLock + normalized.prompt;
+  }
+  return normalized;
 });
 const CREATE_TPL = TEMPLATES.slice();
 
