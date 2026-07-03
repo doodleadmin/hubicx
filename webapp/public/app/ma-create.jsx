@@ -209,6 +209,37 @@ function templateModelCode(t) { return (t && t.modelCode) || 'nano_banana_pro'; 
 function templateQualityValue(t) { return t && (t.qualityValue || t.quality || t.resolution); }
 function templateDurationValue(t) { return t && (t.durationValue || t.duration); }
 function templateAspectKey(t) { return t && (t.code || t.t) ? 'tplAspect:' + (t.code || t.t) : null; }
+function replayParams(task) { return (task && task.params && typeof task.params === 'object') ? task.params : {}; }
+function replayPrompt(task) { return task && task.prompt ? String(task.prompt) : ''; }
+function replayModelCode(task) { return task && task.model_code ? String(task.model_code) : null; }
+function replayQualityValue(task) {
+  var p = replayParams(task);
+  return p.resolution || p.quality || p.image_size || p.size || null;
+}
+function replayDurationValue(task) {
+  var p = replayParams(task);
+  var v = p.duration || p.video_duration || null;
+  return v == null ? null : String(v).replace(/s$/i, '');
+}
+function replayAspectValue(task) {
+  var p = replayParams(task);
+  var v = p.aspect_ratio || p.ratio || null;
+  return v == null ? null : String(v);
+}
+function replayInputFiles(task) {
+  var p = replayParams(task);
+  var urls = [];
+  var add = function(v) {
+    if (!v) return;
+    if (Array.isArray(v)) { v.forEach(add); return; }
+    if (typeof v === 'string' && /^https?:\/\//i.test(v) && urls.indexOf(v) === -1) urls.push(v);
+  };
+  add(task && task.input_file_url);
+  add(p.image_url); add(p.image_urls); add(p.video_url); add(p.video_urls); add(p.media_urls);
+  return urls.map(function(url) {
+    return { url:url, preview:url, type:/\.(mp4|webm|mov)(\?|$)/i.test(url) ? 'video' : 'image', name:'repeat' };
+  }).slice(0, 8);
+}
 function readTemplateAspect(t) {
   var key = templateAspectKey(t);
   if (!key) return null;
@@ -414,18 +445,23 @@ function GenResult({ task, tokens, onNewGeneration, aspectId }) {
   </div>;
 }
 
-function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, onMinimize, onQueued, refreshBalance, onInsufficientBalance }) {
+function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask, onBack, onMinimize, onQueued, refreshBalance, onInsufficientBalance }) {
   const { Ic, Star, ASPECTS, CREATE_TPL, TemplateMedia, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, tplKey, readFavTemplateKeys, writeFavTemplateKeys } = window.MiraCore;
+  var replayModel = replayModelCode(repeatTask);
+  var replayQuality = replayQualityValue(repeatTask);
+  var replayDuration = replayDurationValue(repeatTask);
+  var replayAspect = replayAspectValue(repeatTask);
+  var replayFiles = replayInputFiles(repeatTask);
 
   // Models from API
   const [apiModels, setApiModels] = useState(function() { return initialModelCatalog ? initialModelCatalog() : (FALLBACK_MODELS || []).slice(); });
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
-  const [selectedQuality, setSelectedQuality] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
-  const [selectedDuration, setSelectedDuration] = useState(function() { return preset ? (templateDurationValue(preset) || null) : null; });
-  const [uiModelId, setUiModelId] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : null); });
-  const [uiQualityValue, setUiQualityValue] = useState(function() { return preset ? (templateQualityValue(preset) || null) : null; });
-  const [uiDurationValue, setUiDurationValue] = useState(function() { return preset ? (templateDurationValue(preset) || null) : null; });
+  const [selectedModelCode, setSelectedModelCode] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : replayModel); });
+  const [selectedQuality, setSelectedQuality] = useState(function() { return preset ? (templateQualityValue(preset) || null) : replayQuality; });
+  const [selectedDuration, setSelectedDuration] = useState(function() { return preset ? (templateDurationValue(preset) || null) : replayDuration; });
+  const [uiModelId, setUiModelId] = useState(function() { return initModelCode || (preset ? templateModelCode(preset) : replayModel); });
+  const [uiQualityValue, setUiQualityValue] = useState(function() { return preset ? (templateQualityValue(preset) || null) : replayQuality; });
+  const [uiDurationValue, setUiDurationValue] = useState(function() { return preset ? (templateDurationValue(preset) || null) : replayDuration; });
   const [uiModelLabel, setUiModelLabel] = useState(null);
   const [uiQualityLabel, setUiQualityLabel] = useState(null);
   const [uiDurationLabel, setUiDurationLabel] = useState(null);
@@ -437,17 +473,17 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
 
   // Aspect ratio
   const [selectedAspectId, setSelectedAspectId] = useState(function() {
-    return readTemplateAspect(preset) || (preset && preset.aspectId) || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
+    return readTemplateAspect(preset) || (preset && preset.aspectId) || replayAspect || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
   });
   const [uiAspectId, setUiAspectId] = useState(function() {
-    return readTemplateAspect(preset) || (preset && preset.aspectId) || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
+    return readTemplateAspect(preset) || (preset && preset.aspectId) || replayAspect || (ASPECTS[1] && ASPECTS[1].id) || '1:1';
   });
 
   // Pickers
   const [picker, setPicker] = useState(null); // 'model' | 'quality' | 'duration' | 'aspect'
 
   // Content
-  const [tab, setTab] = useState('tpl');
+  const [tab, setTab] = useState(preset ? 'tpl' : (repeatTask ? 'prompt' : 'tpl'));
   const [selTpl, setSelTpl] = useState(preset ? preset.t : null);
   const [favTplKeys, setFavTplKeys] = useState(readFavTemplateKeys);
   var favSet = new Set(favTplKeys);
@@ -457,10 +493,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     var next = favSet.has(key) ? favTplKeys.filter(function(k) { return k !== key; }) : favTplKeys.concat([key]);
     setFavTplKeys(next); writeFavTemplateKeys(next);
   };
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(function() { return preset ? '' : replayPrompt(repeatTask); });
 
   // File upload
-  const [uploadedFiles, setUploadedFiles] = useState([]); // [{url, file_id, preview, type, name}]
+  const [uploadedFiles, setUploadedFiles] = useState(function() { return replayFiles; }); // [{url, file_id, preview, type, name}]
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const uploadSlotRef = useRef(null);
@@ -497,7 +533,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, onBack, on
     return m.task_type === 'image' || (m.category === 'photo' && m.task_type !== 'video');
   });
 
-  const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(preset ? templateModelCode(preset) : null); });
+  const [seedanceTier, setSeedanceTier] = useState(function() { return seedanceTierFromCode(preset ? templateModelCode(preset) : replayModel); });
 
   // Picker-compatible model options. Seedance endpoints are grouped into one user-facing choice;
   // the concrete endpoint is selected right before generation from attached files.

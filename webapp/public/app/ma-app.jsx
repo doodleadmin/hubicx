@@ -588,6 +588,7 @@ function App() {
   const [createOpen, setCreateOpen] = uS(false);
   const [mode, setMode] = uS('photo');
   const [preset, setPreset] = uS(null);
+  const [repeatTask, setRepeatTask] = uS(null);
   const [createModelCode, setCreateModelCode] = uS(null);
   const [createKey, setCreateKey] = uS(0);
   const [templatesOpen, setTemplatesOpen] = uS(false);
@@ -635,7 +636,31 @@ function App() {
 
   uE(() => { localStorage.setItem(TAB_KEY, tab); }, [tab]);
 
-  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setTemplatesView(null); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
+  const openCreate = (m, p = null, opts = null) => { setMode(m); setPreset(p); setRepeatTask(opts && opts.repeatTask ? opts.repeatTask : null); setCreateModelCode(opts && opts.modelCode ? opts.modelCode : null); setTemplatesOpen(false); setTemplatesView(null); setCreateKey(function(k) { return k + 1; }); setCreateOpen(true); };
+  const repeatGeneration = (task) => {
+    if (!task) return;
+    var taskMode = task.task_type === 'video' ? 'video' : 'photo';
+    var params = task.params && typeof task.params === 'object' ? task.params : {};
+    var tpl = null;
+    var tplCode = task.template_code || params.template_code || null;
+    if (window.MiraCore && window.MiraCore.CREATE_TPL) {
+      tpl = window.MiraCore.CREATE_TPL.find(function(t) {
+        return (tplCode && (t.code === tplCode || t.t === tplCode))
+          || (params.template_pipeline && t.templatePipeline === params.template_pipeline);
+      }) || null;
+      if (!tpl && task.prompt) {
+        var aspect = params.aspect_ratio || params.ratio || null;
+        var quality = params.resolution || params.quality || params.image_size || null;
+        tpl = window.MiraCore.CREATE_TPL.find(function(t) {
+          var tplPrompt = window.MiraCore.templatePromptForOutput
+            ? window.MiraCore.templatePromptForOutput(t, aspect, quality)
+            : (t.prompt || t.t);
+          return String(tplPrompt || '').trim() === String(task.prompt || '').trim();
+        }) || null;
+      }
+    }
+    openCreate(taskMode, tpl, { modelCode: task.model_code || (tpl && tpl.modelCode) || null, repeatTask: task });
+  };
   const openTemplates = (view) => { setCreateOpen(false); setActiveChat(null); setTemplatesView(view || null); setTemplatesOpen(true); };
   const goTab = (t, opts) => {
     if (t === 'templates') { openTemplates(); return; }
@@ -854,6 +879,7 @@ function App() {
   if (createOpen) {
     body = <CreateScreen key={createKey + ':' + mode + ':' + (preset && (preset.code || preset.t) || '') + ':' + (createModelCode || '')}
       tokens={tokens} mode={mode} setMode={setMode} preset={preset} initModelCode={createModelCode}
+      repeatTask={repeatTask}
       onBack={() => setCreateOpen(false)} onMinimize={() => goTab('gen')} onQueued={handleMobileGenerationQueued} refreshBalance={refreshBalance}
       onInsufficientBalance={(required) => { setTopupRequired(required); setTopup(true); }}/>;
   } else if (templatesOpen) {
@@ -872,7 +898,7 @@ function App() {
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={(modelCode) => openCreate('video', null, modelCode ? { modelCode:modelCode } : null)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser} focusHistorySignal={profileHistorySignal}/>;
+    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} onRepeatGeneration={repeatGeneration} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser} focusHistorySignal={profileHistorySignal}/>;
   }
 
   const swipeDisabled = !!(createOpen || templatesOpen || activeChat || topup || paymentResult);

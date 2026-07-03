@@ -145,7 +145,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
   </HxSheet>;
 }
 
-function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onUserUpdate, focusHistorySignal }) {
+function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, theme, onToggleTheme, user, onUserUpdate, focusHistorySignal }) {
   const { Ic, Star, TopNav } = window.MiraCore;
   theme = theme || ((window.HubicxTheme && window.HubicxTheme.theme) || 'light');
   onToggleTheme = onToggleTheme || (window.HubicxTheme && window.HubicxTheme.toggle) || function() {};
@@ -349,7 +349,9 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
           <button className="btn-secondary" style={{ flex:1 }} onClick={function() {
             if (window.HubicxApi) window.HubicxApi.sendToChat(viewTask.id).catch(function() {});
           }}>📤 В Telegram</button>
-          <button className="btn-primary" style={{ flex:1 }} onClick={() => setViewTask(null)}>Назад</button>
+          <button className="btn-primary" style={{ flex:1 }} onClick={function() {
+            if (onRepeatGeneration) onRepeatGeneration(viewTask);
+          }}>Повторить</button>
         </div>
       </div>
     </div>;

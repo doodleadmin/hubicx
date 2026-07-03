@@ -1,5 +1,5 @@
 (function() {
-  window.__APP_BUILD__ = '20260703-090231-gen-price-trace1';
+  window.__APP_BUILD__ = '20260703-092049-gen-price-trace1';
   window.DESKTOP_MODE = true;
 
   var host = String((window.location && window.location.hostname) || '').toLowerCase();

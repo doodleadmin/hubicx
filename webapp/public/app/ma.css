@@ -887,6 +887,7 @@ html.theme-dark .profile-history-anchor.pulse {
   max-height: min(76dvh, 640px); overflow-y: auto; scrollbar-width: none;
   animation: sheetUp .34s cubic-bezier(.2,.86,.2,1) both;
   overscroll-behavior: contain;
+  box-sizing: border-box;
 }
 .sheet-card::-webkit-scrollbar { display:none; }
 .sheet-x {
@@ -1263,7 +1264,12 @@ html.theme-dark .account-link-code-btn {
 .agent-choice .a-name { font-size: 13px; font-weight: 900; line-height: 1.08; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
 .agent-choice .a-desc { font-size: 10.5px; color: var(--muted); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.chat-settings-card { overflow-y: auto; overscroll-behavior: contain; }
+.chat-settings-card {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
 .chat-settings-head { display: flex; align-items: flex-start; gap: 12px; padding: 4px 0 2px; }
 .chat-settings-mark {
   width: 42px; height: 42px; border-radius: 14px; flex: 0 0 auto;
@@ -1274,14 +1280,14 @@ html.theme-dark .account-link-code-btn {
 .chat-settings-copy { flex: 1; min-width: 0; }
 .chat-settings-sub { color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.35; margin-top: 4px; }
 .chat-settings-close { display: none; }
-.chat-settings-body { display: grid; gap: 16px; margin-top: 18px; }
-.chat-settings-group { min-width: 0; }
+.chat-settings-body { display: grid; gap: 18px; margin-top: 18px; min-width: 0; overflow-x: hidden; }
+.chat-settings-group { min-width: 0; max-width: 100%; background: transparent; overflow: hidden; }
 .chat-settings-section { font-weight: 900; font-size: 15px; letter-spacing: -.01em; color: var(--ink); }
-.chat-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.chat-settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; min-width: 0; }
 .chat-setting-choice {
   min-height: 52px; border: 1px solid var(--line); border-radius: 16px; background: var(--nav-bg);
   padding: 11px 12px; display: flex; align-items: center; justify-content: flex-start; text-align: left;
-  cursor: pointer; color: var(--ink); box-shadow: none; font-family: inherit;
+  cursor: pointer; color: var(--ink); box-shadow: none; font-family: inherit; min-width: 0;
 }
 .chat-setting-choice span { display: block; font-size: 13.5px; font-weight: 900; line-height: 1.18; white-space: normal; overflow: visible; text-overflow: clip; word-break: normal; }
 .chat-setting-choice.on { background: var(--card); border-color: var(--ink); box-shadow: var(--shadow-sm); }
