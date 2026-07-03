@@ -1,4 +1,6 @@
 import logging
+import json
+from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
@@ -9,7 +11,18 @@ from bot.i18n import t
 
 logger = logging.getLogger(__name__)
 
-WEBAPP_BUILD_VERSION = "20260630-duration-live4"
+def _webapp_build_version() -> str:
+    build_file = Path(__file__).resolve().parents[2] / "webapp" / "public" / "app" / "build-id.json"
+    try:
+        value = json.loads(build_file.read_text(encoding="utf-8")).get("buildId")
+        if value:
+            return str(value)
+    except (OSError, ValueError, TypeError):
+        logger.warning("Could not read WebApp build id from %s", build_file)
+    return "current"
+
+
+WEBAPP_BUILD_VERSION = _webapp_build_version()
 
 
 def versioned_webapp_url(url: str) -> str:
