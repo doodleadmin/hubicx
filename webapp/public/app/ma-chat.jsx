@@ -229,27 +229,24 @@ function ChatScreen({ chat, onBack, onSend, onSetAgent }) {
 }
 
 function AgentSheet({ current, onSelect, onClose }) {
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet agent-sheet" onClick={function(e) { e.stopPropagation(); }}>
-      <div className="sheet-card chat-settings-card">
-        <div className="sheet-grab"></div>
-        <div className="sheet-title">Выберите агента</div>
-        <div className="muted" style={{ fontSize:13, marginTop:4 }}>Агент меняет стиль следующих сообщений</div>
-        <div className="picker-grid" style={{ marginTop:10 }}>
-          {MOBILE_AGENTS.map(function(a) {
-            return <button key={a.code} className={'agent-choice' + (current === a.code ? ' on' : '')} onClick={() => onSelect(a)}>
-              <span className="a-emoji" style={{ background:a.color }}>{a.icon}</span>
-              <span className="a-name">{a.name}</span>
-              <span className="a-desc">{a.desc}</span>
-            </button>;
-          })}
-        </div>
-      </div>
+  const { HxSheet } = window.MiraCore;
+  return <HxSheet onClose={onClose} sheetClassName="agent-sheet" cardClassName="chat-settings-card">
+    <div className="sheet-title">Выберите агента</div>
+    <div className="muted" style={{ fontSize:13, marginTop:4 }}>Агент меняет стиль следующих сообщений</div>
+    <div className="picker-grid" style={{ marginTop:10 }}>
+      {MOBILE_AGENTS.map(function(a) {
+        return <button key={a.code} className={'agent-choice' + (current === a.code ? ' on' : '')} onClick={() => onSelect(a)}>
+          <span className="a-emoji" style={{ background:a.color }}>{a.icon}</span>
+          <span className="a-name">{a.name}</span>
+          <span className="a-desc">{a.desc}</span>
+        </button>;
+      })}
     </div>
-  </div>;
+  </HxSheet>;
 }
 
 function ChatSettingsSheet({ onClose }) {
+  const { HxSheet } = window.MiraCore;
   const [p, setP] = useState(function() {
     try { return Object.assign({}, CHAT_PROF_DEFAULTS, JSON.parse(localStorage.getItem(CHAT_PROF_KEY) || '{}')); }
     catch(e) { return Object.assign({}, CHAT_PROF_DEFAULTS); }
@@ -291,10 +288,7 @@ function ChatSettingsSheet({ onClose }) {
     });
   }
 
-  return <div className="sheet-ov chat-settings-ov" onClick={onClose}>
-    <div className="sheet agent-sheet chat-settings-sheet" onClick={function(e) { e.stopPropagation(); }}>
-      <div className="sheet-card chat-settings-card">
-        <div className="sheet-grab"></div>
+  return <HxSheet onClose={onClose} ovClassName="chat-settings-ov" sheetClassName="agent-sheet chat-settings-sheet" cardClassName="chat-settings-card">
         <div className="chat-settings-head">
           <div className="chat-settings-mark">AI</div>
           <div className="chat-settings-copy">
@@ -349,9 +343,7 @@ function ChatSettingsSheet({ onClose }) {
           <div className={'chat-settings-saved' + (saved ? ' on' : '')}>{saved || 'Сохраняется автоматически'}</div>
           <button className="sheet-cta chat-settings-done" onClick={onClose}>Готово</button>
         </div>
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 
 window.ChatSettingsSheet = ChatSettingsSheet;

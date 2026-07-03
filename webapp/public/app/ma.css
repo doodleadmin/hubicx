@@ -1432,7 +1432,7 @@ html.theme-dark .switch.on i { background: #111318; }
 /* ── chat overlay ── */
 .chat-wrap {
   position: fixed; top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 100%; max-width: 100%; height: 100dvh; z-index: 45;
+  width: 100%; max-width: 100%; height: 100dvh; z-index: 75;
   display: flex; flex-direction: column; background: var(--bg);
 }
 .chat-top {

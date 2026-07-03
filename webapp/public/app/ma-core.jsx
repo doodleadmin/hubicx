@@ -52,7 +52,7 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9, on = false, duo = "sage" 
     style={{ transition:'fill .18s ease, stroke .18s ease' }}>{p[n]}</svg>;
 }
 
-function HxSheet({ onClose, children, maxHeight, sheetClassName = '', cardClassName = '' }) {
+function HxSheet({ onClose, children, maxHeight, sheetClassName = '', cardClassName = '', ovClassName = '' }) {
   var cardRef = useRef(null);
   var ovRef = useRef(null);
   var drag = useRef({ on:false, startY:0, dy:0 });
@@ -92,7 +92,7 @@ function HxSheet({ onClose, children, maxHeight, sheetClassName = '', cardClassN
     var ov = ovRef.current; if (ov) ov.style.background = '';
   };
 
-  return <div ref={ovRef} className={'sheet-ov' + (closing ? ' hx-closing' : '')} onClick={close}>
+  return <div ref={ovRef} className={('sheet-ov ' + ovClassName + (closing ? ' hx-closing' : '')).trim()} onClick={close}>
     <div className={'sheet ' + sheetClassName} onClick={function(e) { e.stopPropagation(); }}>
       <div ref={cardRef} className={'sheet-card ' + cardClassName + (closing ? ' hx-out' : '')}
         style={maxHeight ? { maxHeight:maxHeight } : null}>

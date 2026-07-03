@@ -1016,7 +1016,7 @@ function PaymentResultModal({ result, onClose }) {
 }
 
 function Topup({ tokens, requiredCredits, onClose }) {
-  const { Star, Ic } = window.MiraCore;
+  const { Star, Ic, HxSheet } = window.MiraCore;
   const approxPhotos = value => Math.max(1, Math.floor(Number(value || 0) / 50));
   const fallbackPacks = [
     { code:'topup_300',   title:'300 токенов',    tokens:300,   price_rub:249,  bonus_tokens:0, total_tokens:300,   effective_price_per_token:0.83 },
@@ -1069,14 +1069,12 @@ function Topup({ tokens, requiredCredits, onClose }) {
   }, []);
 
   if (packs === null) {
-    return <div className="sheet-ov" onClick={onClose}>
-      <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
-        <div className="sheet-card topup-card" style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'36px 20px' }}>
-          <div className="gen-spinner"></div>
-          <div className="muted" style={{ fontSize:14 }}>Загружаем пакеты…</div>
-        </div>
+    return <HxSheet onClose={onClose} sheetClassName="topup-sheet" cardClassName="topup-card topup-card-loading">
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:14, padding:'18px 20px 28px' }}>
+        <div className="gen-spinner"></div>
+        <div className="muted" style={{ fontSize:14 }}>Загружаем пакеты…</div>
       </div>
-    </div>;
+    </HxSheet>;
   }
 
   const templateSubs = (subs || []).filter(p => String(p.code || '').indexOf('templates_') === 0);
@@ -1138,10 +1136,7 @@ function Topup({ tokens, requiredCredits, onClose }) {
     });
   };
 
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet topup-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card topup-card">
-        <div className="sheet-grab"></div>
+  return <HxSheet onClose={onClose} sheetClassName="topup-sheet" cardClassName="topup-card">
         <button className="topup-close" onClick={onClose} aria-label="Закрыть"><Ic n="close" s={17}/></button>
         <div className="topup-head">
           <div>
@@ -1257,9 +1252,7 @@ function Topup({ tokens, requiredCredits, onClose }) {
             {selectedSub ? 'Подписка продлевается повторной покупкой.' : 'Разовые токены не сгорают.'}
           </div>
         </div>
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);

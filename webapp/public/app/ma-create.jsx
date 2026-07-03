@@ -1252,27 +1252,22 @@ window.DurationInlineControl = DurationInlineControl;
 
 /* ---- reusable option picker sheet ---- */
 function PickerSheet({ title, options, current, onSelect, onClose }) {
-  const { Ic } = window.MiraCore;
+  const { Ic, HxSheet } = window.MiraCore;
   const val = current ? current.id : null;
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet" onClick={function(e) { e.stopPropagation(); }}>
-      <div className="sheet-card picker-card">
-        <div className="sheet-grab"></div>
-        <div className="sheet-title">{title}</div>
-        <div className="picker-grid">
-        {options.map(function(o) {
-          return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
-            {o.preview && <span className="aspect-mini" style={{ aspectRatio:o.preview }}></span>}
-            <div className="pick-text">
-              <div className="o-t">{o.t}</div>
-              {o.s && <div className="o-s">{o.s}{o.price && <span className="o-price">{o.price}</span>}</div>}
-            </div>
-            {String(val) === String(o.id) && <span className="o-check"><Ic n="check" s={18} sw={2.4}/></span>}
-          </div>;
-        })}
+  return <HxSheet onClose={onClose} cardClassName="picker-card">
+    <div className="sheet-title">{title}</div>
+    <div className="picker-grid">
+      {options.map(function(o) {
+        return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
+          {o.preview && <span className="aspect-mini" style={{ aspectRatio:o.preview }}></span>}
+          <div className="pick-text">
+            <div className="o-t">{o.t}</div>
+            {o.s && <div className="o-s">{o.s}{o.price && <span className="o-price">{o.price}</span>}</div>}
+          </div>
+          {String(val) === String(o.id) && <span className="o-check"><Ic n="check" s={18} sw={2.4}/></span>}
         </div>
-      </div>
+      })}
     </div>
-  </div>;
+  </HxSheet>;
 }
 window.PickerSheet = PickerSheet;

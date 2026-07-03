@@ -22,7 +22,6 @@ const OPTS = {
   timezone:['Москва (UTC+3)','Калининград (UTC+2)','Самара (UTC+4)','Дубай (UTC+4)','Лондон (UTC+0)','Нью-Йорк (UTC−5)','Токио (UTC+9)'],
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
-const GEN_STAGES = ['В очереди', 'Композиция', 'Детализация', 'Свет и цвет', 'Финал'];
 
 const LANG_MAP = {'ru':'Русский','en':'English','es':'Español','pt':'Português'};
 const LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Português':'pt'};
@@ -69,43 +68,6 @@ function GenWaitThumb() {
   return <div className="gen-skel" style={{ position:'absolute', inset:0 }}>
     <div className="gen-grain"></div>
     <div className="gen-ring"></div>
-  </div>;
-}
-
-function GenWaitCard({ item }) {
-  var started = item && item.created_at ? new Date(item.created_at).getTime() : Date.now();
-  var expected = (item && item.expected_seconds) || 30;
-  var [now, setNow] = useState(Date.now());
-  useEffect(function() {
-    var timer = setInterval(function() { setNow(Date.now()); }, 1000);
-    return function() { clearInterval(timer); };
-  }, []);
-  var elapsed = Math.max(0, (now - started) / 1000);
-  var pct = Math.min(96, Math.round(elapsed / expected * 100));
-  var stageIdx = Math.min(GEN_STAGES.length - 1, Math.floor(pct / 20));
-  var eta = Math.max(1, Math.ceil(expected - elapsed));
-
-  return <div className="card" style={{ padding:'14px 16px 16px', marginBottom:12 }}>
-    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-      <div style={{ fontWeight:850, fontSize:15, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-        {(item && (item.title || item.prompt)) || 'Генерация'}
-      </div>
-      <span className="hx-chip hx-chip--s hx-chip--lilac">★ {(item && item.cost_credits) || ''} списано</span>
-    </div>
-    <div className="gen-canvas" style={{ minHeight:180 }}>
-      <div className="gen-skel"></div>
-      <div className="gen-grain"></div>
-      <div className="gen-ring"></div>
-    </div>
-    <div className="gen-stages">
-      {GEN_STAGES.map(function(_, i) {
-        return <div key={i} className={'gen-chip' + (i < stageIdx ? ' done' : i === stageIdx ? ' act' : '')}><i></i></div>;
-      })}
-    </div>
-    <div className="gen-stagerow">
-      <div className="gen-stage-l"><span className="gen-dot"></span>{GEN_STAGES[stageIdx]}</div>
-      <div className="gen-eta">{elapsed < expected ? '~' + eta + ' сек' : 'ещё немного...'}</div>
-    </div>
   </div>;
 }
 
@@ -467,11 +429,6 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
         <div style={{ marginTop:18, marginBottom:6 }}>
           <span className="label-sec">История генераций</span>
         </div>
-      {histLoaded && history.filter(function(item) {
-        return item.status !== 'completed' && item.status !== 'refunded';
-      }).slice(0, 1).map(function(item) {
-        return <GenWaitCard key={'wait-' + item.id} item={item}/>;
-      })}
       <div className="hist-rail" data-onb="mob-history">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
