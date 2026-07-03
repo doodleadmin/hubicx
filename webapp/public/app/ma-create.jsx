@@ -210,7 +210,11 @@ function templateQualityValue(t) { return t && (t.qualityValue || t.quality || t
 function templateDurationValue(t) { return t && (t.durationValue || t.duration); }
 function templateAspectKey(t) { return t && (t.code || t.t) ? 'tplAspect:' + (t.code || t.t) : null; }
 function replayParams(task) { return (task && task.params && typeof task.params === 'object') ? task.params : {}; }
-function replayPrompt(task) { return task && task.prompt ? String(task.prompt) : ''; }
+function replayPrompt(task) {
+  var p = replayParams(task);
+  if (p._ui_generation_kind === 'template' || p._ui_template_code) return '';
+  return task && task.prompt ? String(task.prompt) : '';
+}
 function replayModelCode(task) { return task && task.model_code ? String(task.model_code) : null; }
 function replayQualityValue(task) {
   var p = replayParams(task);
@@ -235,6 +239,7 @@ function replayInputFiles(task) {
     if (typeof v === 'string' && /^https?:\/\//i.test(v) && urls.indexOf(v) === -1) urls.push(v);
   };
   add(task && task.input_file_url);
+  add(p._ui_input_urls);
   add(p.image_url); add(p.image_urls); add(p.video_url); add(p.video_urls); add(p.media_urls);
   return urls.map(function(url) {
     return { url:url, preview:url, type:/\.(mp4|webm|mov)(\?|$)/i.test(url) ? 'video' : 'image', name:'repeat' };
@@ -825,6 +830,11 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask
       model_code: currentModelFull.code,
       prompt: finalPrompt,
       input_file_url: mediaUrls.length ? mediaUrls[0] : null,
+      params: {
+        _ui_generation_kind: tab === 'tpl' && selectedTpl ? 'template' : 'prompt',
+        _ui_template_code: tab === 'tpl' && selectedTpl ? (selectedTpl.code || selectedTpl.t) : null,
+        _ui_input_urls: mediaUrls,
+      },
       inputs: inputs,
     };
 

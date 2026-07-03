@@ -97,6 +97,11 @@ async def create_generation_task(
     params: dict[str, Any] | None,
     inputs: dict[str, Any] | None = None,
 ) -> GenerationTask:
+    ui_params = {
+        key: value
+        for key, value in (params or {}).items()
+        if isinstance(key, str) and key.startswith("_ui_")
+    }
     model = None
     template = None
     if model_code:
@@ -124,7 +129,7 @@ async def create_generation_task(
                 sorted(provider_input.keys()),
                 _provider_prompt_preview(provider_input),
             )
-            task_params = provider_input
+            task_params = {**provider_input, **ui_params}
         else:
             validated_inputs = inputs or {}
             provider_input = inputs or {}

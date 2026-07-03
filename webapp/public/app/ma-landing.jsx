@@ -1064,7 +1064,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           {[
             ['Продукт', [['/#features','Возможности'], ['/#models','Модели'], ['/#pricing','Тарифы'], ['/#templates','Примеры']]],
             ['Компания', [['#','О нас'], ['/blog/','Блог'], ['/pages/contacts','Контакты']]],
-            ['Поддержка', [['/pages/help','Помощь'], ['/pages/docs','Документация'], ['/pages/terms','Оферта'], ['/pages/privacy','Конфиденциальность'], ['/pages/personal-data-consent','Согласие на ПД']]],
+            ['Поддержка', [['https://t.me/hubicx_supp','Написать в поддержку'], ['/pages/docs','Документация'], ['/pages/terms','Оферта'], ['/pages/privacy','Конфиденциальность'], ['/pages/personal-data-consent','Согласие на ПД']]],
           ].map(col => (
             <div className="lp-foot-col" key={col[0]}>
               <h4>{col[0]}</h4>

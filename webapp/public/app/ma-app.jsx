@@ -642,7 +642,7 @@ function App() {
     var taskMode = task.task_type === 'video' ? 'video' : 'photo';
     var params = task.params && typeof task.params === 'object' ? task.params : {};
     var tpl = null;
-    var tplCode = task.template_code || params.template_code || null;
+    var tplCode = task.template_code || params._ui_template_code || params.template_code || null;
     if (window.MiraCore && window.MiraCore.CREATE_TPL) {
       tpl = window.MiraCore.CREATE_TPL.find(function(t) {
         return (tplCode && (t.code === tplCode || t.t === tplCode))
