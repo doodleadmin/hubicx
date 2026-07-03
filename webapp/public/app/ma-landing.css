@@ -218,6 +218,9 @@ img{display:block;max-width:100%}
 .reveal.in{opacity:1;transform:none;filter:none}
 
 /* ---------- features ---------- */
+.lp-sec#features{max-width:none;padding-left:max(28px,6vw);padding-right:max(28px,6vw)}
+.lp-sec#features .lp-sec-head{width:100%;max-width:var(--maxw);margin-left:auto;margin-right:auto}
+.lp-sec#features .lp-feat-grid{width:100%;max-width:1500px;margin:0 auto}
 .lp-feat-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:16px}
 .lp-feat-lg{grid-column:span 2;grid-row:span 2}
 .lp-feat-w{grid-column:span 2}
@@ -364,6 +367,7 @@ img{display:block;max-width:100%}
 .lp-how-visual{display:flex;flex-direction:column;align-items:center;gap:16px}
 .lp-how-frame{position:relative;width:100%;max-width:380px;aspect-ratio:4/5;border-radius:26px;overflow:hidden;background:var(--soft);border:1px solid var(--line);box-shadow:var(--shadow-lg)}
 .lp-how-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lp-how-frame>.lp-ba{position:absolute;inset:0;width:100%;max-width:none;height:100%;margin:0;aspect-ratio:auto;border:0;border-radius:inherit;box-shadow:none}
 .lp-how-badge{position:absolute;top:16px;right:16px;z-index:4;height:30px;padding:0 13px;border-radius:10px;display:flex;align-items:center;gap:6px;
   background:var(--accent);color:var(--accent-ink);font-size:12.5px;font-weight:800;box-shadow:0 6px 16px var(--acc-glow)}
 

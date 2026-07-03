@@ -52,17 +52,15 @@ const TPL_TABS = ['Все', 'Фото', 'Видео', 'Тренд'];
 
 const MODELS = [
   { n: 9, name: 'Nano Banana Pro', tag: 'Фото', d: 'Максимальное качество и точность' },
+  { n: 8, name: 'GPT Image 2', tag: 'Фото', d: 'Точные изображения и надписи' },
   { n: 7, name: 'Seedream', tag: 'Фото', d: 'Фотореализм и портреты' },
   { n: 13, name: 'Flux', tag: 'Фото', d: 'Арт и стилизация' },
   { n: 5, name: 'Z-Image', tag: 'Фото', d: 'Turbo-генерация за секунды' },
-  { n: 3, name: 'Midjourney v7', tag: 'Фото', d: 'Эстетика и иллюстрации' },
-  { n: 10, name: 'Recraft v3', tag: 'Фото', d: 'Логотипы, вектор, дизайн' },
   { n: 2, name: 'Seedance 2.0', tag: 'Видео', d: 'Кинематографичные ролики' },
-  { n: 11, name: 'Kling 2.1', tag: 'Видео', d: 'Оживление фото в движение' },
-  { n: 1, name: 'Veo 3', tag: 'Видео', d: 'Видео со звуком из текста' },
-  { n: 6, name: 'Runway Gen-4', tag: 'Видео', d: 'Контроль камеры и сцены' },
-  { n: 16, name: 'Hailuo 02', tag: 'Видео', d: 'Плавная анимация и движение' },
-  { n: 12, name: 'Wan 2.5', tag: 'Видео', d: 'Длинные ролики в HD' },
+  { n: 11, name: 'Kling 3.0', tag: 'Видео', d: 'Оживление фото и перенос движения' },
+  { n: 1, name: 'Veo 3.1', tag: 'Видео', d: 'Кинематографичное видео по тексту и фото' },
+  { n: 6, name: 'Grok Video', tag: 'Видео', d: 'Видео по описанию или фотографии' },
+  { n: 12, name: 'Happy Horse', tag: 'Видео', d: 'Оживление фото со звуком и речью' },
 ];
 
 const SUBS = [
@@ -481,6 +479,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
   const [subsExpanded, setSubsExpanded] = uS(false);
   const [faqOpen, setFaqOpen] = uS(-1);
   const [howStep, setHowStep] = uS(0);
+  const howRef = uR(null);
 
   /* ---- Hero prompt state ---- */
   const [heroVal, setHeroVal] = uS('');
@@ -515,6 +514,24 @@ function LandingPage({ onAuthed, initialAuth = null }) {
     };
     window.addEventListener('scroll', h, { passive: true }); h();
     return () => window.removeEventListener('scroll', h);
+  }, []);
+
+  uE(() => {
+    const syncHowStep = () => {
+      const section = howRef.current;
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const viewportAnchor = window.innerHeight * 0.72;
+      const progress = Math.max(0, Math.min(0.999, (viewportAnchor - rect.top) / Math.max(rect.height * 0.78, 1)));
+      setHowStep(Math.min(HOW_DATA.length - 1, Math.floor(progress * HOW_DATA.length)));
+    };
+    window.addEventListener('scroll', syncHowStep, { passive: true });
+    window.addEventListener('resize', syncHowStep);
+    syncHowStep();
+    return () => {
+      window.removeEventListener('scroll', syncHowStep);
+      window.removeEventListener('resize', syncHowStep);
+    };
   }, []);
 
   /* ---- Hero placeholder typing animation ---- */
@@ -819,7 +836,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
         </section>
 
         {/* ========== 5. HOW IT WORKS (compact) ========== */}
-        <section className="lp-how" id="how">
+        <section className="lp-how" id="how" ref={howRef}>
           <div className="lp-how-grid">
             <div className="lp-how-text">
               <span className="lp-kicker reveal">Как это работает</span>
