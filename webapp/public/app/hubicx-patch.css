@@ -1,0 +1,186 @@
+/* ============================================================
+   HUBICX UI PATCH — выбранные варианты
+   Добавить в конец ma.css (или подключить после него).
+   Секции 3 и 4 ЗАМЕНЯЮТ существующие правила — старые удалить,
+   номера строк указаны по текущему ma.css.
+   ============================================================ */
+
+/* ────────────────────────────────────────────────────────────
+   1. МИКРО-ОТКЛИК КНОПОК (новое, просто добавить)
+   Один токен нажатия: scale(.96–.98) + приглушение тени, 120мс.
+   ──────────────────────────────────────────────────────────── */
+.bb, .sheet-cta, .mob-onb-primary, .mob-onb-ghost,
+.topup-plan, .row-link, .bonus-act-v2 button, .bonus-act-v2 a {
+  transition: transform .12s cubic-bezier(.2,.85,.25,1), box-shadow .12s ease;
+}
+.bb:active, .mob-onb-ghost:active,
+.bonus-act-v2 button:active, .bonus-act-v2 a:active {
+  transform: scale(.96);
+}
+.sheet-cta:active, .mob-onb-primary:active, .topup-plan:active, .row-link:active {
+  transform: scale(.98);
+  box-shadow: 0 3px 10px rgba(210,210,80,.25);
+}
+.hist-card:active, .opt:active { transform: scale(.98); }
+.hist-card, .opt { transition: transform .12s cubic-bezier(.2,.85,.25,1), background .12s; }
+.tn-item { transition: transform .12s cubic-bezier(.2,.85,.25,1), background .18s, color .18s; }
+.tn-item:active { transform: scale(.95); }
+
+/* Спиннер в CTA (морф «Создать → Создаём…») */
+.cta-spin {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2.5px solid rgba(28,28,26,.25); border-top-color: #1c1c1a;
+  animation: ctaSpin .75s linear infinite; display: inline-block;
+}
+@keyframes ctaSpin { to { transform: rotate(360deg); } }
+.cta-done-pop { animation: ctaCheckPop .3s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes ctaCheckPop {
+  0% { transform: scale(.4); opacity: 0; }
+  70% { transform: scale(1.12); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   2. ЕДИНАЯ ШКАЛА ЧИПОВ (вариант A — тонированные роли)
+   Новое. Мигрировать плашки по мере касания кода:
+   tb-tok → hx-chip hx-chip--l hx-chip--lilac
+   «Оплачено» → hx-chip hx-chip--l hx-chip--sage
+   «Выгодно» → hx-chip hx-chip--s hx-chip--accent
+   счётчики/аспекты → hx-chip--neutral
+   ──────────────────────────────────────────────────────────── */
+.hx-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px; font-weight: 900; white-space: nowrap;
+  border: 1px solid transparent; letter-spacing: -.01em;
+}
+.hx-chip--l { height: 34px; padding: 0 13px; font-size: 13px; }
+.hx-chip--s { height: 24px; padding: 0 9px; font-size: 11px; gap: 4px; }
+/* роли */
+.hx-chip--sage    { background: rgba(127,170,157,.16); color: #4d7d70; border-color: rgba(127,170,157,.36); }
+.hx-chip--lilac   { background: rgba(182,181,230,.22); color: #54529e; border-color: rgba(182,181,230,.45); }
+.hx-chip--accent  { background: #fcfd76; color: #454629; border-color: rgba(0,0,0,.06); }
+.hx-chip--neutral { background: #f5f4ee; color: #6b6b64; border-color: var(--line, #e9e8e3); }
+.hx-chip--ink     { background: #1c1c1a; color: #f3f2ee; border-color: #1c1c1a; }
+/* тёмная тема — при наличии html.dark скорректировать фоны на rgba той же роли */
+
+/* ────────────────────────────────────────────────────────────
+   3. ПЕРЕХОДЫ ВКЛАДОК (вариант B — zoom-fade 200мс)
+   ЗАМЕНЯЕТ ma.css строки 276–279. JSX не трогаем —
+   имена классов и keyframes сохранены.
+   ──────────────────────────────────────────────────────────── */
+.mob-swipe-stage.swipe-next { animation: tabInNext .2s cubic-bezier(.2,.85,.25,1) both; }
+.mob-swipe-stage.swipe-prev { animation: tabInPrev .2s cubic-bezier(.2,.85,.25,1) both; }
+@keyframes tabInNext { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes tabInPrev { from { opacity: 0; transform: scale(.985) translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ────────────────────────────────────────────────────────────
+   4. ХОЛСТ ГЕНЕРАЦИИ (вариант A — «дыхание» sage/lilac)
+   ЗАМЕНЯЕТ блок «staged-canvas» в ma.css строки 1600–1636
+   (.gen-canvas … @keyframes genPing). Живёт только в
+   Профиль → История генераций (см. GenWait.jsx).
+   ──────────────────────────────────────────────────────────── */
+.gen-canvas, .dk-stage {
+  position: relative; width: 100%; border-radius: 18px; overflow: hidden; margin-top: 8px;
+  background: #ecebe5; border: 1px solid var(--line);
+}
+.gen-canvas { min-height: 220px; }
+.gen-result-canvas { aspect-ratio: 1/1; min-height: 0; max-height: 420px; }
+
+/* дышащие пятна вместо голубого свипа */
+.gen-skel { position: absolute; inset: 0; overflow: hidden; }
+.gen-skel::before {
+  content: ""; position: absolute; left: 8%; top: 12%; width: 52%; height: 62%;
+  border-radius: 50%; background: rgba(127,170,157,.4); filter: blur(28px);
+  animation: genBlobA 4.2s ease-in-out infinite;
+}
+.gen-skel::after {
+  content: ""; position: absolute; right: 4%; bottom: 6%; width: 56%; height: 60%;
+  border-radius: 50%; background: rgba(182,181,230,.46); filter: blur(30px);
+  animation: genBlobB 5s ease-in-out infinite;
+  transform: none; /* сброс старого genSweep */
+}
+@keyframes genBlobA {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(26px,-14px) scale(1.18); }
+}
+@keyframes genBlobB {
+  0%, 100% { transform: translate(0,0) scale(1.1); }
+  50% { transform: translate(-22px,16px) scale(.94); }
+}
+
+/* зерно — тёмное на светлом холсте */
+.gen-grain {
+  position: absolute; inset: 0; opacity: .6; pointer-events: none; mix-blend-mode: normal;
+  background-image: radial-gradient(rgba(28,28,26,.05) 1px, transparent 1px); background-size: 3px 3px;
+}
+
+/* кольцо по центру */
+.gen-ring {
+  position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+}
+.gen-ring::after {
+  content: ""; width: 46px; height: 46px; border-radius: 50%;
+  border: 2.5px solid rgba(28,28,26,.14); border-top-color: #1c1c1a;
+  animation: ctaSpin 1s linear infinite;
+}
+
+/* появление результата — оставить как было (blur→чёткость) */
+.gen-media {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  opacity: 0; filter: blur(16px) saturate(.6); transform: scale(1.06);
+  transition: opacity .9s ease, filter 1.1s ease, transform 1.1s ease; background: rgba(0,0,0,.04);
+}
+.gen-media.in { opacity: 1; filter: blur(0) saturate(1); transform: scale(1); }
+
+/* стадии — градиент sage→lilac вместо голубого */
+.gen-stages { display: flex; gap: 5px; margin-top: 12px; }
+.gen-chip { flex: 1; height: 5px; border-radius: 3px; background: var(--line, #e9e8e3); overflow: hidden; }
+.gen-chip i {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, #7faa9d, #b6b5e6); transition: width .4s ease;
+}
+.gen-chip.done i { width: 100%; }
+.gen-chip.act i { width: 60%; animation: genChipPulse 1.1s ease-in-out infinite; }
+@keyframes genChipPulse { 0%,100% { opacity: .7; } 50% { opacity: 1; } }
+
+.gen-stagerow { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 12px; }
+.gen-stage-l { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+.gen-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #7faa9d;
+  box-shadow: 0 0 0 0 rgba(127,170,157,.5); animation: genPing 1.4s ease-out infinite;
+}
+@keyframes genPing {
+  0% { box-shadow: 0 0 0 0 rgba(127,170,157,.5); }
+  100% { box-shadow: 0 0 0 9px rgba(127,170,157,0); }
+}
+.gen-eta { font-size: 13px; color: var(--muted, #8d8d87); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* мини-версия для карточки в hist-rail (пока задача pending) */
+.hist-thumb { position: relative; }
+.hist-thumb .gen-skel { border-radius: 0; }
+.hist-thumb .gen-ring::after { width: 28px; height: 28px; border-width: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gen-skel::before, .gen-skel::after, .gen-chip.act i, .gen-dot, .gen-ring::after { animation: none; }
+  .gen-media { transition: none; opacity: 1; filter: none; transform: none; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   5. BOTTOM SHEET — drag-to-dismiss (работает с Sheet.jsx)
+   Дополняет существующие .sheet-ov/.sheet-card.
+   ──────────────────────────────────────────────────────────── */
+.sheet-ov { animation: sheetFade .26s ease both; }
+.sheet-ov.hx-closing { animation: sheetFadeOut .3s ease both; }
+@keyframes sheetFadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+/* вход снизу целиком вместо 28px — заменяет sheetUp (ma.css :1246) */
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.sheet-card { animation: sheetUp .38s cubic-bezier(.16,1,.3,1) both; }
+
+.sheet-card.hx-dragging { animation: none; transition: none; }
+.sheet-card.hx-settling { animation: none; transition: transform .3s cubic-bezier(.16,1,.3,1); }
+.sheet-card.hx-out { animation: none; transition: transform .3s cubic-bezier(.4,0,1,1); transform: translateY(104%) !important; }
+
+.sheet-grab { width: 38px; height: 4px; border-radius: 2px; background: #d8d7cf; margin: 8px auto 14px; }
+/* зона захвата — сам грабер + шапка */
+.sheet-grab-zone { touch-action: none; cursor: grab; margin: -8px -18px 0; padding: 8px 18px 0; }

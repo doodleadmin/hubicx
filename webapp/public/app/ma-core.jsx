@@ -2,13 +2,18 @@
 const { useState, useEffect, useRef } = React;
 
 /* ---- inline icons (stroke) ---- */
-function Ic({ n, s = 22, c = "currentColor", sw = 1.9 }) {
+var IC_DUO = {
+  sage: 'rgba(127,170,157,.28)',
+  lilac: 'rgba(182,181,230,.34)',
+};
+
+function Ic({ n, s = 22, c = "currentColor", sw = 1.9, on = false, duo = "sage" }) {
   const p = {
     bolt: <path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>,
     image: <g><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5L5 21"/></g>,
     video: <g><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M16 10l5-3v10l-5-3z"/></g>,
     chat: <path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12z"/>,
-    telegram: <path d="M21 4.8L18 19.2c-.2 1-.8 1.2-1.6.8l-4.5-3.3-2.2 2.1c-.2.2-.4.4-.9.4l.3-4.6 8.4-7.6c.4-.3-.1-.5-.6-.2L6.5 13.1 2.1 11.7c-1-.3-1-1 .2-1.4L19.6 3.7c.8-.3 1.5.2 1.3 1.1z"/>,
+    telegram: <path d="M21.5 4.5L18.4 18.9c-.2.9-.8 1.1-1.6.7l-4.7-3.5-2.3 2.2c-.25.25-.46.46-.94.46l.34-4.8 8.7-7.9c.38-.34-.08-.53-.59-.19L6.6 13.1 2 11.6c-1-.31-1.02-1 .21-1.48L20.1 3.4c.83-.31 1.56.19 1.4 1.1z"/>,
     arrowUp: <path d="M12 19V6M6 12l6-6 6 6"/>,
     chev: <path d="M9 6l6 6-6 6"/>,
     user: <g><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></g>,
@@ -28,7 +33,7 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9 }) {
     gear: <g><circle cx="12" cy="12" r="3.2"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6"/></g>,
     sliders: <g><path d="M4 7h11M19 7h1M4 17h6M14 17h6"/><circle cx="17" cy="7" r="2"/><circle cx="12" cy="17" r="2"/></g>,
     heart: <path d="M12 20s-7-4.5-7-9.5A3.5 3.5 0 0 1 12 7a3.5 3.5 0 0 1 7 3.5C19 15.5 12 20 12 20z"/>,
-    star: <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>,
+    star: <path d="M12 3l2.5 5.3 5.5.8-4 4 1 5.9-5-2.8-5 2.8 1-5.9-4-4 5.5-.8z"/>,
     grid: <g><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></g>,
     clock: <g><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></g>,
     search: <g><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></g>,
@@ -39,8 +44,67 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9 }) {
     lock: <g><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></g>,
     unlock: <g><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M16 10V7a4 4 0 0 0-7.5-2"/></g>,
   };
-  return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c}
-    strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">{p[n]}</svg>;
+  var w = on ? 1.8 : (s < 18 && sw === 1.9 ? 2.1 : sw);
+  return <svg width={s} height={s} viewBox="0 0 24 24"
+    fill={on ? (IC_DUO[duo] || duo) : "none"}
+    stroke={on ? "var(--ink, #1c1c1a)" : c}
+    strokeWidth={w} strokeLinecap="round" strokeLinejoin="round"
+    style={{ transition:'fill .18s ease, stroke .18s ease' }}>{p[n]}</svg>;
+}
+
+function HxSheet({ onClose, children, maxHeight, sheetClassName = '', cardClassName = '' }) {
+  var cardRef = useRef(null);
+  var ovRef = useRef(null);
+  var drag = useRef({ on:false, startY:0, dy:0 });
+  var [closing, setClosing] = useState(false);
+
+  var close = function() {
+    if (closing) return;
+    setClosing(true);
+    if (window.tgHaptic) window.tgHaptic('light');
+    setTimeout(onClose, 300);
+  };
+  var setY = function(y, cls) {
+    var el = cardRef.current; if (!el) return;
+    el.className = ('sheet-card ' + cardClassName + ' ' + cls).trim();
+    el.style.transform = y > 0 ? 'translateY(' + y + 'px)' : '';
+    var ov = ovRef.current;
+    if (ov) ov.style.background = 'rgba(28,28,22,' + Math.max(0, .36 * (1 - y / 260)).toFixed(3) + ')';
+  };
+  var onDown = function(e) {
+    var t = e.touches ? e.touches[0] : e;
+    drag.current = { on:true, startY:t.clientY, dy:0 };
+  };
+  var onMove = function(e) {
+    if (!drag.current.on) return;
+    var t = e.touches ? e.touches[0] : e;
+    var dy = Math.max(0, t.clientY - drag.current.startY);
+    drag.current.dy = dy;
+    setY(dy, 'hx-dragging');
+  };
+  var onUp = function() {
+    if (!drag.current.on) return;
+    drag.current.on = false;
+    var dy = drag.current.dy;
+    var h = cardRef.current ? cardRef.current.offsetHeight : 300;
+    if (dy > Math.min(120, h / 3)) { close(); return; }
+    setY(0, 'hx-settling');
+    var ov = ovRef.current; if (ov) ov.style.background = '';
+  };
+
+  return <div ref={ovRef} className={'sheet-ov' + (closing ? ' hx-closing' : '')} onClick={close}>
+    <div className={'sheet ' + sheetClassName} onClick={function(e) { e.stopPropagation(); }}>
+      <div ref={cardRef} className={'sheet-card ' + cardClassName + (closing ? ' hx-out' : '')}
+        style={maxHeight ? { maxHeight:maxHeight } : null}>
+        <div className="sheet-grab-zone"
+          onTouchStart={onDown} onTouchMove={onMove} onTouchEnd={onUp}
+          onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}>
+          <div className="sheet-grab"></div>
+        </div>
+        {children}
+      </div>
+    </div>
+  </div>;
 }
 
 /* ---- token star (filled) ---- */
@@ -646,4 +710,4 @@ const ASPECTS = [
   { id:'21:9', t:'21:9', s:'Кино', preview:'21 / 9' },
 ];
 
-window.MiraCore = { Ic, Star, TokenBadge, TopNav, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, isInsufficientBalanceError, templatePromptForOutput };
+window.MiraCore = { Ic, Star, TokenBadge, TopNav, HxSheet, TemplateMedia, TEMPLATES, CREATE_TPL, MODELS, ASPECTS, FALLBACK_MODELS, mergeModelCatalog, initialModelCatalog, persistModelCatalog, computeGenerationPrice, tplKey, MOB_FAV_KEY, defaultFavTemplateKeys, readFavTemplateKeys, writeFavTemplateKeys, writePriceTrace, isInsufficientBalanceError, templatePromptForOutput };

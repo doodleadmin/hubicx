@@ -22,6 +22,7 @@ const OPTS = {
   timezone:['Москва (UTC+3)','Калининград (UTC+2)','Самара (UTC+4)','Дубай (UTC+4)','Лондон (UTC+0)','Нью-Йорк (UTC−5)','Токио (UTC+9)'],
 };
 const EMOJIS = ['✨','🔥','💎','🌙','⭐','🚀','🎨','💜','🌸','⚡','🦋','🌊','🍀','☀️','🎯','🧠'];
+const GEN_STAGES = ['В очереди', 'Композиция', 'Детализация', 'Свет и цвет', 'Финал'];
 
 const LANG_MAP = {'ru':'Русский','en':'English','es':'Español','pt':'Português'};
 const LANG_MAP_REV = {'Русский':'ru','English':'en','Español':'es','Português':'pt'};
@@ -64,8 +65,52 @@ function uiToServer(p) {
   };
 }
 
+function GenWaitThumb() {
+  return <div className="gen-skel" style={{ position:'absolute', inset:0 }}>
+    <div className="gen-grain"></div>
+    <div className="gen-ring"></div>
+  </div>;
+}
+
+function GenWaitCard({ item }) {
+  var started = item && item.created_at ? new Date(item.created_at).getTime() : Date.now();
+  var expected = (item && item.expected_seconds) || 30;
+  var [now, setNow] = useState(Date.now());
+  useEffect(function() {
+    var timer = setInterval(function() { setNow(Date.now()); }, 1000);
+    return function() { clearInterval(timer); };
+  }, []);
+  var elapsed = Math.max(0, (now - started) / 1000);
+  var pct = Math.min(96, Math.round(elapsed / expected * 100));
+  var stageIdx = Math.min(GEN_STAGES.length - 1, Math.floor(pct / 20));
+  var eta = Math.max(1, Math.ceil(expected - elapsed));
+
+  return <div className="card" style={{ padding:'14px 16px 16px', marginBottom:12 }}>
+    <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+      <div style={{ fontWeight:850, fontSize:15, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+        {(item && (item.title || item.prompt)) || 'Генерация'}
+      </div>
+      <span className="hx-chip hx-chip--s hx-chip--lilac">★ {(item && item.cost_credits) || ''} списано</span>
+    </div>
+    <div className="gen-canvas" style={{ minHeight:180 }}>
+      <div className="gen-skel"></div>
+      <div className="gen-grain"></div>
+      <div className="gen-ring"></div>
+    </div>
+    <div className="gen-stages">
+      {GEN_STAGES.map(function(_, i) {
+        return <div key={i} className={'gen-chip' + (i < stageIdx ? ' done' : i === stageIdx ? ' act' : '')}><i></i></div>;
+      })}
+    </div>
+    <div className="gen-stagerow">
+      <div className="gen-stage-l"><span className="gen-dot"></span>{GEN_STAGES[stageIdx]}</div>
+      <div className="gen-eta">{elapsed < expected ? '~' + eta + ' сек' : 'ещё немного...'}</div>
+    </div>
+  </div>;
+}
+
 function MobileLinkAccountSheet({ onClose, onLinked }) {
-  const { Ic } = window.MiraCore;
+  const { Ic, HxSheet } = window.MiraCore;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailCode, setEmailCode] = useState('');
@@ -111,9 +156,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
     });
   };
 
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet profile-sheet account-link-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card profile-sheet-card account-link-card">
+  return <HxSheet onClose={onClose} sheetClassName="profile-sheet account-link-sheet" cardClassName="profile-sheet-card account-link-card">
         <button className="sheet-x" onClick={onClose}><Ic n="close" s={18}/></button>
         <div className="account-link-icon"><Ic n="user" s={22} c="#5f9184"/></div>
         <div className="sheet-title">Связать аккаунты</div>
@@ -137,9 +180,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
             {err && <div className="account-link-error">{err}</div>}
             <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
           </>}
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 
 function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onUserUpdate, focusHistorySignal }) {
@@ -426,6 +467,11 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
         <div style={{ marginTop:18, marginBottom:6 }}>
           <span className="label-sec">История генераций</span>
         </div>
+      {histLoaded && history.filter(function(item) {
+        return item.status !== 'completed' && item.status !== 'refunded';
+      }).slice(0, 1).map(function(item) {
+        return <GenWaitCard key={'wait-' + item.id} item={item}/>;
+      })}
       <div className="hist-rail" data-onb="mob-history">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
@@ -441,7 +487,9 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
             <div className="hist-thumb">
               {isCompleted && item.output_file_url
                 ? <img src={item.output_file_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
-                : <Ic n={isFailed ? 'close' : 'sparkle'} s={20} c={isFailed ? '#c0473e' : 'var(--muted)'}/>} 
+                : isFailed
+                  ? <Ic n="close" s={20} c="#c0473e"/>
+                  : <GenWaitThumb/>}
             </div>
             <div className="hist-meta">
               <div className="hist-title">
@@ -517,12 +565,9 @@ function ProfileScreen({ tokens, onTopup, onTab, theme, onToggleTheme, user, onU
 
 /* ---- editor sheets ---- */
 function OptsSheet({ title, options, current, onSave, onClose }) {
-  const { Ic } = window.MiraCore;
+  const { Ic, HxSheet } = window.MiraCore;
   const [val, setVal] = useState(current);
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card profile-sheet-card">
-        <div className="sheet-grab"></div>
+  return <HxSheet onClose={onClose} sheetClassName="profile-sheet" cardClassName="profile-sheet-card">
         <div className="sheet-title">{title}</div>
         <div className="profile-sheet-scroll">
           {options.map(o => (
@@ -533,33 +578,25 @@ function OptsSheet({ title, options, current, onSave, onClose }) {
           ))}
         </div>
         <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 function TextSheet({ title, ph, current, onSave, onClose }) {
+  const { HxSheet } = window.MiraCore;
   const [val, setVal] = useState(current || "");
   const ref = useRef(null);
   useEffect(() => { if (ref.current) ref.current.focus(); }, []);
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card profile-sheet-card">
-        <div className="sheet-grab"></div>
+  return <HxSheet onClose={onClose} sheetClassName="profile-sheet" cardClassName="profile-sheet-card">
         <div className="sheet-title">{title}</div>
         <input ref={ref} className="text-in" placeholder={ph || "Введите значение"} value={val}
           onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { onSave(val.trim()); onClose(); } }}/>
         <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val.trim()); onClose(); }}>Сохранить</button>
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 function EmojiSheet({ current, onSave, onClose }) {
+  const { HxSheet } = window.MiraCore;
   const [val, setVal] = useState(current);
-  return <div className="sheet-ov" onClick={onClose}>
-    <div className="sheet profile-sheet" onClick={e => e.stopPropagation()}>
-      <div className="sheet-card profile-sheet-card">
-        <div className="sheet-grab"></div>
+  return <HxSheet onClose={onClose} sheetClassName="profile-sheet" cardClassName="profile-sheet-card">
         <div className="sheet-title">Любимый эмодзи</div>
         <div className="profile-sheet-scroll">
           <div className="emoji-grid">
@@ -569,8 +606,6 @@ function EmojiSheet({ current, onSave, onClose }) {
           </div>
         </div>
         <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
-      </div>
-    </div>
-  </div>;
+  </HxSheet>;
 }
 window.ProfileScreen = ProfileScreen;
