@@ -44,7 +44,7 @@ function GenerationScreen({ tokens, onTopup, onCreatePhoto, onCreateVideo, onTem
           <div className="bk">Мои токены</div>
           <div className="bn"><Star s={20} c="#c9c7f4"/> {tokens}</div>
         </div>
-        <button className="bb" onClick={onTopup}>Пополнить</button>
+        <button className="bb" onClick={function() { if (window.tgHaptic) window.tgHaptic('light'); onTopup(); }}>Пополнить</button>
       </div>
 
       <div className="card" data-onb="mob-create-card" style={{ marginTop:14, overflow:'hidden' }}>

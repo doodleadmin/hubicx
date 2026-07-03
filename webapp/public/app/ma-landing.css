@@ -193,8 +193,8 @@ img{display:block;max-width:100%}
 /* showcase marquee */
 .lp-show{position:relative;margin-top:22px;padding:26px 0;display:flex;flex-direction:column;gap:16px;
   -webkit-mask:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
-.lp-row{display:flex;width:max-content;animation:lp-marq 52s linear infinite;will-change:transform}
-.lp-row.rev{animation-direction:reverse;animation-duration:60s}
+.lp-row{display:flex;width:max-content;animation:lp-marq 70s linear infinite;will-change:transform}
+.lp-row.rev{animation-direction:reverse;animation-duration:80s}
 .lp-show:hover .lp-row{animation-play-state:paused}
 @keyframes lp-marq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .lp-tile{position:relative;flex:0 0 auto;width:226px;height:296px;margin-right:16px;border-radius:18px;overflow:hidden;

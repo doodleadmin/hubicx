@@ -1266,7 +1266,7 @@ function Topup({ tokens, requiredCredits, onClose }) {
         <div className="topup-footer">
           {payError && <div className="topup-error">{payError}</div>}
           {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginBottom:8 }}>Оплата скоро будет доступна</div>}
-          <button className="sheet-cta topup-cta" onClick={handlePay}
+          <button className="sheet-cta topup-cta" onClick={function() { tgHaptic('light'); handlePay(); }}
             disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
             style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,
                      cursor: (!paymentsEnabled || paying) ? 'not-allowed' : 'pointer' }}>

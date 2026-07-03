@@ -2,24 +2,28 @@
 const { useState: uS, useEffect: uE, useRef: uR, useCallback: uC, useMemo: uM } = React;
 
 /* ============ Helpers ============ */
-const Gg = (n) => 'assets/g/r' + n + '.png';
+const LP_U = (id, w) => 'https://images.unsplash.com/photo-' + id + '?auto=format&fit=crop&w=' + (w || 800) + '&q=80';
+const LP_PHOTOS = {1:LP_U('1506905925346-21bda4d32df4',1000),2:LP_U('1541701494587-cb58502866ab'),3:LP_U('1523275335684-37898b6baf30'),4:LP_U('1518709268805-4e9042af9f23'),5:LP_U('1462331940025-496dfbfc7564'),6:LP_U('1618005182384-a83a8bd57fbe'),7:LP_U('1534528741775-53994a69daeb'),8:LP_U('1519501025264-65ba15a82390',1000),9:LP_U('1560250097-0b93528c311a'),10:LP_U('1507003211169-0a1dd7228f2d'),11:LP_U('1515462277126-2dd0c162007a',1000),12:LP_U('1545239351-1141bd82e8a6'),13:LP_U('1541746972996-4e0b0f43e02a'),14:LP_U('1550745165-9bc0b252726f'),15:LP_U('1518895949257-7621c3c786d7'),16:LP_U('1470071459604-3b5ec3a7fe05',1000),17:LP_U('1507525428034-b723cf961d3e',1000),18:LP_U('1557682250-33bd709cbe85')};
+const Gg = (n) => LP_PHOTOS[n] || ('assets/g/r' + n + '.png');
 const G = Gg;
+const LP_AVATARS = ['https://i.pravatar.cc/72?img=32','https://i.pravatar.cc/72?img=12','https://i.pravatar.cc/72?img=47','https://i.pravatar.cc/72?img=5','https://i.pravatar.cc/72?img=68'];
+const LP_BA = { before:LP_U('1494790108377-be9c29b29330',900), after:LP_U('1534528741775-53994a69daeb',900) };
 
 /* ============ Data ============ */
 const SHOW_A = [
   { n: 7, l: 'Портрет' },
-  { n: 1, l: 'Кинокадр', vid: true, dur: '0:08' },
-  { n: 11, l: 'Неон-сити', cls: 't-w', vid: true, dur: '0:12' },
+  { n: 1, l: 'Кинокадр', vid: true, dur: '0:08', mp4:'assets/templates/photo/cinematic-portrait/cover.mp4' },
+  { n: 11, l: 'Неон-сити', cls: 't-w', vid: true, dur: '0:12', mp4:'assets/templates/photo/neo-noir/cover.mp4' },
   { n: 9, l: 'Портрет' },
   { n: 5, l: 'Космос', cls: 't-sq' },
-  { n: 13, l: 'Флюид', vid: true, dur: '0:06' },
+  { n: 13, l: 'Флюид', vid: true, dur: '0:06', mp4:'assets/templates/photo/motion-blur/cover.mp4' },
 ];
 
 const SHOW_B = [
   { n: 10, l: 'Портрет' },
-  { n: 17, l: 'Закат', cls: 't-w', vid: true, dur: '0:10' },
+  { n: 17, l: 'Закат', cls: 't-w', vid: true, dur: '0:10', mp4:'assets/templates/photo/g7x-flash/cover.mp4' },
   { n: 12, l: 'Неон' },
-  { n: 6, l: '3D-герой', vid: true, dur: '0:07' },
+  { n: 6, l: '3D-герой', vid: true, dur: '0:07', mp4:'assets/templates/photo/pixar-caricature/cover.mp4' },
   { n: 3, l: 'Пастель' },
   { n: 16, l: 'Пейзаж', cls: 't-sq' },
 ];
@@ -375,8 +379,8 @@ function LandingStatNum({ to, suffix = '' }) {
 function LogoMark({ size = 34 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 34 34">
-      <rect width="34" height="34" rx="10" fill="#2f80ed" />
-      <path d="M10 23c0-5 1.6-9 3-9s2 3.4 3.6 3.4S19 11 20.6 11 23 15 24 15" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <rect width="34" height="34" rx="10" fill="#1c1c1a" />
+      <path d="M10 23c0-5 1.6-9 3-9s2 3.4 3.6 3.4S19 11 20.6 11 23 15 24 15" stroke="#fcfd76" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
 }
@@ -724,7 +728,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           <div className="lp-row">
             {[...SHOW_A, ...SHOW_A].map((t, i) => (
               <div className={'lp-tile' + (t.cls ? ' ' + t.cls : '')} key={'a' + i}>
-                <img src={Gg(t.n)} alt={t.l} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {t.mp4 ? <video src={t.mp4} poster={Gg(t.n)} muted loop playsInline autoPlay style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <img src={Gg(t.n)} alt={t.l} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>}
                 <div className="lp-tile-sh"></div>
                 {t.vid && <span className="lp-tile-play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#1c1c1a"><path d="M7 4l13 8-13 8z" /></svg></span>}
                 {t.vid && <span className="lp-tile-dur"><svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M7 4l13 8-13 8z" /></svg> {t.dur}</span>}
@@ -735,7 +739,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           <div className="lp-row rev">
             {[...SHOW_B, ...SHOW_B].map((t, i) => (
               <div className={'lp-tile' + (t.cls ? ' ' + t.cls : '')} key={'b' + i}>
-                <img src={Gg(t.n)} alt={t.l} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {t.mp4 ? <video src={t.mp4} poster={Gg(t.n)} muted loop playsInline autoPlay style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : <img src={Gg(t.n)} alt={t.l} style={{ width:'100%', height:'100%', objectFit:'cover' }}/>}
                 <div className="lp-tile-sh"></div>
                 {t.vid && <span className="lp-tile-play"><svg width="18" height="18" viewBox="0 0 24 24" fill="#1c1c1a"><path d="M7 4l13 8-13 8z" /></svg></span>}
                 {t.vid && <span className="lp-tile-dur"><svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M7 4l13 8-13 8z" /></svg> {t.dur}</span>}
@@ -748,8 +752,8 @@ function LandingPage({ onAuthed, initialAuth = null }) {
         {/* ========== 3. TRUST BAR ========== */}
         <div className="lp-trust reveal">
           <div className="lp-ava-stack">
-            {[7, 9, 8, 10, 6].map(n => (
-              <span key={n} style={{ backgroundImage: 'url(' + Gg(n) + ')', width: 36, height: 36, marginLeft: -9, border: '2px solid var(--bg)', borderRadius: '50%', display: 'inline-block', backgroundSize: 'cover', boxShadow: 'var(--shadow-sm)' }}></span>
+            {LP_AVATARS.map((u, i) => (
+              <span key={i} style={{ backgroundImage:'url(' + u + ')', width:36, height:36, marginLeft:-9, border:'2px solid var(--bg)', borderRadius:'50%', display:'inline-block', backgroundSize:'cover', boxShadow:'var(--shadow-sm)' }}></span>
             ))}
           </div>
           <span>Более <b style={{ color: 'var(--ink)' }}>120 000</b> создателей уже с Hubicx</span>
@@ -832,7 +836,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
             </div>
             <div className="lp-how-visual">
               <div className="lp-how-frame">
-                <img src={Gg(8)} alt="Результат генерации" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                <BeforeAfter before={LP_BA.before} after={LP_BA.after} label="Оживите селфи" />
                 <div className="lp-how-badge"><Ic n="check" s={14} c="#1c1c1a" sw={2.6} /> Готово · 14 сек</div>
               </div>
             </div>
@@ -1057,13 +1061,11 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           <div className="lp-foot-brand">
             <div className="lp-brand"><span className="lp-logo"><img src="assets/logo.jpg" alt="Hubicx" width="34" height="34" style={{borderRadius:10}} /></span> Hubicx</div>
             <p style={{ color: 'var(--mut)', fontSize: 14, lineHeight: 1.55 }}>Ваш AI-хаб для фото, видео, чата и промптов. Прямо в Telegram и в браузере.</p>
-            <div className="lp-socials">
-              {['tg', 'x', 'yt', 'ig'].map(s => <a className="lp-soc" key={s} href="#" onClick={e => e.preventDefault()}><Ic n={s} s={18} /></a>)}
-            </div>
+            <div className="lp-socials"><a className="lp-soc" href="https://t.me/hubicx_supp" target="_blank" rel="noopener"><Ic n="tg" s={18}/></a></div>
           </div>
           {[
             ['Продукт', [['/#features','Возможности'], ['/#models','Модели'], ['/#pricing','Тарифы'], ['/#templates','Примеры']]],
-            ['Компания', [['#','О нас'], ['/blog/','Блог'], ['/pages/contacts','Контакты']]],
+            ['Компания', [['/blog/','Блог'], ['/pages/contacts','Контакты']]],
             ['Поддержка', [['https://t.me/hubicx_supp','Написать в поддержку'], ['/pages/docs','Документация'], ['/pages/terms','Оферта'], ['/pages/privacy','Конфиденциальность'], ['/pages/personal-data-consent','Согласие на ПД']]],
           ].map(col => (
             <div className="lp-foot-col" key={col[0]}>

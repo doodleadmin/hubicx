@@ -609,7 +609,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask
   var serverPriceFresh = serverPrice && serverPrice.signature === priceSignature && serverPrice.value != null ? serverPrice.value : null;
   // Show catalog price immediately, then prefer a fresh backend preview.
   var currentPrice = serverPriceFresh != null ? serverPriceFresh : localPrice;
-  var createCtaKey = ['mobile-create-cta', priceSignature, String(currentPrice), currentModelFull ? currentModelFull.code : 'none'].join('|');
+  var createCtaKey = ['mobile-create-cta', priceSignature, String(currentPrice), currentModelFull ? currentModelFull.code : 'none', genState].join('|');
   var createCtaLabel = currentModelFull ? 'Создать · ' + currentPrice + ' ★' : 'Модель временно недоступна';
   useEffect(function() {
     if (!window.MiraCore || !window.MiraCore.writePriceTrace) return;
@@ -856,7 +856,7 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask
       var cancel = pollTask(
         data.task_id,
         function(task) { setCurrentTask(task); },
-        function(task) { setCurrentTask(task); setGenState('done'); if (refreshBalance) refreshBalance(); },
+        function(task) { setCurrentTask(task); setGenState('done'); if (window.tgHaptic) window.tgHaptic('success'); if (refreshBalance) refreshBalance(); },
         function(errMsg, kind) { setGenState('error'); setGenError(errMsg); setGenErrorKind(kind || 'error'); if (refreshBalance) refreshBalance(); }
       );
       pollCancelRef.current = cancel;
@@ -975,10 +975,10 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask
       {/* Mode switcher */}
       <div className="seg">
         <button className={mode === 'photo' ? 'on' : ''} onClick={() => { setMode('photo'); setUploadedFiles(function(prev) { return prev.filter(function(f) { return f && f.type !== 'video'; }); }); setSelectedModelCode(null); setUiModelId(null); setSelectedQuality(null); setSelectedDuration(null); setUiQualityValue(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setSelTpl(null); setTemplateLocked(false); setQualityLocked(false); setDurationLocked(false); setAspectLocked(false); }}>
-          <Ic n="image" s={18}/> Фото
+          <Ic n="image" s={18} on={mode === 'photo'}/> Фото
         </button>
         <button className={mode === 'video' ? 'on' : ''} onClick={() => { setMode('video'); setSelectedModelCode(null); setUiModelId(null); setSelectedQuality(null); setSelectedDuration(null); setUiQualityValue(null); setUiDurationValue(null); setUiModelLabel(null); setUiQualityLabel(null); setUiDurationLabel(null); setUiAspectLabel(null); setSelTpl(null); setTemplateLocked(false); setQualityLocked(false); setDurationLocked(false); setAspectLocked(false); }}>
-          <Ic n="video" s={18}/> Видео
+          <Ic n="video" s={18} on={mode === 'video'} duo="lilac"/> Видео
         </button>
       </div>
 
@@ -1160,9 +1160,9 @@ function CreateScreen({ tokens, mode, setMode, preset, initModelCode, repeatTask
 
       <div style={{ height:20 }}/>
       <button key={createCtaKey} className="btn-primary"
-        disabled={!ready || uploading || !currentModelFull}
-        onClick={startGeneration}>
-        <span>{createCtaLabel}</span>
+        disabled={!ready || uploading || !currentModelFull || genState === 'generating'}
+        onClick={function() { if (window.tgHaptic) window.tgHaptic('light'); startGeneration(); }}>
+        {genState === 'generating' ? <><span className="cta-spin"></span> Создаём…</> : genState === 'done' ? <><span className="cta-done-pop">✓</span> Готово</> : <span>{createCtaLabel}</span>}
       </button>
     </div>
 
@@ -1305,6 +1305,7 @@ function PickerSheet({ title, options, current, onSelect, onClose }) {
     <div className="picker-grid">
       {options.map(function(o) {
         return <div className={'opt pick' + (String(val) === String(o.id) ? ' on' : '')} key={o.id} onClick={function() { onSelect(o); onClose(); }}>
+          {title === 'Модель' && <Ic n="model" s={20} on={String(val) === String(o.id)} duo="lilac"/>}
           {o.preview && <span className="aspect-mini" style={{ aspectRatio:o.preview }}></span>}
           <div className="pick-text">
             <div className="o-t">{o.t}</div>

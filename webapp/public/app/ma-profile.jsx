@@ -71,6 +71,24 @@ function GenWaitThumb() {
   </div>;
 }
 
+var GEN_WAIT_STAGES = ['В очереди','Композиция','Детализация','Свет и цвет','Финал'];
+function GenWaitCard({ item }) {
+  var started = item && item.created_at ? new Date(item.created_at).getTime() : Date.now();
+  var expected = (item && item.expected_seconds) || 30;
+  var [now, setNow] = useState(Date.now());
+  useEffect(function() { var t = setInterval(function() { setNow(Date.now()); }, 1000); return function() { clearInterval(t); }; }, []);
+  var elapsed = Math.max(0, (now - started) / 1000);
+  var pct = Math.min(96, Math.round(elapsed / expected * 100));
+  var stageIdx = Math.min(GEN_WAIT_STAGES.length - 1, Math.floor(pct / 20));
+  var eta = Math.max(1, Math.ceil(expected - elapsed));
+  return <div className="card" style={{ padding:'14px 16px 16px', marginBottom:12 }}>
+    <div style={{ display:'flex', alignItems:'center', gap:10 }}><div style={{ fontWeight:850, fontSize:15, flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{(item && (item.title || item.prompt)) || 'Генерация'}</div><span className="hx-chip hx-chip--s hx-chip--lilac">★ {(item && item.cost_credits) || ''} списано</span></div>
+    <div className="gen-canvas" style={{ minHeight:180 }}><div className="gen-skel"></div><div className="gen-grain"></div><div className="gen-ring"></div></div>
+    <div className="gen-stages">{GEN_WAIT_STAGES.map(function(_, i) { return <div key={i} className={'gen-chip' + (i < stageIdx ? ' done' : i === stageIdx ? ' act' : '')}><i></i></div>; })}</div>
+    <div className="gen-stagerow"><div className="gen-stage-l"><span className="gen-dot"></span>{GEN_WAIT_STAGES[stageIdx]}</div><div className="gen-eta">{elapsed < expected ? '~' + eta + ' сек' : 'ещё немного…'}</div></div>
+  </div>;
+}
+
 function MobileLinkAccountSheet({ onClose, onLinked }) {
   const { Ic, HxSheet } = window.MiraCore;
   const [email, setEmail] = useState('');
@@ -140,7 +158,7 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
               </div>
             </div>
             {err && <div className="account-link-error">{err}</div>}
-            <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={submit}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
+            <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={function() { if (window.tgHaptic) window.tgHaptic('light'); submit(); }}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
           </>}
   </HxSheet>;
 }
@@ -431,6 +449,7 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, theme, onTo
         <div style={{ marginTop:18, marginBottom:6 }}>
           <span className="label-sec">История генераций</span>
         </div>
+      {histLoaded && history.filter(function(x) { return x.status !== 'completed' && x.status !== 'refunded'; }).slice(0, 1).map(function(item) { return <GenWaitCard key={item.id} item={item}/>; })}
       <div className="hist-rail" data-onb="mob-history">
         {!histLoaded && <div className="card" style={{ padding:'22px 18px', display:'flex', justifyContent:'center' }}><div className="gen-spinner"></div></div>}
         {histLoaded && history.length === 0 && <div className="card" style={{ padding:'22px 18px', textAlign:'center' }}>
@@ -536,7 +555,7 @@ function OptsSheet({ title, options, current, onSave, onClose }) {
             </div>
           ))}
         </div>
-        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { if (window.tgHaptic) window.tgHaptic('light'); onSave(val); onClose(); }}>Сохранить</button>
   </HxSheet>;
 }
 function TextSheet({ title, ph, current, onSave, onClose }) {
@@ -549,7 +568,7 @@ function TextSheet({ title, ph, current, onSave, onClose }) {
         <input ref={ref} className="text-in" placeholder={ph || "Введите значение"} value={val}
           onChange={e => setVal(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { onSave(val.trim()); onClose(); } }}/>
-        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val.trim()); onClose(); }}>Сохранить</button>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { if (window.tgHaptic) window.tgHaptic('light'); onSave(val.trim()); onClose(); }}>Сохранить</button>
   </HxSheet>;
 }
 function EmojiSheet({ current, onSave, onClose }) {
@@ -564,7 +583,7 @@ function EmojiSheet({ current, onSave, onClose }) {
             ))}
           </div>
         </div>
-        <button className="sheet-cta profile-sheet-cta" onClick={() => { onSave(val); onClose(); }}>Сохранить</button>
+        <button className="sheet-cta profile-sheet-cta" onClick={() => { if (window.tgHaptic) window.tgHaptic('light'); onSave(val); onClose(); }}>Сохранить</button>
   </HxSheet>;
 }
 window.ProfileScreen = ProfileScreen;
