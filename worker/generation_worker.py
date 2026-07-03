@@ -21,9 +21,20 @@ from backend.app.providers.openrouter import OpenRouterProvider
 from backend.app.services.generations import mark_failed_and_refund
 from backend.app.services.safety import handle_generation_failure
 from backend.app.services.storage import storage_configured, storage_service
+from backend.app.services.telegram_sender import send_generation_result_to_chat
 from worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
+
+
+async def deliver_generation_result(task: GenerationTask) -> None:
+    telegram_id = task.user.telegram_id if task.user else None
+    if not telegram_id:
+        return
+    try:
+        await send_generation_result_to_chat(telegram_id, task)
+    except Exception:
+        logger.exception("Failed to deliver completed generation to Telegram task_id=%s", task.id)
 
 
 TV_BROADCAST_GPT_IMAGE_PROMPT = """Generate a high-quality (4k) photo with the face of the person in the uploaded image, placed onto a realistic scene of a KBO baseball fan captured on live broadcast.
@@ -380,7 +391,7 @@ async def _process_generation_task(task_id: int) -> None:
             task.completed_at = datetime.now(timezone.utc)
             await session.commit()
             log_task(task, "completed")
-            await notify_user(task.user.telegram_id, "✅ Генерация готова")
+            await deliver_generation_result(task)
         else:
             error = result.error or "generation_failed"
             source = (

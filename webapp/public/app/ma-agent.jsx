@@ -112,7 +112,7 @@ function AgentScreen({ tokens, onBuyPro, onCreatePhoto, onCreateVideo, onTopup,
       </div>
       <div className="tpl-rail rise" data-onb="mob-templates" style={{ '--d':'.2s' }}>
         {TEMPLATES.slice(0, 6).map(function(t, i) {
-          return <div className="thumb tpl-card" key={i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
+          return <div className="thumb tpl-card" key={(t.code || t.t) + '-' + i} onClick={() => onTemplate ? onTemplate(t) : onTemplates()}>
             <TemplateMedia t={t} loading={i < 4 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i < 2 ? 'high' : 'auto'}/>
             <div className="shade"></div>
             <div className="lbl">{t.t}</div>

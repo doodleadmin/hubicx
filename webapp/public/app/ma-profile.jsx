@@ -351,7 +351,7 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, theme, onTo
           }}>📤 В Telegram</button>
           <button className="btn-primary" style={{ flex:1 }} onClick={function() {
             if (onRepeatGeneration) onRepeatGeneration(viewTask);
-          }}>Повторить</button>
+          }}>Редактировать</button>
         </div>
       </div>
     </div>;

@@ -11,7 +11,7 @@ from backend.app.providers.fal import FalProvider
 from backend.app.services.generations import mark_failed_and_refund
 from backend.app.services.safety import handle_generation_failure
 from worker.celery_app import celery_app
-from worker.generation_worker import advance_seedance_reference_pipeline, notify_user, persist_generated_file
+from worker.generation_worker import advance_seedance_reference_pipeline, deliver_generation_result, notify_user, persist_generated_file
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +108,7 @@ async def _poll_fal_tasks() -> dict:
                     task_fresh.completed_at = datetime.now(timezone.utc)
                     await session.commit()
                     logger.info("poll: task %s completed", task_fresh.id)
-                    await notify_user(task_fresh.user.telegram_id, "✅ Генерация готова")
+                    await deliver_generation_result(task_fresh)
                     completed += 1
                 else:
                     error = poll_result.error or "generation_failed"
