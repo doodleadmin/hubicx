@@ -11,6 +11,7 @@ from backend.app.config import settings
 from backend.app.db.models import Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
 from backend.app.services.business import SUBSCRIPTION_PLANS_V2
 from backend.app.utils.errors import AppError
+from backend.app.utils.safe_logging import log_event
 
 PAYMENT_PACKAGES = {300, 1000, 3000, 10000}
 MIN_CUSTOM_TOPUP_RUB = 99
@@ -43,7 +44,13 @@ def _safe_return_base(return_url: str | None) -> str:
     host = (parsed.hostname or "").lower()
     scheme = (parsed.scheme or "").lower()
     if scheme not in {"https", "http"} or host not in _ALLOWED_RETURN_HOSTS:
-        logger.warning("PAYMENT_RETURN_URL_REJECTED host=%s scheme=%s", host or "<missing>", scheme or "<missing>")
+        log_event(
+            logger,
+            logging.WARNING,
+            "PAYMENT_RETURN_URL_REJECTED",
+            host=host or "<missing>",
+            scheme=scheme or "<missing>",
+        )
         raw = settings.webapp_url
     return raw.rstrip("/")
 
@@ -266,23 +273,27 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
 
         if status == "CONFIRMED" and payment.status in terminal_statuses:
             if payment.status in ("refunded", "reversed"):
-                logger.warning(
-                    "Ignoring late CONFIRMED for terminal payment order_id=%s payment_id=%s current_status=%s",
-                    order_id,
-                    payment.id,
-                    payment.status,
+                log_event(
+                    logger,
+                    logging.WARNING,
+                    "PAYMENT_LATE_CONFIRMED_IGNORED",
+                    order_id=order_id,
+                    payment_id=payment.id,
+                    current_status=payment.status,
                 )
             await session.commit()
             return
 
         if status != "CONFIRMED" and payment.status in terminal_statuses:
             if status not in ("REFUNDED", "REVERSED"):
-                logger.info(
-                    "Ignoring non-terminal payment status for terminal payment order_id=%s payment_id=%s event_status=%s current_status=%s",
-                    order_id,
-                    payment.id,
-                    status,
-                    payment.status,
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "PAYMENT_NON_TERMINAL_STATUS_IGNORED",
+                    order_id=order_id,
+                    payment_id=payment.id,
+                    event_status=status,
+                    current_status=payment.status,
                 )
                 await session.commit()
                 return
@@ -403,9 +414,14 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
             # topup/refund/commission slipping through. Treat that as "already
             # processed" rather than surfacing a 500 that makes the gateway retry.
             await session.rollback()
-            logger.warning(
-                "Payment webhook commit hit a duplicate constraint order_id=%s payment_id=%s status=%s; treating as already processed",
-                order_id, payment.id, status,
+            log_event(
+                logger,
+                logging.WARNING,
+                "PAYMENT_WEBHOOK_DUPLICATE_CONSTRAINT",
+                order_id=order_id,
+                payment_id=payment.id,
+                status=status,
+                outcome="already_processed",
             )
             return
 

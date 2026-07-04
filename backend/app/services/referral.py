@@ -2,6 +2,7 @@
 Referral system business logic: partners, clicks, conversions, commissions.
 """
 from datetime import datetime, timedelta, timezone
+import logging
 from typing import Sequence
 
 from sqlalchemy import select, func, and_
@@ -17,6 +18,10 @@ from backend.app.db.models import (
     ReferralPayoutRequest,
     User,
 )
+from backend.app.utils.safe_logging import log_event
+
+
+logger = logging.getLogger(__name__)
 
 
 async def get_partner_by_code(session: AsyncSession, code: str) -> ReferralPartner | None:
@@ -43,6 +48,7 @@ async def track_click(
 ) -> ReferralClick | None:
     partner = await get_active_partner_by_code(session, partner_code)
     if not partner:
+        log_event(logger, logging.INFO, "REFERRAL_CLICK_IGNORED", partner_code=partner_code, reason="inactive_or_missing")
         return None
 
     click = ReferralClick(
@@ -53,6 +59,7 @@ async def track_click(
     )
     session.add(click)
     await session.flush()
+    log_event(logger, logging.INFO, "REFERRAL_CLICK_TRACKED", click_id=click.id, partner_code=partner_code)
     return click
 
 
@@ -68,13 +75,22 @@ async def track_conversion(
         partner = await get_active_partner_by_code(session, partner_code)
 
     if not partner:
+        log_event(logger, logging.INFO, "REFERRAL_CONVERSION_IGNORED", partner_code=partner_code, reason="inactive_or_missing")
         return None
 
     user = await session.get(User, user_id)
     if not user:
+        log_event(logger, logging.INFO, "REFERRAL_CONVERSION_IGNORED", user_id=user_id, reason="user_missing")
         return None
 
     if user.referred_by_partner_id:
+        log_event(
+            logger,
+            logging.INFO,
+            "REFERRAL_CONVERSION_ALREADY_ASSIGNED",
+            user_id=user_id,
+            partner_id=user.referred_by_partner_id,
+        )
         return await session.get(ReferralPartner, user.referred_by_partner_id)
 
     existing = await session.scalar(
@@ -94,6 +110,7 @@ async def track_conversion(
     )
     session.add(conv)
     await session.flush()
+    log_event(logger, logging.INFO, "REFERRAL_CONVERSION_TRACKED", user_id=user_id, partner_id=partner.id, click_id=click_id)
     return partner
 
 
@@ -141,20 +158,39 @@ async def calculate_commission(
 ) -> ReferralCommission | None:
     """Calculate and create a commission entry for a payment."""
     if not payment.referral_partner_id:
+        log_event(logger, logging.INFO, "REFERRAL_COMMISSION_SKIPPED", payment_id=payment.id, reason="no_partner")
         return None
 
     existing = await session.scalar(
         select(ReferralCommission).where(ReferralCommission.payment_id == payment.id)
     )
     if existing:
+        log_event(logger, logging.INFO, "REFERRAL_COMMISSION_IDEMPOTENT", payment_id=payment.id, commission_id=existing.id)
         return existing
 
     partner = await session.get(ReferralPartner, payment.referral_partner_id)
     if not partner or partner.status != "active":
+        log_event(
+            logger,
+            logging.INFO,
+            "REFERRAL_COMMISSION_SKIPPED",
+            payment_id=payment.id,
+            partner_id=payment.referral_partner_id,
+            reason="partner_inactive_or_missing",
+        )
         return None
 
     rate = await get_commission_rate(session, payment.referral_partner_id, category)
     if rate <= 0:
+        log_event(
+            logger,
+            logging.INFO,
+            "REFERRAL_COMMISSION_SKIPPED",
+            payment_id=payment.id,
+            partner_id=payment.referral_partner_id,
+            category=category,
+            reason="zero_rate",
+        )
         return None
 
     commission_rub = round(float(payment.amount_rub or 0) * rate / 100, 2)
@@ -171,6 +207,17 @@ async def calculate_commission(
     )
     session.add(comm)
     await session.flush()
+    log_event(
+        logger,
+        logging.INFO,
+        "REFERRAL_COMMISSION_CREATED",
+        payment_id=payment.id,
+        partner_id=payment.referral_partner_id,
+        category=category,
+        amount_rub=payment.amount_rub,
+        rate_percent=rate,
+        commission_rub=commission_rub,
+    )
     return comm
 
 

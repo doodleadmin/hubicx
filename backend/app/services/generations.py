@@ -13,6 +13,7 @@ from backend.app.services.business import is_bonus_eligible_model
 from backend.app.services.input_validation import build_provider_input_from_resolved, is_trusted_file_url, resolve_input_files, validate_inputs_against_schema
 from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
+from backend.app.utils.safe_logging import log_event
 
 MODEL_ALIASES = {"nano_banana": "nano_banana_2"}
 FREE_TEMPLATE_FALLBACK_MODEL_CODE = "nano_banana_2"
@@ -129,11 +130,13 @@ async def create_generation_task(
             if prompt and "prompt" not in provider_input:
                 provider_input["prompt"] = prompt
             provider_input = {**(model.default_params or {}), **provider_input}
-            logger.info(
-                "VALIDATED_PROVIDER_INPUT model_code=%s keys=%s prompt_preview=%s",
-                model.code,
-                sorted(provider_input.keys()),
-                _provider_prompt_preview(provider_input),
+            log_event(
+                logger,
+                logging.INFO,
+                "GENERATION_PROVIDER_INPUT_VALIDATED",
+                model_code=model.code,
+                keys=sorted(provider_input.keys()),
+                prompt_preview=_provider_prompt_preview(provider_input),
             )
             task_params = {**provider_input, **ui_params}
         else:
@@ -174,11 +177,14 @@ async def create_generation_task(
                 model = fallback_model
                 price = await calculate_generation_cost_from_db(session, model, {})
             else:
-                logger.info(
-                    "TEMPLATE_MODEL_FALLBACK_SKIPPED template_code=%s from_model=%s to_model=%s reason=fallback_inactive_or_missing",
-                    template.code,
-                    model.code,
-                    FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                log_event(
+                    logger,
+                    logging.INFO,
+                    "TEMPLATE_MODEL_FALLBACK_SKIPPED",
+                    template_code=template.code,
+                    from_model=model.code,
+                    to_model=FREE_TEMPLATE_FALLBACK_MODEL_CODE,
+                    reason="fallback_inactive_or_missing",
                 )
 
         provider = model.provider if model else "fal"
@@ -230,6 +236,18 @@ async def create_generation_task(
     task.status = "queued"
     await session.commit()
     await session.refresh(task)
+    log_event(
+        logger,
+        logging.INFO,
+        "GENERATION_TASK_QUEUED",
+        task_id=task.id,
+        user_id=user.id,
+        model_code=model.code if model else None,
+        template_code=template.code if template else None,
+        task_type=task.task_type,
+        provider=task.provider,
+        cost_credits=task.cost_credits,
+    )
     return task
 
 
@@ -261,3 +279,12 @@ async def mark_failed_and_refund(session: AsyncSession, task: GenerationTask, er
     task.completed_at = datetime.now(timezone.utc)
     await refund_generation(session, task.user_id, task.id, task.cost_credits)
     await session.commit()
+    log_event(
+        logger,
+        logging.WARNING,
+        "GENERATION_TASK_REFUNDED",
+        task_id=task.id,
+        user_id=task.user_id,
+        cost_credits=task.cost_credits,
+        error=error,
+    )
