@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import logging
+import time
 from urllib.parse import parse_qsl
 
 from fastapi import Header
@@ -16,6 +17,12 @@ from backend.app.utils.security import decode_jwt
 
 logger = logging.getLogger(__name__)
 
+# Telegram initData is re-sent on every request (not exchanged for a bearer),
+# so this window also caps how long a Mini App session may stay open before it
+# must be reopened. A valid signature alone lets a captured initData string be
+# replayed forever; the auth_date freshness check bounds that window.
+INIT_DATA_MAX_AGE_SECONDS = 24 * 3600
+
 
 def validate_init_data(init_data: str) -> dict:
     if not settings.bot_token:
@@ -29,6 +36,14 @@ def validate_init_data(init_data: str) -> dict:
     expected_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(expected_hash, received_hash):
         raise AppError("invalid_init_data", "Invalid Telegram initData signature", 401)
+    try:
+        auth_date = int(parsed.get("auth_date") or 0)
+    except (TypeError, ValueError):
+        auth_date = 0
+    if auth_date <= 0:
+        raise AppError("invalid_init_data", "Missing Telegram auth_date", 401)
+    if time.time() - auth_date > INIT_DATA_MAX_AGE_SECONDS:
+        raise AppError("init_data_expired", "Сессия Telegram устарела, переоткройте приложение", 401)
     if "user" not in parsed:
         raise AppError("invalid_init_data", "Telegram user is missing", 401)
     parsed["user"] = json.loads(parsed["user"])

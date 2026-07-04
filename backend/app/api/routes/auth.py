@@ -36,7 +36,7 @@ async def award_signup_once(session: AsyncSession, user: User) -> None:
 
 @router.post("/register", response_model=AuthOut)
 async def register(payload: RegisterIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
-    await check_ip_rate_limit(request, "auth_register", 5, 3600)
+    await check_ip_rate_limit(request, "auth_register", 5, 3600, fail_closed=True)
     email = normalize_email(payload.email)
     existing = await session.scalar(select(User).where(func.lower(User.email) == email))
     if existing:
@@ -69,7 +69,7 @@ async def email_code_start(payload: EmailCodeStartIn, request: Request, session:
 
 @router.post("/login", response_model=AuthOut)
 async def login(payload: LoginIn, request: Request, session: AsyncSession = Depends(get_session)) -> dict:
-    await check_ip_rate_limit(request, "auth_login", 10, 300)
+    await check_ip_rate_limit(request, "auth_login", 10, 300, fail_closed=True)
     email = normalize_email(payload.email)
     user = await session.scalar(select(User).where(func.lower(User.email) == email))
     if not user or not verify_password(payload.password, user.password_hash):

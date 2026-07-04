@@ -29,7 +29,9 @@ def require_admin(user: User) -> None:
 
 
 def _admin_browser_token() -> str:
-    return settings.admin_panel_token or settings.admin_panel_password
+    # Must be a dedicated token: never fall back to the login password, or the
+    # password would travel as a long-lived bearer on every admin request.
+    return settings.admin_panel_token
 
 
 def _ensure_token_package_code_allowed(code: str) -> None:
@@ -71,7 +73,7 @@ async def current_admin_user(
 
 @router.post("/auth/login")
 async def browser_admin_login(request: Request, payload: dict = Body(...), session: AsyncSession = Depends(get_session)) -> dict:
-    await check_ip_rate_limit(request, "admin_login", 5, 300)
+    await check_ip_rate_limit(request, "admin_login", 5, 300, fail_closed=True)
     password = str(payload.get("password") or "")
     if not settings.admin_panel_password:
         raise AppError("admin_password_not_configured", "ADMIN_PANEL_PASSWORD не настроен", 503)

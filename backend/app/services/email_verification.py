@@ -36,9 +36,9 @@ async def start_email_verification(session: AsyncSession, request, email: str, p
     if purpose not in VALID_PURPOSES:
         raise AppError("invalid_purpose", "Некорректный тип подтверждения", 422)
 
-    await check_ip_rate_limit(request, f"email_code:{purpose}", 10, 3600)
-    await check_rate_limit(f"email:{purpose}:{email}", 5, 3600)
-    await check_rate_limit(f"email:{purpose}:{email}:cooldown", 1, 60)
+    await check_ip_rate_limit(request, f"email_code:{purpose}", 10, 3600, fail_closed=True)
+    await check_rate_limit(f"email:{purpose}:{email}", 5, 3600, fail_closed=True)
+    await check_rate_limit(f"email:{purpose}:{email}:cooldown", 1, 60, fail_closed=True)
 
     now = datetime.now(timezone.utc)
     code = _new_code()
