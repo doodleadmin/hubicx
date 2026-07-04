@@ -48,11 +48,12 @@ def _jwt_key() -> bytes:
     return key.encode("utf-8")
 
 
-def create_jwt(user_id: int) -> str:
+def create_jwt(user_id: int, token_version: int = 0) -> str:
     now = datetime.now(timezone.utc)
     header = {"alg": "HS256", "typ": "JWT"}
     payload = {
         "sub": str(user_id),
+        "tv": int(token_version or 0),
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(days=settings.jwt_ttl_days)).timestamp()),
     }

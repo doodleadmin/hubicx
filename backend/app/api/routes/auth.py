@@ -25,7 +25,7 @@ def normalize_email(email: str) -> str:
 async def auth_out(session: AsyncSession, user: User) -> dict:
     await session.refresh(user)
     ensure_user_not_banned(user)
-    return {"token": create_jwt(user.id), "user": user}
+    return {"token": create_jwt(user.id, user.token_version), "user": user}
 
 
 async def award_signup_once(session: AsyncSession, user: User) -> None:
@@ -103,6 +103,8 @@ async def me(user: User = Depends(current_user), session: AsyncSession = Depends
             UserSubscription.is_active == True,
         ).order_by(UserSubscription.started_at.desc())
     )
-    user_dict = user.__dict__.copy()
+    # Build from a filtered copy rather than the raw __dict__, which also carries
+    # SQLAlchemy's internal `_sa_instance_state` key.
+    user_dict = {k: v for k, v in user.__dict__.items() if not k.startswith("_")}
     user_dict["subscription"] = sub
     return user_dict

@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     backend_url: str = "http://localhost:8000"
     jwt_signing_key: str = ""
     jwt_secret: str = ""
-    jwt_ttl_days: int = 30
+    # No refresh-token flow exists yet, so this is the hard session ceiling.
+    # Kept shorter than before (was 30) since a leaked JWT is bearer-valid until
+    # expiry; token_version invalidation (see users.token_version) covers
+    # password-change revocation within that window.
+    jwt_ttl_days: int = 14
     signup_bonus_credits: int = 0
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_aggregator"
     redis_url: str = "redis://localhost:6379/0"

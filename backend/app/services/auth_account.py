@@ -85,6 +85,9 @@ async def set_email_password(session: AsyncSession, user: User, email: str, pass
         raise AppError("email_taken", "Этот email уже используется другим аккаунтом", 409)
     user.email = email
     user.password_hash = hash_password(password)
+    # Any JWT issued before this point is now stale; bump token_version so it
+    # stops validating (see telegram_auth.get_current_user).
+    user.token_version = int(user.token_version or 0) + 1
     await session.commit()
     await session.refresh(user)
     return user

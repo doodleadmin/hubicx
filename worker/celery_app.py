@@ -9,7 +9,7 @@ celery_app.conf.update(
     accept_content=["json"],
     timezone="UTC",
     worker_prefetch_multiplier=1,
-    imports=("worker.generation_worker", "worker.polling_worker", "worker.refund_worker"),
+    imports=("worker.generation_worker", "worker.polling_worker", "worker.refund_worker", "worker.cleanup_worker"),
     beat_schedule={
         "poll-fal-tasks-every-20s": {
             "task": "worker.polling_worker.poll_provider_tasks",
@@ -18,6 +18,10 @@ celery_app.conf.update(
         "refund-stuck-tasks-every-10min": {
             "task": "worker.refund_worker.refund_failed_tasks",
             "schedule": 600.0,
+        },
+        "purge-expired-email-codes-daily": {
+            "task": "worker.cleanup_worker.purge_expired_email_codes",
+            "schedule": 86400.0,
         },
     },
 )

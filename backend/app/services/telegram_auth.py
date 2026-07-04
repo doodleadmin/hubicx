@@ -65,6 +65,11 @@ async def get_current_user(
         user = await session.get(User, user_id)
         if not user:
             raise AppError("invalid_token", "Пользователь не найден", 401)
+        token_tv = int(payload.get("tv") or 0)
+        if token_tv != int(user.token_version or 0):
+            # Password was changed (or the session was explicitly revoked) after
+            # this token was issued; force re-authentication.
+            raise AppError("token_revoked", "Сессия отозвана, войдите заново", 401)
         return user
 
     init_data = x_telegram_init_data

@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from backend.app.db.models import AIModel, GenerationTask, Template, User, UserProfileSettings
 from backend.app.services.balance import charge_for_generation, has_enough_balance, refund_generation
 from backend.app.services.business import is_bonus_eligible_model
-from backend.app.services.input_validation import build_provider_input_from_resolved, resolve_input_files, validate_inputs_against_schema
+from backend.app.services.input_validation import build_provider_input_from_resolved, is_trusted_file_url, resolve_input_files, validate_inputs_against_schema
 from backend.app.services.pricing import calculate_generation_cost_from_db
 from backend.app.utils.errors import AppError
 
@@ -97,6 +97,12 @@ async def create_generation_task(
     params: dict[str, Any] | None,
     inputs: dict[str, Any] | None = None,
 ) -> GenerationTask:
+    # This URL is forwarded verbatim as image_url/video_url to the AI provider
+    # (see worker/generation_worker.py). Without this check any client-supplied
+    # string here would make the provider fetch an attacker-chosen URL (SSRF).
+    if input_file_url and not is_trusted_file_url(input_file_url):
+        raise AppError("validation_error", "Недопустимый источник файла")
+
     ui_params = {
         key: value
         for key, value in (params or {}).items()

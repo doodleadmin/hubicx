@@ -4,6 +4,7 @@ from decimal import Decimal
 from urllib.parse import urlparse
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings
@@ -393,6 +394,19 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
         else:
             payment.status = status.lower()
 
-        await session.commit()
+        try:
+            await session.commit()
+        except IntegrityError:
+            # The row lock above should already serialize concurrent notifies for the
+            # same payment, but the partial-unique ledger/commission indexes (see
+            # migration 0017) are the last line of defense against a duplicate
+            # topup/refund/commission slipping through. Treat that as "already
+            # processed" rather than surfacing a 500 that makes the gateway retry.
+            await session.rollback()
+            logger.warning(
+                "Payment webhook commit hit a duplicate constraint order_id=%s payment_id=%s status=%s; treating as already processed",
+                order_id, payment.id, status,
+            )
+            return
 
     # manual_mock / другие провайдеры — ignore

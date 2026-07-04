@@ -38,6 +38,7 @@ class User(Base, TimestampMixin):
     referred_by_partner_id: Mapped[int | None] = mapped_column(ForeignKey("referral_partners.id"), nullable=True)
     active_menu_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     active_menu_message_id: Mapped[int | None] = mapped_column(BigInteger)
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     referrer: Mapped["User | None"] = relationship(
         foreign_keys=[referrer_id],

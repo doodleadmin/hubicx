@@ -1,15 +1,35 @@
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.app.config import settings
 from backend.app.db.models import File
 from backend.app.utils.errors import AppError
 
 logger = logging.getLogger(__name__)
 
 ALLOWED_FIELD_TYPES = {"textarea", "text", "select", "number", "switch", "file", "files", "hidden"}
+
+
+def _trusted_file_host() -> str | None:
+    return (urlparse(settings.s3_public_url).hostname or "").lower() or None
+
+
+def is_trusted_file_url(url: str) -> bool:
+    """Only accept URLs pointing at our own S3 bucket.
+
+    Inputs here end up as `image_url`/`video_url` sent straight to third-party
+    AI providers. Accepting any http(s) URL would let a client make the
+    provider (and our egress) fetch an arbitrary attacker-controlled URL (SSRF).
+    """
+    allowed_host = _trusted_file_host()
+    if not allowed_host:
+        return False
+    parsed = urlparse(url)
+    return parsed.scheme in ("http", "https") and (parsed.hostname or "").lower() == allowed_host
 
 
 def _parse_switch(value: Any, label: str) -> bool:
@@ -169,6 +189,8 @@ async def resolve_input_files(
             for fid in file_ids:
                 # The webapp uploads to S3 and passes back ready URLs; the bot passes file_ids.
                 if isinstance(fid, str) and fid.startswith("http"):
+                    if not is_trusted_file_url(fid):
+                        raise AppError("validation_error", "Недопустимый источник файла")
                     urls.append(fid)
                     continue
                 if not isinstance(fid, int):
@@ -188,6 +210,8 @@ async def resolve_input_files(
         elif field_type == "file" and name in result:
             fid = result[name]
             if isinstance(fid, str) and fid.startswith("http"):
+                if not is_trusted_file_url(fid):
+                    raise AppError("validation_error", "Недопустимый источник файла")
                 # Ready S3 URL from the webapp uploader.
                 result[name] = fid
                 result[f"{name}_resolved"] = fid

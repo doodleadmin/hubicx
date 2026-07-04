@@ -19,6 +19,25 @@ from worker.generation_worker import notify_user, process_generation_task
 router = APIRouter(prefix="/generations", tags=["generations"])
 logger = logging.getLogger(__name__)
 
+# Fire-and-forget tasks must be referenced somewhere until they finish, or the
+# event loop is free to garbage-collect them mid-flight and the notification
+# is silently dropped. Keeping them in a module-level set (with a done callback
+# that discards + logs) avoids that without making the request wait on Telegram.
+_background_tasks: set[asyncio.Task] = set()
+
+
+def _fire_and_forget(coro) -> None:
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+
+    def _on_done(t: asyncio.Task) -> None:
+        _background_tasks.discard(t)
+        exc = t.exception() if not t.cancelled() else None
+        if exc:
+            logger.warning("BACKGROUND_TASK_FAILED %s", exc)
+
+    task.add_done_callback(_on_done)
+
 
 def serialize_task(task: GenerationTask) -> GenerationOut:
     return GenerationOut(
@@ -69,7 +88,7 @@ async def create_generation(payload: GenerationCreate, user: User = Depends(curr
     if task is None:
         raise last_exc  # type: ignore[misc]
     if user.telegram_id and user.telegram_id > 0:
-        asyncio.create_task(notify_generation_started(user.telegram_id, task))
+        _fire_and_forget(notify_generation_started(user.telegram_id, task))
     process_generation_task.delay(task.id)
     return GenerationQueued(task_id=task.id, status=task.status)
 
