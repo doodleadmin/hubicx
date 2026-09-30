@@ -30,7 +30,8 @@ def _serialize_task(task: dict, claimed: set[str]) -> dict:
 async def my_bonuses(user: User = Depends(current_user), session: AsyncSession = Depends(get_session)) -> dict:
     claimed = await _claimed_codes(session, user.id)
     return {
-        "title": "50 токенов сразу + бонусы за задания после проверки",
+        # Bonus tasks are switched off (see business.BONUS_TASKS_V2); kept for older clients.
+        "title": "",
         "total_tokens": BONUS_TOTAL_TOKENS,
         "bonus_credits": int(user.bonus_credits or 0),
         "tasks": [_serialize_task(task, claimed) for task in BONUS_TASKS_V2],

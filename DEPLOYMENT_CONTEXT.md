@@ -18,11 +18,10 @@ Current as of 2026-07-03.
 
 ## Domains
 
-- `hubicx.ru` - landing and desktop workspace.
+- `hubicx.ru` - landing that sends visitors to the Telegram bot.
 - `webapp.hubicx.ru` - Telegram Mini App through KZ proxy.
 - `api.hubicx.ru` - FastAPI.
 - `admin.hubicx.ru` - admin panel.
-- `partners.hubicx.ru` - partner dashboard.
 
 ## Standard deployment
 

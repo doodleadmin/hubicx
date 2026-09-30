@@ -64,26 +64,26 @@ const MODELS = [
 ];
 
 const SUBS = [
-  { n: 'Шаблоны Mini', p: '790', py: '632', t: '800 токенов / месяц', badge: 'Старт', best: false, core: true,
+  { n: 'Шаблоны Mini', p: '790', py: '632', t: '100 токенов / месяц', badge: 'Старт', best: false, core: true,
     f: ['Базовые шаблоны', 'Фото-шаблоны', 'Стартовый пакет токенов'] },
-  { n: 'Creator', p: '1 490', py: '1 192', t: '1 800 токенов / месяц', badge: 'Личный', best: false, core: false,
+  { n: 'Creator', p: '1 490', py: '1 192', t: '225 токенов / месяц', badge: 'Личный', best: false, core: false,
     f: ['Фото и видео', 'Базовые модели', 'История генераций'] },
-  { n: 'Шаблоны Plus', p: '2 590', py: '2 072', t: '3 500 токенов / месяц', badge: 'Для контента', best: false, core: false,
+  { n: 'Шаблоны Plus', p: '2 590', py: '2 072', t: '438 токенов / месяц', badge: 'Для контента', best: false, core: false,
     f: ['Все шаблоны', 'Видео-шаблоны', 'Больше токенов'] },
-  { n: 'Creator Pro', p: '3 990', py: '3 192', t: '6 500 токенов / месяц', badge: 'Популярный', best: true, core: true,
+  { n: 'Creator Pro', p: '3 990', py: '3 192', t: '813 токенов / месяц', badge: 'Популярный', best: true, core: true,
     f: ['Все основные модели', 'Премиум-шаблоны', 'Регулярный контент'] },
-  { n: 'Studio', p: '9 900', py: '7 920', t: '18 000 токенов / месяц', badge: 'Для бизнеса', best: false, core: true,
+  { n: 'Studio', p: '9 900', py: '7 920', t: '2 250 токенов / месяц', badge: 'Для бизнеса', best: false, core: true,
     f: ['Командная работа', 'Большой объём токенов', 'Студийные сценарии'] },
 ];
 
 const PACKS = [
-  { n: '300 токенов', p: '249', t: '0,83 ₽ за токен', best: false,
+  { n: '38 токенов', p: '249', t: '6,6 ₽ за токен', best: false,
     f: ['Разовое пополнение', 'Все базовые модели', 'AI-чат', 'Токены не сгорают'] },
-  { n: '1 000 токенов', p: '790', t: '0,79 ₽ за токен', badge: 'Выгодно', best: true,
+  { n: '125 токенов', p: '790', t: '6,3 ₽ за токен', badge: 'Выгодно', best: true,
     f: ['Разовое пополнение', 'Все модели', 'Выгоднее для задач', 'Токены не сгорают'] },
-  { n: '3 000 токенов', p: '1 990', t: '0,66 ₽ за токен', best: false,
+  { n: '375 токенов', p: '1 990', t: '5,3 ₽ за токен', best: false,
     f: ['Разовое пополнение', 'Большой объём', 'Все Pro-модели', 'Токены не сгорают'] },
-  { n: '10 000 токенов', p: '5 990', t: '0,60 ₽ за токен', best: false,
+  { n: '1 250 токенов', p: '5 990', t: '4,8 ₽ за токен', best: false,
     f: ['Максимальная выгода', 'Для активной работы', 'Все форматы и модели', 'Токены не сгорают'] },
 ];
 
@@ -91,7 +91,7 @@ const FAQ = [
   ['Нужен ли VPN для работы?', 'Нет. Hubicx работает напрямую в Telegram и в браузере — все зарубежные модели доступны без VPN и сторонних настроек.'],
   ['Токены сгорают?', 'Нет. Купленные токены остаются на балансе бессрочно и расходуются только когда вы что-то генерируете.'],
   ['Какие модели доступны?', 'Топовые модели для фото и видео: Nano Banana Pro, Seedream, Flux, Seedance 2.0, Kling, Z-Image и другие. Список постоянно пополняется.'],
-  ['Сколько стоит одна генерация?', 'Фото — от 1–2 токенов, видео — от 15. Точная стоимость показывается перед запуском, без скрытых списаний.'],
+  ['Сколько стоит одна генерация?', 'Фото — от 1 токена, видео — от 6. Точная стоимость показывается перед запуском, без скрытых списаний.'],
   ['Можно ли использовать результаты коммерчески?', 'Да. На тарифах Про и Макс доступна коммерческая лицензия на созданный контент.'],
   ['Как оплатить?', 'Картой российского банка через защищённую оплату. Чек приходит автоматически.'],
 ];
@@ -432,6 +432,15 @@ function DesktopMock() {
 }
 
 /* ============ Main Landing Page ============ */
+// The product lives in the Telegram Mini App: every sign-up/sign-in CTA opens the bot,
+// carrying a partner code from ?ref= through to /start.
+function openHubicxBot() {
+  var ref = '';
+  try { ref = localStorage.getItem('hbx_ref_code') || ''; } catch (e) {}
+  var start = /^[A-Za-z0-9_-]{1,60}$/.test(ref) ? '?start=ref_' + ref.replace(/^ref_/, '') : '';
+  window.location.href = 'https://t.me/hubicx_bot' + start;
+}
+
 function LandingPage({ onAuthed, initialAuth = null }) {
   const Ic = LandingIc;
 
@@ -472,7 +481,8 @@ function LandingPage({ onAuthed, initialAuth = null }) {
   }, []);
 
   /* ---- State ---- */
-  const [auth, setAuth] = uS(initialAuth);
+  const auth = null;
+  const setAuth = function(mode) { if (mode) openHubicxBot(); };
   const [scrolled, setScrolled] = uS(false);
   const [menu, setMenu] = uS(false);
   const [sticky, setSticky] = uS(false);
@@ -637,8 +647,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           <a href="/blog/">Блог</a>
         </div>
         <div className="lp-nav-cta">
-          <button className="lp-btn lp-btn-ghost" onClick={() => setAuth('login')}>Войти</button>
-          <button className="lp-btn lp-btn-white" onClick={() => setAuth('register')} data-mag>Начать бесплатно</button>
+          <button className="lp-btn lp-btn-white" onClick={() => setAuth('register')} data-mag>Открыть в Telegram</button>
           <button className="lp-burger" aria-label="Открыть меню" onClick={() => setMenu(true)}><Ic n="menu" s={20} /></button>
         </div>
       </nav>
@@ -651,7 +660,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
             <a key={l[0]} href={l[0]} onClick={e => { e.preventDefault(); setMenu(false); scrollTo(l[0].slice(1)); }}>{l[1]}</a>
           ))}
           <a href="/blog/">Блог</a>
-          <button className="lp-btn lp-btn-white lp-btn-lg" onClick={() => { setMenu(false); setAuth('register'); }}>Начать бесплатно</button>
+          <button className="lp-btn lp-btn-white lp-btn-lg" onClick={() => { setMenu(false); setAuth('register'); }}>Открыть в Telegram</button>
         </div>
       )}
 
@@ -663,7 +672,7 @@ function LandingPage({ onAuthed, initialAuth = null }) {
           description: 'AI-хаб для генерации фото, видео и текстов. Одна подписка на лучшие AI-модели без VPN — прямо в Telegram и в браузере.',
           applicationCategory: 'Multimedia',
           operatingSystem: 'Web, Telegram',
-          offers: { '@type': 'Offer', price: '0', priceCurrency: 'RUB', description: 'Бесплатный старт с 50 токенами в подарок' }
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'RUB', description: 'Фото, видео и чат с нейросетями в Telegram' }
         }) }}></script>
 
         {/* ========== 1. HERO (split) ========== */}
@@ -697,12 +706,12 @@ function LandingPage({ onAuthed, initialAuth = null }) {
             </div>
 
             <div className="lp-hero-meta">
-              <span><Ic n="check" s={15} c="#7faa9d" /> 50 токенов в подарок</span>
+              <span><Ic n="check" s={15} c="#7faa9d" /> Прямо в Telegram</span>
               <span><Ic n="bolt" s={15} c="#7faa9d" /> Результат за секунды</span>
               <span><Ic n="shield" s={15} c="#7faa9d" /> Без VPN</span>
             </div>
             <div className="lp-hero-meta" style={{ marginTop: 12 }}>
-              <span>🎁 50 токенов сразу + до 140 за простые задания</span>
+              <span>🤝 Партнёрская программа: 20% с покупок приглашённых друзей</span>
             </div>
           </div>
 
@@ -971,7 +980,6 @@ function LandingPage({ onAuthed, initialAuth = null }) {
             <span className="lp-kicker reveal">Тарифы</span>
             <h2 className="lp-h2 reveal" style={{ '--d': '60ms' }}>Выберите формат — <span className="lp-grad-tx">подписка или токены</span></h2>
             <p className="lp-sub reveal" style={{ '--d': '120ms', margin: '0 auto' }}>Подписки — для регулярного контента, разовые пакеты — когда нужно пополнить баланс. Токены тратятся только на генерации.</p>
-            <p className="lp-sub reveal" style={{ '--d': '150ms', margin: '8px auto 0', fontSize: 15 }}>Можно начать бесплатно: 50 токенов после регистрации.</p>
           </div>
 
           <div className="lp-price-toggle reveal">
@@ -1062,11 +1070,8 @@ function LandingPage({ onAuthed, initialAuth = null }) {
         <section className="lp-sec" style={{ paddingTop: 0 }}>
           <div className="lp-cta reveal">
             <h2>Начните создавать<br /><span className="lp-grad-tx">уже сегодня</span></h2>
-            <p>50 токенов в подарок при регистрации. Карта не нужна.</p>
+            <p>Фото, видео и тексты с нейросетями — прямо в Telegram, без VPN.</p>
             <div className="lp-cta-row">
-              <button className="lp-btn lp-btn-white lp-btn-lg" onClick={() => setAuth('register')}>
-                Начать бесплатно <Ic n="arrow" s={18} />
-              </button>
               <button className="lp-btn lp-btn-tg lp-btn-lg" onClick={() => setAuth('register')}>
                 <Ic n="tg" s={18} c="#fff" /> Открыть в Telegram
               </button>
@@ -1103,8 +1108,8 @@ function LandingPage({ onAuthed, initialAuth = null }) {
       {/* ========== 14. STICKY CTA ========== */}
       <div className={'lp-sticky' + (sticky ? ' show' : '')}>
         <div className="lp-sticky-in">
-          <span className="lp-sticky-tx"><b>50 токенов в подарок</b> — попробуйте без карты, прямо сейчас</span>
-          <button className="lp-btn lp-btn-white" onClick={() => setAuth('register')}>Начать бесплатно</button>
+          <span className="lp-sticky-tx"><b>Hubicx в Telegram</b> — фото, видео и чат с ИИ в одном боте</span>
+          <button className="lp-btn lp-btn-white" onClick={() => setAuth('register')}>Открыть в Telegram</button>
         </div>
       </div>
 

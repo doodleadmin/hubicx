@@ -5,21 +5,22 @@ import os
 from sqlalchemy import select
 
 from backend.seed_models import AI_MODELS_CATALOG
-from backend.app.db.models import AIModel, Template
+from backend.app.db.models import AIModel, ModelPricing, Template
+from backend.app.services.model_pricing_catalog import MODEL_PRICING
 from backend.app.db.session import async_session
 
 TEMPLATES = [
-    ("enhance_4k", "Улучшить до 4K", "Повышение качества изображения", ["image"], 35),
-    ("photo_to_prompt", "Промпт по фото", "Создать подробный промпт по изображению", ["image"], 10),
-    ("chat_to_song", "Чат в песню", "Превратить переписку или текст в песню", ["prompt"], 50),
-    ("add_beer", "Добавить пиво", "Аккуратно добавить пиво на фото", ["image", "prompt"], 30),
-    ("photo_gx", "Фото на GX", "Стилизованная обработка фото", ["image"], 30),
-    ("light_aura", "Ореол света", "Добавить кинематографичный световой ореол", ["image"], 30),
-    ("broadcast", "Трансляция", "Сцена как в прямом эфире", ["image", "prompt"], 40),
-    ("formula_1", "Formula 1", "Сделать образ в стиле Formula 1", ["image"], 40),
-    ("doll_unboxing", "Распаковка куклы", "Создать видео/фото распаковки куклы", ["image"], 60),
-    ("ai_avatar", "ИИ Аватар", "Создать говорящий ИИ-аватар", ["image", "audio"], 70),
-    ("graduation", "Выпускной", "Праздничный выпускной стиль", ["image"], 35),
+    ("enhance_4k", "Улучшить до 4K", "Повышение качества изображения", ["image"], 4),
+    ("photo_to_prompt", "Промпт по фото", "Создать подробный промпт по изображению", ["image"], 1),
+    ("chat_to_song", "Чат в песню", "Превратить переписку или текст в песню", ["prompt"], 6),
+    ("add_beer", "Добавить пиво", "Аккуратно добавить пиво на фото", ["image", "prompt"], 4),
+    ("photo_gx", "Фото на GX", "Стилизованная обработка фото", ["image"], 4),
+    ("light_aura", "Ореол света", "Добавить кинематографичный световой ореол", ["image"], 4),
+    ("broadcast", "Трансляция", "Сцена как в прямом эфире", ["image", "prompt"], 5),
+    ("formula_1", "Formula 1", "Сделать образ в стиле Formula 1", ["image"], 5),
+    ("doll_unboxing", "Распаковка куклы", "Создать видео/фото распаковки куклы", ["image"], 8),
+    ("ai_avatar", "ИИ Аватар", "Создать говорящий ИИ-аватар", ["image", "audio"], 9),
+    ("graduation", "Выпускной", "Праздничный выпускной стиль", ["image"], 4),
 ]
 
 
@@ -65,12 +66,38 @@ async def upsert_template(session, code: str, title: str, description: str, inpu
         session.add(Template(code=code, **values))
 
 
+async def upsert_model_pricing(session, code: str, data: dict, force: bool = False) -> None:
+    """Prices from the catalog; rows edited in the admin panel are kept unless force."""
+    model = await session.scalar(select(AIModel).where(AIModel.code == code))
+    if not model:
+        return
+    pricing = await session.scalar(select(ModelPricing).where(ModelPricing.model_code == code))
+    values = {
+        "display_name": model.title,
+        "category": model.task_type,
+        "price_tokens": data["price_tokens"],
+        "price_rules": data["price_rules"],
+        "provider_cost_note": data["note"],
+    }
+    if pricing:
+        pricing.display_name = model.title
+        pricing.category = model.task_type
+        if force:
+            for key, value in values.items():
+                setattr(pricing, key, value)
+    else:
+        session.add(ModelPricing(model_code=code, is_enabled=True, is_featured=False, **values))
+
+
 async def main(force: bool = False) -> None:
     async with async_session() as session:
         for data in AI_MODELS_CATALOG:
             await upsert_model(session, data, force=force)
         for index, item in enumerate(TEMPLATES, start=1):
             await upsert_template(session, *item, sort_order=index * 10)
+        await session.flush()
+        for code, data in MODEL_PRICING.items():
+            await upsert_model_pricing(session, code, data, force=force)
         await session.commit()
     mode = "force" if force else "safe"
     print(f"Seed completed ({mode})")

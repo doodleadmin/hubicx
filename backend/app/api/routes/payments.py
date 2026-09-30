@@ -8,6 +8,7 @@ from backend.app.api.deps import current_user
 from backend.app.db.models import TokenPackage, User
 from backend.app.db.session import get_session
 from backend.app.schemas.payments import PaymentCreate, PaymentOut, OrderPreviewRequest
+from backend.app.services.business import RUB_PER_TOKEN_CUSTOM
 from backend.app.services.payments import MIN_CUSTOM_TOPUP_RUB, create_payment, process_webhook
 from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 from backend.app.utils.errors import AppError
@@ -118,12 +119,13 @@ async def order_preview(request: Request, payload: OrderPreviewRequest, session:
                 422,
             )
 
+        tokens = amount // RUB_PER_TOKEN_CUSTOM
         return {
             "type": "custom",
             "amount_rub": amount,
-            "base_tokens": amount,
+            "base_tokens": tokens,
             "bonus_tokens": 0,
-            "total_tokens": amount,
+            "total_tokens": tokens,
             "status": "available",
             "message": "Готово к оплате",
         }

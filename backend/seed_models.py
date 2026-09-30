@@ -7,7 +7,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "google/nano-banana-2-lite",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 25,
+        "price_credits": 3,
         "is_active": True,
         "sort_order": 9,
         "default_params": {"num_images": 1, "output_format": "png"},
@@ -21,7 +21,7 @@ AI_MODELS_CATALOG = [
                 {"name": "aspect_ratio", "provider_key": "aspect_ratio", "label": "Соотношение сторон", "type": "select", "default": "1:1", "options": ["auto", "21:9", "16:9", "3:2", "4:3", "5:4", "1:1", "4:5", "3:4", "2:3", "9:16"]},
                 {"name": "num_images", "provider_key": "num_images", "label": "Количество", "type": "select", "default": 1, "options": [1, 2, 3, 4]},
             ],
-            "price_rules": {"base": 25, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+            "price_rules": {"base": 3, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
             "schema_source": {"provider": "fal", "provider_model_id": "google/nano-banana-2-lite", "verified_at": "2026-07-01", "verified_by": "official_fal_docs"},
         },
     },
@@ -33,7 +33,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/nano-banana-2",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 40,
+        "price_credits": 5,
         "is_active": True,
         "sort_order": 10,
         "default_params": {"num_images": 1},
@@ -60,7 +60,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/nano-banana-2",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 40,
+        "price_credits": 5,
         "is_active": True,
         "sort_order": 11,
         "default_params": {"num_images": 1},
@@ -74,7 +74,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/nano-banana-pro",
         "task_type": "image",
         "input_type": "image",
-        "price_credits": 80,
+        "price_credits": 10,
         "is_active": True,
         "sort_order": 12,
         "default_params": {"num_images": 1},
@@ -105,7 +105,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/nano-banana/edit",
         "task_type": "image",
         "input_type": "image",
-        "price_credits": 60,
+        "price_credits": 8,
         "is_active": True,
         "sort_order": 13,
         "default_params": {"num_images": 1},
@@ -133,7 +133,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/flux/schnell",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 30,
+        "price_credits": 4,
         "is_active": True,
         "sort_order": 15,
         "default_params": {"image_size": "square_hd", "num_images": 1},
@@ -158,7 +158,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/bytedance/seedream/v4/text-to-image",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 35,
+        "price_credits": 4,
         "is_active": True,
         "sort_order": 30,
         "default_params": {"num_images": 1},
@@ -185,7 +185,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "openai/gpt-image-2",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 40,
+        "price_credits": 5,
         "is_active": True,
         "sort_order": 20,
         "default_params": {},
@@ -211,7 +211,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "xai/grok-imagine-image",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 35,
+        "price_credits": 4,
         "is_active": True,
         "sort_order": 40,
         "default_params": {},
@@ -237,7 +237,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "fal-ai/z-image/turbo",
         "task_type": "image",
         "input_type": "text",
-        "price_credits": 25,
+        "price_credits": 3,
         "is_active": True,
         "sort_order": 50,
         "default_params": {"num_images": 1},
@@ -267,7 +267,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "openai/gpt-4o-mini",
         "task_type": "text",
         "input_type": "text",
-        "price_credits": 2,
+        "price_credits": 1,
         "is_active": True,
         "sort_order": 10,
         "default_params": {"max_tokens": 800, "temperature": 0.7},
@@ -291,7 +291,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "openai/gpt-4o-mini",
         "task_type": "text",
         "input_type": "text",
-        "price_credits": 2,
+        "price_credits": 1,
         "is_active": True,
         "sort_order": 20,
         "default_params": {"max_tokens": 1000, "temperature": 0.5},
@@ -313,7 +313,7 @@ AI_MODELS_CATALOG = [
         "provider_model_id": "placeholder/voice-transcription",
         "task_type": "audio",
         "input_type": "audio",
-        "price_credits": 10,
+        "price_credits": 1,
         "is_active": True,
         "sort_order": 30,
         "default_params": {},
@@ -387,14 +387,14 @@ set_model(
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/nano-banana-2", "Fal Nano Banana 2 input schema."),
-        price_rules={"base": 40, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 5, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
 set_model(
     "nano_banana",
     is_active=False,
-    form_schema=schema([], schema_source=source("alias", notes="Deprecated alias. /api/models/nano_banana returns nano_banana_2."), price_rules={"base": 40, "min": 1, "round": "ceil"}),
+    form_schema=schema([], schema_source=source("alias", notes="Deprecated alias. /api/models/nano_banana returns nano_banana_2."), price_rules={"base": 5, "min": 1, "round": "ceil"}),
 )
 
 set_model(
@@ -410,7 +410,7 @@ set_model(
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/nano-banana-pro", "Fal Nano Banana Pro input schema."),
-        price_rules={"base": 80, "multipliers": [{"field": "resolution", "values": {"1K": 1, "2K": 1, "4K": 2}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 10, "multipliers": [{"field": "resolution", "values": {"1K": 1, "2K": 1, "4K": 2}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -426,7 +426,7 @@ set_model(
         ],
         submit_label="Редактировать",
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/nano-banana/edit", "Fal Nano Banana Edit input schema."),
-        price_rules={"base": 60, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 8, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -440,7 +440,7 @@ set_model(
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/flux/schnell", "Fal Flux Schnell input schema. Technical defaults are hidden."),
-        price_rules={"base": 30, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 4, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -454,7 +454,7 @@ set_model(
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/bytedance/seedream/v4/text-to-image", "Fal Seedream v4 text-to-image input schema. Technical defaults are hidden."),
-        price_rules={"base": 50, "multipliers": [{"field": "image_size", "values": {"auto_2K": 2, "auto_4K": 4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 6, "multipliers": [{"field": "image_size", "values": {"auto_2K": 2, "auto_4K": 4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -468,7 +468,7 @@ set_model(
             field("num_images", "Количество", "select", default=1, options=[1, 2, 3, 4], label_key="num_images", advanced=False),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/fal-ai/z-image/turbo", "Fal Z-Image Turbo input schema. Prompt expansion omitted because pricing changes."),
-        price_rules={"base": 25, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 3, "multipliers": [{"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -480,7 +480,7 @@ set_model(
         submit_label="Отправить",
         result_type="text",
         schema_source=source("custom", notes="OpenRouter chat completion. Technical parameters are defaults."),
-        price_rules={"base": 2, "min": 1, "round": "ceil"},
+        price_rules={"base": 1, "min": 1, "round": "ceil"},
     ),
 )
 
@@ -492,7 +492,7 @@ set_model(
     provider_model_id="openai/gpt-image-2",
     task_type="image",
     input_type="text",
-    price_credits=90,
+    price_credits=11,
     is_active=True,
     sort_order=22,
     default_params={"num_images": 1, "quality": "high", "output_format": "png", "sync_mode": False},
@@ -506,7 +506,7 @@ set_model(
             field("output_format", "Формат файла", "select", default="png", options=["png", "jpeg", "webp"], advanced=True),
         ],
         schema_source=source("verified", f"{FAL_DOCS_BASE}/openai/gpt-image-2/api", "Fal GPT Image 2 input schema."),
-        price_rules={"base": 90, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 11, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
 set_model(
@@ -517,7 +517,7 @@ set_model(
     provider_model_id="openai/gpt-image-2/edit",
     task_type="image",
     input_type="image",
-    price_credits=110,
+    price_credits=14,
     is_active=True,
     sort_order=23,
     default_params={"num_images": 1, "quality": "high", "output_format": "png", "sync_mode": False},
@@ -533,10 +533,10 @@ set_model(
         ],
         submit_label="Редактировать",
         schema_source=source("verified", f"{FAL_DOCS_BASE}/openai/gpt-image-2/edit/api", "Fal GPT Image 2 Edit input schema."),
-        price_rules={"base": 110, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
+        price_rules={"base": 14, "multipliers": [{"field": "quality", "values": {"auto": 1, "low": 0.7, "medium": 1, "high": 1.4}}, {"field": "num_images", "mode": "multiply_by_value"}], "min": 1, "round": "ceil"},
     ),
 )
-set_model("grok_image", is_active=False, form_schema=schema(AI_MODELS_CATALOG[[m["code"] for m in AI_MODELS_CATALOG].index("grok_image")].get("form_schema", {}).get("fields", []), schema_source=source("unverified", notes="xAI image schema docs were not reachable during audit; model hidden until provider contract is confirmed."), price_rules={"base": 35, "min": 1, "round": "ceil"}))
+set_model("grok_image", is_active=False, form_schema=schema(AI_MODELS_CATALOG[[m["code"] for m in AI_MODELS_CATALOG].index("grok_image")].get("form_schema", {}).get("fields", []), schema_source=source("unverified", notes="xAI image schema docs were not reachable during audit; model hidden until provider contract is confirmed."), price_rules={"base": 4, "min": 1, "round": "ceil"}))
 
 VIDEO_ASPECT = ["auto", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"]
 GROK_VIDEO_ASPECT = ["16:9", "4:3", "3:2", "1:1", "2:3", "3:4", "9:16"]
@@ -554,7 +554,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/text-to-video",
     task_type="video",
     input_type="text",
-    price_credits=460,
+    price_credits=58,
     is_active=True,
     sort_order=10,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "16:9", "generate_audio": True, "sync_mode": False},
@@ -571,7 +571,7 @@ set_model(
         result_type="video",
         helper_text="Видео по тексту. Для первого теста используйте 480p/720p и короткую длительность.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/text-to-video", "Fal Seedance 2.0 text-to-video input schema."),
-        price_rules={"base": 460, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 58, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -583,7 +583,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/fast/text-to-video",
     task_type="video",
     input_type="text",
-    price_credits=370,
+    price_credits=46,
     is_active=True,
     sort_order=15,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "16:9", "generate_audio": True, "sync_mode": False},
@@ -600,7 +600,7 @@ set_model(
         result_type="video",
         helper_text="Быстрый режим по тексту. До 15 секунд, 480p/720p.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/fast/text-to-video", "Fal Seedance 2.0 Fast text-to-video input schema.", verified_at="2026-06-30"),
-        price_rules={"base": 370, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 46, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -612,7 +612,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/fast/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=370,
+    price_credits=46,
     is_active=True,
     sort_order=20,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "auto", "generate_audio": True, "sync_mode": False},
@@ -631,7 +631,7 @@ set_model(
         result_type="video",
         helper_text="Быстрый режим по фото. Используйте одно стартовое изображение.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/fast/image-to-video", "Fal Seedance 2.0 Fast image-to-video input schema."),
-        price_rules={"base": 370, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 46, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -643,7 +643,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/mini/text-to-video",
     task_type="video",
     input_type="text",
-    price_credits=240,
+    price_credits=30,
     is_active=True,
     sort_order=16,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "16:9", "generate_audio": True, "sync_mode": False},
@@ -660,7 +660,7 @@ set_model(
         result_type="video",
         helper_text="Доступный режим по тексту. До 15 секунд.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/mini/text-to-video", "Fal Seedance 2.0 Mini text-to-video input schema.", verified_at="2026-06-30"),
-        price_rules={"base": 240, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 30, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -672,7 +672,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/mini/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=240,
+    price_credits=30,
     is_active=True,
     sort_order=26,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "auto", "generate_audio": True, "sync_mode": False},
@@ -691,7 +691,7 @@ set_model(
         result_type="video",
         helper_text="Доступный режим по фото. До 15 секунд.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/mini/image-to-video", "Fal Seedance 2.0 Mini image-to-video input schema.", verified_at="2026-06-30"),
-        price_rules={"base": 240, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 30, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -703,7 +703,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/mini/reference-to-video",
     task_type="video",
     input_type="image",
-    price_credits=240,
+    price_credits=30,
     is_active=True,
     sort_order=27,
     default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
@@ -721,7 +721,7 @@ set_model(
         result_type="video",
         helper_text="Доступный режим по референсам. До 9 изображений.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/mini/reference-to-video", "Fal Seedance 2.0 Mini reference-to-video input schema.", verified_at="2026-06-30"),
-        price_rules={"base": 240, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 30, "multipliers": [{"field": "resolution", "values": {"480p": 0.466, "720p": 1}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -733,7 +733,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/reference-to-video",
     task_type="video",
     input_type="image",
-    price_credits=460,
+    price_credits=58,
     is_active=True,
     sort_order=24,
     default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
@@ -753,7 +753,7 @@ set_model(
         result_type="video",
         helper_text="Топовый режим по референсам: 480p/720p/1080p, до 9 изображений.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/reference-to-video", "Fal Seedance 2.0 reference-to-video input schema."),
-        price_rules={"base": 460, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 58, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -765,7 +765,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/fast/reference-to-video",
     task_type="video",
     input_type="image",
-    price_credits=370,
+    price_credits=46,
     is_active=True,
     sort_order=25,
     default_params={"resolution": "480p", "duration": "5", "aspect_ratio": "9:16", "generate_audio": True, "sync_mode": False},
@@ -783,7 +783,7 @@ set_model(
         result_type="video",
         helper_text="Быстрый режим по референсам: 480p/720p, до 9 изображений.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/fast/reference-to-video", "Fal Seedance 2.0 Fast reference-to-video input schema."),
-        price_rules={"base": 370, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 46, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1}}, {"field": "duration", "values": SEEDANCE_REFERENCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -795,7 +795,7 @@ set_model(
     provider_model_id="bytedance/seedance-2.0/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=460,
+    price_credits=58,
     is_active=True,
     sort_order=30,
     default_params={"resolution": "720p", "duration": "5", "aspect_ratio": "auto", "generate_audio": True, "sync_mode": False},
@@ -814,7 +814,7 @@ set_model(
         result_type="video",
         helper_text="Качественный режим по фото. 1080p может быть дороже и дольше.",
         schema_source=fal_schema_source("bytedance/seedance-2.0/image-to-video", "Fal Seedance 2.0 image-to-video input schema."),
-        price_rules={"base": 460, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
+        price_rules={"base": 58, "multipliers": [{"field": "resolution", "values": {"480p": 0.45, "720p": 1, "1080p": 2.25}}, {"field": "duration", "values": SEEDANCE_DURATION_PRICE}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -826,7 +826,7 @@ set_model(
     provider_model_id="fal-ai/kling-video/v2.1/standard/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=220,
+    price_credits=28,
     is_active=True,
     sort_order=40,
     default_params={"duration": "5", "negative_prompt": "blur, distort, and low quality", "cfg_scale": 0.5, "sync_mode": False},
@@ -841,7 +841,7 @@ set_model(
         result_type="video",
         helper_text="Видео по фото. Для первого теста используйте 5 секунд.",
         schema_source=fal_schema_source("fal-ai/kling-video/v2.1/standard/image-to-video", "Fal Kling 2.1 Standard image-to-video input schema."),
-        price_rules={"base": 220, "multipliers": [{"field": "duration", "values": {"5": 1, "10": 2}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 28, "multipliers": [{"field": "duration", "values": {"5": 1, "10": 2}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -853,7 +853,7 @@ set_model(
     provider_model_id="fal-ai/kling-video/v3/standard/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=260,
+    price_credits=33,
     is_active=True,
     sort_order=41,
     default_params={"duration": "10", "generate_audio": False, "sync_mode": False},
@@ -871,7 +871,7 @@ set_model(
         result_type="video",
         helper_text="Видео по фото. Этот режим работает в 720p без отдельного выбора разрешения.",
         schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/image-to-video", "Fal Kling 3.0 Standard image-to-video input schema.", verified_at="2026-06-20"),
-        price_rules={"base": 260, "multipliers": [{"field": "duration", "values": {"3": 0.4, "4": 0.5, "5": 0.6, "6": 0.7, "7": 0.8, "8": 0.9, "9": 1, "10": 1, "11": 1.1, "12": 1.2, "13": 1.3, "14": 1.4, "15": 1.5}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 33, "multipliers": [{"field": "duration", "values": {"3": 0.4, "4": 0.5, "5": 0.6, "6": 0.7, "7": 0.8, "8": 0.9, "9": 1, "10": 1, "11": 1.1, "12": 1.2, "13": 1.3, "14": 1.4, "15": 1.5}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -883,7 +883,7 @@ set_model(
     provider_model_id="fal-ai/kling-video/v3/standard/motion-control",
     task_type="video",
     input_type="image",
-    price_credits=260,
+    price_credits=33,
     is_active=True,
     sort_order=42,
     default_params={"keep_original_sound": True, "character_orientation": "image", "sync_mode": False},
@@ -900,7 +900,7 @@ set_model(
         result_type="video",
         helper_text="Нужно фото персонажа и видео-референс движения.",
         schema_source=fal_schema_source("fal-ai/kling-video/v3/standard/motion-control", "Fal Kling 3.0 Standard Motion Control input schema.", verified_at="2026-06-20"),
-        price_rules={"base": 260, "min": 1, "round": "ceil"},
+        price_rules={"base": 33, "min": 1, "round": "ceil"},
     ),
 )
 
@@ -912,7 +912,7 @@ set_model(
     provider_model_id="fal-ai/veo3.1",
     task_type="video",
     input_type="text",
-    price_credits=900,
+    price_credits=113,
     is_active=True,
     sort_order=80,
     default_params={"aspect_ratio": "16:9", "duration": "8s", "resolution": "720p", "generate_audio": True, "auto_fix": True, "safety_tolerance": "4", "sync_mode": False},
@@ -933,7 +933,7 @@ set_model(
         result_type="video",
         helper_text="Высокая стоимость. Для теста используйте 720p и короткую длительность.",
         schema_source=fal_schema_source("fal-ai/veo3.1", "Fal Veo 3.1 text-to-video input schema. Kept inactive because of high provider cost."),
-        price_rules={"base": 900, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}, {"field": "duration", "values": {"4s": 0.6, "6s": 0.8, "8s": 1}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 113, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}, {"field": "duration", "values": {"4s": 0.6, "6s": 0.8, "8s": 1}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -945,7 +945,7 @@ set_model(
     provider_model_id="fal-ai/veo3.1/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=900,
+    price_credits=113,
     is_active=True,
     sort_order=90,
     default_params={"aspect_ratio": "auto", "duration": "8s", "resolution": "720p", "generate_audio": True, "auto_fix": True, "safety_tolerance": "4", "sync_mode": False},
@@ -967,7 +967,7 @@ set_model(
         result_type="video",
         helper_text="Высокая стоимость. Для теста используйте 720p и короткую длительность.",
         schema_source=fal_schema_source("fal-ai/veo3.1/image-to-video", "Fal Veo 3.1 image-to-video input schema. Kept inactive because of high provider cost."),
-        price_rules={"base": 900, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}, {"field": "duration", "values": {"4s": 0.6, "6s": 0.8, "8s": 1}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 113, "multipliers": [{"field": "resolution", "values": {"720p": 1, "1080p": 2, "4k": 4}}, {"field": "duration", "values": {"4s": 0.6, "6s": 0.8, "8s": 1}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -979,7 +979,7 @@ set_model(
     provider_model_id="xai/grok-imagine-video/text-to-video",
     task_type="video",
     input_type="text",
-    price_credits=320,
+    price_credits=40,
     is_active=True,
     sort_order=50,
     default_params={"duration": 6, "resolution": "720p", "aspect_ratio": "16:9", "sync_mode": False},
@@ -995,7 +995,7 @@ set_model(
         result_type="video",
         helper_text="Видео по тексту. Для первого теста используйте 480p/720p.",
         schema_source=fal_schema_source("xai/grok-imagine-video/text-to-video", "Fal Grok Imagine Video text-to-video input schema.", verified_at="2026-06-16"),
-        price_rules={"base": 320, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 40, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -1007,7 +1007,7 @@ set_model(
     provider_model_id="xai/grok-imagine-video/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=340,
+    price_credits=43,
     is_active=True,
     sort_order=55,
     default_params={"duration": 6, "resolution": "720p", "aspect_ratio": "auto", "sync_mode": False},
@@ -1024,7 +1024,7 @@ set_model(
         result_type="video",
         helper_text="Видео по фото. Для первого теста используйте 480p/720p.",
         schema_source=fal_schema_source("xai/grok-imagine-video/image-to-video", "Fal Grok Imagine Video image-to-video input schema.", verified_at="2026-06-16"),
-        price_rules={"base": 340, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 43, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1}}, {"field": "duration", "values": {"4": 0.8, "6": 1, 4: 0.8, 6: 1}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -1036,7 +1036,7 @@ set_model(
     provider_model_id="alibaba/happy-horse/image-to-video",
     task_type="video",
     input_type="image",
-    price_credits=200,
+    price_credits=25,
     is_active=True,
     sort_order=45,
     default_params={"duration": "5", "aspect_ratio": "auto", "sync_mode": False},
@@ -1054,7 +1054,7 @@ set_model(
         result_type="video",
         helper_text="Оживление фото со звуком, 1080p и синхронизацией речи.",
         schema_source=fal_schema_source("alibaba/happy-horse/image-to-video", "Fal Happy Horse 1.0 image-to-video input schema."),
-        price_rules={"base": 200, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1, "1080p": 2}}, {"field": "duration", "values": {"auto": 1, "4": 1, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
+        price_rules={"base": 25, "multipliers": [{"field": "resolution", "values": {"480p": 0.8, "720p": 1, "1080p": 2}}, {"field": "duration", "values": {"auto": 1, "4": 1, "5": 1, "6": 1.2, "7": 1.4, "8": 1.6, "9": 1.8, "10": 2, "11": 2.2, "12": 2.4, "13": 2.6, "14": 2.8, "15": 3}}], "min": 1, "round": "ceil"},
     ),
 )
 
@@ -1068,3 +1068,4 @@ for _model in AI_MODELS_CATALOG:
         for _field in _schema.get("fields", []):
             if _field.get("name") in {"seed", "safety_tolerance", "system_prompt", "output_format", "num_images", "num_inference_steps", "enable_safety_checker", "enable_prompt_expansion", "acceleration", "guidance_scale", "max_tokens", "temperature", "duration", "max_images", "limit_generations", "enable_web_search", "thinking_level"}:
                 _field.setdefault("advanced", True)
+

@@ -1,12 +1,30 @@
 from __future__ import annotations
 
-SIGNUP_BONUS_TOKENS = 50
+# Welcome and task bonuses are switched off: growth now goes through the partner
+# program. Bonus balances users already have stay spendable.
+SIGNUP_BONUS_TOKENS = 0
+
+# Partner program: every user can invite people and earn from their purchases.
+PARTNER_COMMISSION_PERCENT = 20
+PARTNER_HOLD_DAYS = 14
+PARTNER_MIN_PAYOUT_RUB = 500
+# Cash-outs are paused until the legal/tax side of paying individuals is settled.
+# Earnings can still be spent on plans and tokens.
+PARTNER_WITHDRAWALS_ENABLED = False
+PARTNER_PAYOUT_METHODS = {
+    "card": "Банковская карта",
+    "sbp": "СБП по номеру телефона",
+}
+
+# Token scale v3 (October 2026): one token ≈ 4.4-7.9 ₽ depending on the plan (8× the old token).
+# Custom top-ups buy at 8 ₽ per token.
+RUB_PER_TOKEN_CUSTOM = 8
 
 TOKEN_PACKAGES_V2 = [
-    {"code": "topup_300", "title": "300 токенов", "price_rub": 249, "base_tokens": 300, "bonus_tokens": 0, "total_tokens": 300, "sort_order": 10},
-    {"code": "topup_1000", "title": "1 000 токенов", "price_rub": 790, "base_tokens": 1000, "bonus_tokens": 0, "total_tokens": 1000, "sort_order": 20},
-    {"code": "topup_3000", "title": "3 000 токенов", "price_rub": 1990, "base_tokens": 3000, "bonus_tokens": 0, "total_tokens": 3000, "sort_order": 30},
-    {"code": "topup_10000", "title": "10 000 токенов", "price_rub": 5990, "base_tokens": 10000, "bonus_tokens": 0, "total_tokens": 10000, "sort_order": 40},
+    {"code": "topup_300", "title": "38 токенов", "price_rub": 249, "base_tokens": 38, "bonus_tokens": 0, "total_tokens": 38, "sort_order": 10},
+    {"code": "topup_1000", "title": "125 токенов", "price_rub": 790, "base_tokens": 125, "bonus_tokens": 0, "total_tokens": 125, "sort_order": 20},
+    {"code": "topup_3000", "title": "375 токенов", "price_rub": 1990, "base_tokens": 375, "bonus_tokens": 0, "total_tokens": 375, "sort_order": 30},
+    {"code": "topup_10000", "title": "1 250 токенов", "price_rub": 5990, "base_tokens": 1250, "bonus_tokens": 0, "total_tokens": 1250, "sort_order": 40},
 ]
 
 SUBSCRIPTION_PLANS_V2 = [
@@ -16,7 +34,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "price_rub": 790,
         "period": "month",
         "category": "templates",
-        "tokens_per_month": 800,
+        "tokens_per_month": 100,
         "features": ["Базовые шаблоны", "Фото-шаблоны", "Стартовый пакет токенов"],
         "badge": "Старт",
     },
@@ -26,7 +44,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "price_rub": 2590,
         "period": "month",
         "category": "templates",
-        "tokens_per_month": 3500,
+        "tokens_per_month": 438,
         "features": ["Все шаблоны", "Видео-шаблоны", "Больше токенов каждый месяц"],
         "badge": "Для контента",
     },
@@ -36,7 +54,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "price_rub": 1490,
         "period": "month",
         "category": "full",
-        "tokens_per_month": 1800,
+        "tokens_per_month": 225,
         "features": ["Фото и видео", "Базовые модели", "История генераций"],
         "badge": "Личный",
     },
@@ -46,7 +64,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "price_rub": 3990,
         "period": "month",
         "category": "full",
-        "tokens_per_month": 6500,
+        "tokens_per_month": 813,
         "features": ["Все основные модели", "Премиум-шаблоны", "Регулярный контент"],
         "badge": "Популярный",
     },
@@ -56,31 +74,13 @@ SUBSCRIPTION_PLANS_V2 = [
         "price_rub": 9900,
         "period": "month",
         "category": "full",
-        "tokens_per_month": 18000,
+        "tokens_per_month": 2250,
         "features": ["Командная работа", "Большой объём токенов", "Студийные сценарии"],
         "badge": "Для бизнеса",
     },
 ]
 
-BONUS_TASKS_V2 = [
-    {
-        "code": "signup",
-        "title": "Бонус за регистрацию",
-        "description": "Начисляется автоматически после первого входа.",
-        "tokens": 50,
-        "kind": "automatic",
-    },
-    {
-        "code": "social_subscribe",
-        "title": "Подписаться на наш канал",
-        "description": "Перейдите в Telegram-канал Hubicx. Автоматическая проверка подписки появится после подключения канала к боту.",
-        "tokens": 70,
-        "kind": "external_check",
-        "action_label": "Открыть канал",
-        "action_url": "https://t.me/hubicx_bot",
-        "status_label": "Проверка скоро",
-    },
-]
+BONUS_TASKS_V2: list[dict] = []
 
 BONUS_TOTAL_TOKENS = sum(int(t["tokens"]) for t in BONUS_TASKS_V2)
 

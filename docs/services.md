@@ -6,11 +6,10 @@ Current as of 2026-07-03. Hubicx is an AI creation product designed around a sho
 
 | Surface | Domain | Implementation | Responsibility |
 |---|---|---|---|
-| Landing and desktop workspace | `hubicx.ru` | Next.js shell plus static React workspace | Marketing pages, email login, photo/video generation, templates, AI chat, history, profile and payments |
+| Landing | `hubicx.ru` | Next.js shell plus static React landing | Marketing pages; every call to action opens the Telegram bot and forwards `?ref=` codes. The desktop workspace and email login are switched off |
 | Telegram Mini App | `webapp.hubicx.ru` | Static React Mini App through KZ reverse proxy | Mobile-first generation, templates, chat, balance, profile and Telegram-native navigation |
 | Backend API | `api.hubicx.ru` | FastAPI | Authentication, catalog, pricing, tasks, payments, files, referrals, admin API and chat API |
 | Admin panel | `admin.hubicx.ru` | `webapp/public/app/admin.*` | Users, balances, tasks, errors, pricing, token packages, partners, commissions and payouts |
-| Partner dashboard | `partners.hubicx.ru` | `webapp/public/partners/` | Partner login, links, clicks/conversions, commissions, payout history and payout requests |
 
 ## Runtime services
 
@@ -78,8 +77,11 @@ Seedance templates can preprocess every uploaded person image through GPT Image 
 - Paid and bonus token movements are recorded in a ledger.
 - T-Bank has separate desktop and Mini App terminal settings selected by return host.
 - Subscriptions and one-time packages are served by `/api/pricing`.
-- Partner commissions are calculated from eligible net economics, have a configurable hold and stop accruing after partner deactivation/expiry.
-- Partners request payouts from their dashboard; admins process them in the admin panel.
+- Every user is a partner (Mini App → Профиль → Партнёрство, `backend/app/services/partner_program.py`). The referral link is `t.me/<bot>?start=ref_<code>`; attribution happens once, when the invited user is created.
+- Partners earn 20% of every confirmed payment of their referrals. Commissions mature after a 14-day hold; refunds cancel them.
+- The partner balance is derived (matured commissions minus withdrawals and purchases). It can be spent on plans and tokens (no commission on such purchases). Withdrawals (from 500 ₽, card or SBP, paid manually by an admin) are implemented but switched off by `PARTNER_WITHDRAWALS_ENABLED = False` until the tax side is settled.
+- Manually created partners (admin panel) keep their per-category rates.
+- Welcome and task bonuses are switched off; existing bonus balances stay spendable.
 
 ## Authentication and safety
 

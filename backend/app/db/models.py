@@ -324,6 +324,8 @@ class ReferralPartner(Base, TimestampMixin):
     status: Mapped[str] = mapped_column(String(32), default="active")
     contact_info: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     hold_days: Mapped[int] = mapped_column(Integer, default=14, server_default="14")
+    # Set for the automatic per-user partner account; NULL for manually created partners.
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), unique=True, nullable=True)
 
 
 class ReferralCommissionRate(Base, TimestampMixin):
@@ -385,6 +387,9 @@ class ReferralPayoutRequest(Base, TimestampMixin):
     partner_id: Mapped[int] = mapped_column(ForeignKey("referral_partners.id"), index=True)
     amount_rub: Mapped[float] = mapped_column(Numeric(10, 2))
     status: Mapped[str] = mapped_column(String(32), default="requested")
+    # "withdrawal" is paid out manually by an admin; "purchase" is spent inside the service.
+    kind: Mapped[str] = mapped_column(String(16), default="withdrawal", server_default="withdrawal", index=True)
+    payment_id: Mapped[int | None] = mapped_column(ForeignKey("payments.id"), nullable=True)
     payout_details: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     admin_note: Mapped[str | None] = mapped_column(Text)
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -15,7 +15,7 @@ from backend.app.utils.errors import AppError
 
 logger = logging.getLogger(__name__)
 
-AI_CHAT_COST = 3
+AI_CHAT_COST = 1
 MAX_CONTEXT_MESSAGES = 20
 SUPPORTED_CHAT_MODELS = {"ai_chat", "prompt_helper"}
 

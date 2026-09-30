@@ -11,8 +11,8 @@ class UnitEconomicsInput:
     acquiring_vat_rate: float = 0.22
     target_net_margin_rate: float = 0.30
     partner_share_from_profit_rate: float = 0.25
-    token_floor_rub: float = 0.55
-    token_round_to: int = 10
+    token_floor_rub: float = 4.40
+    token_round_to: int = 1
 
 
 def _positive(value: float, name: str) -> float:

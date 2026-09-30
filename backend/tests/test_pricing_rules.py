@@ -1,6 +1,11 @@
 import unittest
 
-from backend.app.services.pricing import SEEDANCE_REFERENCE_PIPELINE, reference_preprocess_surcharge, resolve_price_from_rules
+from backend.app.services.pricing import (
+    GPT_IMAGE_REFERENCE_PRICE_CREDITS,
+    SEEDANCE_REFERENCE_PIPELINE,
+    reference_preprocess_surcharge,
+    resolve_price_from_rules,
+)
 
 
 class PricingRulesTests(unittest.TestCase):
@@ -9,7 +14,7 @@ class PricingRulesTests(unittest.TestCase):
             reference_preprocess_surcharge(
                 {"template_pipeline": SEEDANCE_REFERENCE_PIPELINE, "reference_preprocess_count": 2}
             ),
-            220,
+            2 * GPT_IMAGE_REFERENCE_PRICE_CREDITS,
         )
 
     def test_generic_multipliers_are_supported_in_db_rules(self):

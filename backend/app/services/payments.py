@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.config import settings
 from backend.app.db.models import Payment, ReferralCommission, TokenPackage, Transaction, User, UserSubscription
-from backend.app.services.business import SUBSCRIPTION_PLANS_V2
+from backend.app.services.business import RUB_PER_TOKEN_CUSTOM, SUBSCRIPTION_PLANS_V2
 from backend.app.utils.errors import AppError
 from backend.app.utils.safe_logging import log_event
 
@@ -25,7 +25,6 @@ _ALLOWED_RETURN_HOSTS = {
     "www.hubicx.ru",
     "webapp.hubicx.ru",
     "admin.hubicx.ru",
-    "partners.hubicx.ru",
     "localhost",
     "127.0.0.1",
 }
@@ -128,8 +127,8 @@ async def _resolve_payment_catalog_item(
             422,
         )
 
-    # Custom top-up: 1 RUB = 1 token. Credits from the client are ignored.
-    return amount, float(amount), "Своя сумма"
+    # Custom top-up at the base token rate. Credits from the client are ignored.
+    return amount // RUB_PER_TOKEN_CUSTOM, float(amount), "Своя сумма"
 
 
 async def create_mock_payment(session: AsyncSession, user: User, credits: int) -> Payment:
@@ -236,6 +235,72 @@ async def create_payment(
     return payment, None
 
 
+async def grant_confirmed_payment(session: AsyncSession, payment: Payment, reason: str) -> None:
+    """Deliver what a confirmed payment bought: tokens and, for plans, the subscription.
+
+    Shared by the T-Bank webhook and purchases paid from the partner balance.
+    """
+    from backend.app.services.balance import apply_balance_operation
+
+    await apply_balance_operation(
+        session,
+        user_id=payment.user_id,
+        amount=int(payment.credits),
+        operation_type="payment_topup",
+        reason=reason,
+        payment_id=payment.id,
+    )
+    session.add(
+        Transaction(user_id=payment.user_id, type="purchase", amount_credits=int(payment.credits), status="completed", payment_id=payment.id)
+    )
+
+    pkg = payment.package_code
+    if not pkg or pkg not in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
+        return
+    plan = _subscription_plan(pkg)
+    if not plan:
+        raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
+    sub_kind = _subscription_kind(pkg)
+    # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
+    # падать на uq_user_subscriptions_user_code.
+    existing_sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == payment.user_id,
+            UserSubscription.code == pkg,
+        ).with_for_update()
+    )
+    old_sub = await session.scalar(
+        select(UserSubscription).where(
+            UserSubscription.user_id == payment.user_id,
+            UserSubscription.kind == sub_kind,
+            UserSubscription.is_active.is_(True),
+        ).with_for_update()
+    )
+    if old_sub and old_sub is not existing_sub:
+        old_sub.is_active = False
+    title = str(plan["title"])
+    tokens = int(plan["tokens_per_month"])
+    price = int(plan["price_rub"])
+    if existing_sub:
+        existing_sub.title = title
+        existing_sub.kind = sub_kind
+        existing_sub.tokens_per_month = tokens
+        existing_sub.price_rub = price
+        existing_sub.payment_id = payment.id
+        existing_sub.is_active = True
+    else:
+        session.add(UserSubscription(
+            user_id=payment.user_id,
+            code=pkg,
+            title=title,
+            kind=sub_kind,
+            tokens_per_month=tokens,
+            price_rub=price,
+            payment_id=payment.id,
+            is_active=True,
+        ))
+
+
 async def process_webhook(session: AsyncSession, event: dict) -> None:
     """Обработать уведомление от платёжного шлюза.
 
@@ -300,73 +365,14 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
 
         # Начисляем токены при успешной оплате (ПРОВЕРЯЕМ ДО смены статуса!)
         if status == "CONFIRMED":
-            from backend.app.services.balance import apply_balance_operation
-
             payment.status = "confirmed"
             payment.paid_at = datetime.now(timezone.utc)
-            await apply_balance_operation(
-                session,
-                user_id=payment.user_id,
-                amount=int(payment.credits),
-                operation_type="payment_topup",
-                reason=f"Пополнение через Т-Банк, заказ {order_id}",
-                payment_id=payment.id,
-            )
-            session.add(
-                Transaction(user_id=payment.user_id, type="purchase", amount_credits=int(payment.credits), status="completed", payment_id=payment.id)
-            )
+            await grant_confirmed_payment(session, payment, f"Пополнение через Т-Банк, заказ {order_id}")
 
-            # --- Активация подписки ---
-            pkg = payment.package_code
-            if pkg and pkg in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
-                plan = _subscription_plan(pkg)
-                if not plan:
-                    raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
-                sub_kind = _subscription_kind(pkg)
-                # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
-                # падать на uq_user_subscriptions_user_code.
-                existing_sub = await session.scalar(
-                    select(UserSubscription).where(
-                        UserSubscription.user_id == payment.user_id,
-                        UserSubscription.code == pkg,
-                    ).with_for_update()
-                )
-                old_sub = await session.scalar(
-                    select(UserSubscription).where(
-                        UserSubscription.user_id == payment.user_id,
-                        UserSubscription.kind == sub_kind,
-                        UserSubscription.is_active.is_(True),
-                    ).with_for_update()
-                )
-                if old_sub and old_sub is not existing_sub:
-                    old_sub.is_active = False
-                title = str(plan["title"])
-                tokens = int(plan["tokens_per_month"])
-                price = int(plan["price_rub"])
-                if existing_sub:
-                    existing_sub.title = title
-                    existing_sub.kind = sub_kind
-                    existing_sub.tokens_per_month = tokens
-                    existing_sub.price_rub = price
-                    existing_sub.payment_id = payment.id
-                    existing_sub.is_active = True
-                else:
-                    new_sub = UserSubscription(
-                        user_id=payment.user_id,
-                        code=pkg,
-                        title=title,
-                        kind=sub_kind,
-                        tokens_per_month=tokens,
-                        price_rub=price,
-                        payment_id=payment.id,
-                        is_active=True,
-                    )
-                    session.add(new_sub)
-
-            category = _commission_category(payment.package_code)
-            if category and payment.referral_partner_id:
+            if payment.referral_partner_id:
                 from backend.app.services.referral import calculate_commission
 
+                category = _commission_category(payment.package_code) or "token_topup"
                 await calculate_commission(session, payment, category)
         elif status in ("REFUNDED", "REVERSED") and payment.status not in ("refunded", "reversed"):
             from backend.app.services.balance import apply_balance_operation

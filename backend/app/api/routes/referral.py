@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import current_user
 from backend.app.db.models import User
 from backend.app.db.session import get_session
-from backend.app.services.referral import track_click, track_conversion
+from backend.app.services.partner_program import attribute_referral
+from backend.app.services.referral import track_click
 from backend.app.services.rate_limit import check_ip_rate_limit, check_user_rate_limit
 
 router = APIRouter(prefix="/referral", tags=["referral"])
@@ -41,6 +42,6 @@ async def referral_track(
     ref_code = str(payload.get("ref_code") or "").strip()
     if not ref_code:
         return {"ok": False, "tracked": False}
-    partner = await track_conversion(session, user.id, ref_code, None)
+    partner = await attribute_referral(session, user, ref_code)
     await session.commit()
     return {"ok": True, "tracked": bool(partner)}

@@ -182,7 +182,7 @@ function MobileOnboarding({ onCreate, onTemplates, onChat, onProfile, onTab }) {
     { tab:'agent', selector:'[data-onb="mob-templates"]', icon:'🖼️', title:'Шаблоны', text:'Готовые стили помогают получить результат быстрее. Фото-шаблоны доступны без подписки через базовую модель.', action:'Открыть все', fn:onTemplates },
     { tab:'gen', selector:'[data-onb="mob-create-card"]', icon:'🎨', title:'Генерация', text:'Экран создания: фото и видео-генерации, подборки шаблонов с фильтрами.' },
     { tab:'profile', selector:'[data-onb="mob-profile-card"]', icon:'👤', title:'Профиль и баланс', text:'Здесь ваш баланс токенов, история генераций, профиль и настройки аккаунта.', action:'Профиль', fn:onProfile },
-    { tab:'profile', selector:'[data-onb="mob-bonuses"]', icon:'🎁', title:'Бонусные токены', text:'За простые задания можно получить до 120 бонусных токенов. Подпишитесь на канал — получите ещё 70.' },
+    { tab:'profile', selector:'[data-onb="mob-partner"]', icon:'🤝', title:'Партнёрство', text:'Приглашайте друзей по своей ссылке и получайте 20% с каждой их покупки. Заработок можно потратить на тарифы и токены.' },
   ];
 
   var cur = steps[step] || steps[0];
@@ -857,7 +857,10 @@ function App() {
   if (isMiniAppHost && !hasAuth) {
     return <MiniAppReturnPage result={paymentResult}/>;
   }
-  if (!hasAuth && !isTelegramShell) {
+  // Only the Telegram Mini App is live; browsers (hubicx.ru, desktop and mobile) get the landing.
+  // The local preview server stands in for Telegram on the mobile layout.
+  const previewShell = !!window.__HUBICX_PREVIEW_MOCK__ && !DESKTOP;
+  if (!isTelegramShell && !previewShell) {
     return window.HBX && window.HBX.LandingPage
       ? <window.HBX.LandingPage onAuthed={onDeskAuthed}/>
       : <div className="dk-auth"><div className="gen-spinner"></div></div>;
@@ -964,7 +967,8 @@ function App() {
     </div>}
     {topup && (
       <Topup tokens={tokens} requiredCredits={topupRequired}
-        onClose={() => { setTopup(false); setTopupRequired(null); }}/>
+        onClose={() => { setTopup(false); setTopupRequired(null); }}
+        onPaid={() => { if (window.HubicxApi) window.HubicxApi.me().then(setUser).catch(function() {}); }}/>
     )}
     {paymentResult && <PaymentResultModal result={paymentResult} onClose={() => setPaymentResult(null)}/>}
     <MobileOnboarding key="mob-onb" onCreate={() => openCreate('photo')} onTemplates={openTemplates} onChat={() => startChat('Привет!')} onProfile={() => goTab('profile')} onTab={goTab}/>
@@ -1029,29 +1033,27 @@ function PaymentResultModal({ result, onClose }) {
   </div>;
 }
 
-function Topup({ tokens, requiredCredits, onClose }) {
+function Topup({ tokens, requiredCredits, onClose, onPaid }) {
   const { Star, Ic, HxSheet } = window.MiraCore;
-  const approxPhotos = value => Math.max(1, Math.floor(Number(value || 0) / 50));
+  // A typical photo was ~50 old tokens, i.e. 6.25 tokens on the v3 scale (÷8).
+  const approxPhotos = value => Math.max(1, Math.floor(Number(value || 0) * 8 / 50));
+  const RUB_PER_TOKEN_CUSTOM = 8;
   const fallbackPacks = [
-    { code:'topup_300',   title:'300 токенов',    tokens:300,   price_rub:249,  bonus_tokens:0, total_tokens:300,   effective_price_per_token:0.83 },
-    { code:'topup_1000',  title:'1 000 токенов',  tokens:1000,  price_rub:790,  bonus_tokens:0, total_tokens:1000,  effective_price_per_token:0.79 },
-    { code:'topup_3000',  title:'3 000 токенов',  tokens:3000,  price_rub:1990, bonus_tokens:0, total_tokens:3000,  effective_price_per_token:0.66 },
-    { code:'topup_10000', title:'10 000 токенов', tokens:10000, price_rub:5990, bonus_tokens:0, total_tokens:10000, effective_price_per_token:0.60 },
+    { code:'topup_300',   title:'38 токенов',     tokens:38,    price_rub:249,  bonus_tokens:0, total_tokens:38,    effective_price_per_token:6.55 },
+    { code:'topup_1000',  title:'125 токенов',    tokens:125,   price_rub:790,  bonus_tokens:0, total_tokens:125,   effective_price_per_token:6.32 },
+    { code:'topup_3000',  title:'375 токенов',    tokens:375,   price_rub:1990, bonus_tokens:0, total_tokens:375,   effective_price_per_token:5.31 },
+    { code:'topup_10000', title:'1 250 токенов',  tokens:1250,  price_rub:5990, bonus_tokens:0, total_tokens:1250,  effective_price_per_token:4.79 },
   ];
   const fallbackSubs = [
-    { code:'templates_mini', title:'Шаблоны Mini', price_rub:790, period:'month', tokens_per_month:800, badge:'Старт', features:['Базовые шаблоны','Фото-шаблоны'] },
-    { code:'templates_plus', title:'Шаблоны Plus', price_rub:2590, period:'month', tokens_per_month:3500, badge:'Для контента', features:['Все шаблоны','Видео-шаблоны'] },
-    { code:'creator', title:'Creator', price_rub:1490, period:'month', tokens_per_month:1800, badge:'Личный', features:['Фото и видео','Базовые модели'] },
-    { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:6500, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
-    { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:18000, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
+    { code:'templates_mini', title:'Шаблоны Mini', price_rub:790, period:'month', tokens_per_month:100, badge:'Старт', features:['Базовые шаблоны','Фото-шаблоны'] },
+    { code:'templates_plus', title:'Шаблоны Plus', price_rub:2590, period:'month', tokens_per_month:438, badge:'Для контента', features:['Все шаблоны','Видео-шаблоны'] },
+    { code:'creator', title:'Creator', price_rub:1490, period:'month', tokens_per_month:225, badge:'Личный', features:['Фото и видео','Базовые модели'] },
+    { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:813, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
+    { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:2250, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
   ];
-  const fallbackBonus = { title:'50 токенов сразу + бонусы за задания после проверки', total_tokens:120, note:'Бонусные токены доступны для базовых фото-моделей и простых сценариев.', tasks:[
-    { code:'signup', title:'Бонус за регистрацию', tokens:50, kind:'automatic', claimed:true },
-    { code:'social_subscribe', title:'Подписаться на наш канал', description:'Откройте Telegram-канал. Автопроверка появится после подключения канала к боту.', tokens:70, kind:'external_check', action_url:'https://t.me/hubicx_bot', action_label:'Открыть канал', status_label:'Проверка скоро' },
-  ] };
   const [packs, setPacks] = uS(null); // null = loading; set by API or fallback on error
   const [subs, setSubs] = uS(fallbackSubs);
-  const [bonus, setBonus] = uS(fallbackBonus);
+  const [partnerAvailable, setPartnerAvailable] = uS(0);
   const [paymentsEnabled, setPaymentsEnabled] = uS(false);
   const [sel, setSel] = uS(1);
   const [subSel, setSubSel] = uS(0);
@@ -1073,9 +1075,13 @@ function Topup({ tokens, requiredCredits, onClose }) {
         else
           setPacks(fallbackPacks);
         if (data && Array.isArray(data.subscription_plans) && data.subscription_plans.length) setSubs(data.subscription_plans);
-        if (data && data.bonus_program) setBonus(data.bonus_program);
         if (data && data.payments_enabled) setPaymentsEnabled(true);
       }).catch(() => { if (alive) setPacks(fallbackPacks); });
+      if (window.HubicxApi.partner) {
+        window.HubicxApi.partner().then(function(data) {
+          if (alive && data && data.balance) setPartnerAvailable(Number(data.balance.available_rub || 0));
+        }).catch(function() {});
+      }
     } else {
       setPacks(fallbackPacks);
     }
@@ -1141,12 +1147,21 @@ function Topup({ tokens, requiredCredits, onClose }) {
   };
 
   const ctaPrice = customValid ? customNum : (chosen ? chosen.price_rub : '');
-  const claimBonus = (code) => {
-    if (!window.HubicxApi || !window.HubicxApi.claimBonus) return;
-    window.HubicxApi.claimBonus(code).then(function() {
-      return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null;
-    }).then(function(data) { if (data) setBonus(data); }).catch(function(err) {
-      setPayError((err && err.message) || 'Не удалось начислить бонус');
+  const canPayFromPartner = Number(ctaPrice) > 0 && partnerAvailable >= Number(ctaPrice) && !customError;
+  const handlePartnerPay = () => {
+    if (paying || !window.HubicxApi || !window.HubicxApi.partnerPurchase) return;
+    var payload = customValid ? { amount_rub: customNum } : { package_code: (selectedSub || chosen || {}).code };
+    setPayError('');
+    setPaying(true);
+    window.HubicxApi.partnerPurchase(payload).then(function(data) {
+      setPaying(false);
+      tgHaptic('success');
+      try { window.dispatchEvent(new CustomEvent('hubicx:partner-changed')); } catch(e) {}
+      if (onPaid) onPaid(data);
+      onClose();
+    }).catch(function(err) {
+      setPaying(false);
+      setPayError((err && err.message) || 'Не удалось оплатить с партнёрского баланса');
     });
   };
 
@@ -1165,13 +1180,10 @@ function Topup({ tokens, requiredCredits, onClose }) {
             <div className="topup-bonus-ic">★</div>
             <div><b>Недостаточно токенов</b><span>Нужно {requiredCredits} ★, на балансе {tokens} ★. Не хватает {requiredCredits - Number(tokens || 0)} ★.</span></div>
           </div>}
-          {bonus && <div className="topup-bonus-lite">
-            <div className="topup-bonus-ic">🎁</div>
-            <div>
-              <b>{bonus.title || '50 токенов сразу + бонусы'}</b>
-              <span>{bonus.note || 'Бонусы доступны для базовых фото-моделей.'}</span>
-            </div>
-            {bonus.total_tokens ? <strong>+{bonus.total_tokens} ★</strong> : null}
+          {partnerAvailable > 0 && <div className="topup-bonus-lite">
+            <div className="topup-bonus-ic">₽</div>
+            <div><b>Партнёрский баланс</b><span>Можно оплатить тариф или токены заработком с партнёрской программы.</span></div>
+            <strong>{window.HubicxFmtRub ? window.HubicxFmtRub(partnerAvailable) : partnerAvailable + ' ₽'}</strong>
           </div>}
 
           {templateSubs.length > 0 && <React.Fragment>
@@ -1244,7 +1256,7 @@ function Topup({ tokens, requiredCredits, onClose }) {
                 {customError && <div className="topup-error">{customError}</div>}
                 {customValid && <div className="topup-custom-preview">
                   <span>{customNum} ₽</span>
-                  <b>{customNum} токенов · примерно {approxPhotos(customNum)} фото</b>
+                  <b>{Math.floor(customNum / RUB_PER_TOKEN_CUSTOM)} токенов · примерно {approxPhotos(Math.floor(customNum / RUB_PER_TOKEN_CUSTOM))} фото</b>
                 </div>}
               </React.Fragment>}
             </React.Fragment>}
@@ -1253,7 +1265,11 @@ function Topup({ tokens, requiredCredits, onClose }) {
 
         <div className="topup-footer">
           {payError && <div className="topup-error">{payError}</div>}
-          {!paymentsEnabled && <div className="muted" style={{ fontSize:12.5, marginBottom:8 }}>Оплата скоро будет доступна</div>}
+          {!paymentsEnabled && !canPayFromPartner && <div className="muted" style={{ fontSize:12.5, marginBottom:8 }}>Оплата скоро будет доступна</div>}
+          {canPayFromPartner && <button className="sheet-cta topup-cta topup-cta-partner" disabled={paying}
+            onClick={function() { tgHaptic('light'); handlePartnerPay(); }}>
+            {paying ? 'Оплачиваем…' : `С партнёрского баланса · ${ctaPrice} ₽`}
+          </button>}
           <button className="sheet-cta topup-cta" onClick={function() { tgHaptic('light'); handlePay(); }}
             disabled={!paymentsEnabled || paying || (!chosen && !customValid) || !!customError}
             style={{ opacity: (!paymentsEnabled || paying) ? .55 : 1,

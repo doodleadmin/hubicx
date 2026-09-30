@@ -10,7 +10,7 @@ from backend.app.utils.errors import AppError
 
 
 SEEDANCE_REFERENCE_PIPELINE = "seedance_gpt_image_reference_sheet_v1"
-GPT_IMAGE_REFERENCE_PRICE_CREDITS = 110
+GPT_IMAGE_REFERENCE_PRICE_CREDITS = 14
 
 
 def reference_preprocess_surcharge(validated_inputs: dict[str, Any]) -> int:

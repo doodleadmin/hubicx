@@ -89,80 +89,6 @@ function GenWaitCard({ item }) {
   </div>;
 }
 
-function MobileLinkAccountSheet({ onClose, onLinked }) {
-  const { Ic, HxSheet } = window.MiraCore;
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [emailCode, setEmailCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [codeBusy, setCodeBusy] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
-  const [err, setErr] = useState('');
-  const [done, setDone] = useState(false);
-
-  const sendCode = function() {
-    var em = email.trim();
-    if (!em) { setErr('Введите email'); return; }
-    setCodeBusy(true); setErr('');
-    window.HubicxApi.sendEmailCode(em, 'link_email').then(function() {
-      setCodeBusy(false); setCodeSent(true); setErr('Код отправлен на почту');
-    }).catch(function(e) {
-      setCodeBusy(false); setErr((e && e.message) || 'Не удалось отправить код');
-    });
-  };
-
-  const submit = function() {
-    var em = email.trim();
-    if (!em || password.length < 8) { setErr('Email и пароль от 8 символов'); return; }
-    setBusy(true); setErr('');
-    function finish(data) {
-      var nextUser = data && data.user ? data.user : data;
-      setBusy(false); setDone(true);
-      if (onLinked) onLinked(nextUser);
-    }
-    function showError(e, fallback) {
-      setBusy(false);
-      setErr((e && e.message) || fallback || 'Не удалось связать аккаунты');
-    }
-    window.HubicxApi.linkTelegram(em, password).then(finish).catch(function(firstErr) {
-      window.HubicxApi.linkEmail(em, password, emailCode.trim()).then(finish).catch(function(secondErr) {
-        var msg = String((secondErr && secondErr.message) || '').toLowerCase();
-        if (msg.indexOf('существ') >= 0 || msg.indexOf('занят') >= 0 || msg.indexOf('already') >= 0) {
-          showError(firstErr, 'Email уже зарегистрирован. Проверьте пароль от аккаунта сайта.');
-        } else {
-          showError(secondErr || firstErr, 'Не удалось связать аккаунты');
-        }
-      });
-    });
-  };
-
-  return <HxSheet onClose={onClose} sheetClassName="profile-sheet account-link-sheet" cardClassName="profile-sheet-card account-link-card">
-        <button className="sheet-x" onClick={onClose}><Ic n="close" s={18}/></button>
-        <div className="account-link-icon"><Ic n="user" s={22} c="#5f9184"/></div>
-        <div className="sheet-title">Связать аккаунты</div>
-        <div className="muted account-link-copy">
-          Введите email и пароль от сайта. Если аккаунт уже есть, мы объединим его с Telegram. Если нет — создадим вход с тем же балансом.
-        </div>
-        {done
-          ? <div className="account-link-done"><Ic n="check" s={22} c="#5f9184"/> Готово. Аккаунты связаны.</div>
-          : <>
-            <div className="profile-sheet-scroll account-link-fields">
-              <input className="text-in" type="email" autoComplete="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}/>
-              <input className="text-in" type="password" autoComplete="current-password" placeholder="Пароль" value={password} onChange={e => setPassword(e.target.value)}/>
-              <div className="account-link-code-row">
-                <input className="text-in" inputMode="numeric" placeholder="Код из письма" value={emailCode}
-                  onChange={e => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/>
-                <button className="btn-secondary account-link-code-btn" disabled={codeBusy || !email.trim()} onClick={sendCode}>
-                  {codeBusy ? '...' : codeSent ? 'Ещё' : 'Код'}
-                </button>
-              </div>
-            </div>
-            {err && <div className="account-link-error">{err}</div>}
-            <button className="sheet-cta profile-sheet-cta account-link-cta" disabled={busy} onClick={function() { if (window.tgHaptic) window.tgHaptic('light'); submit(); }}>{busy ? 'Связываем...' : 'Связать аккаунты'}</button>
-          </>}
-  </HxSheet>;
-}
-
 function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUserUpdate, focusHistorySignal }) {
   const { Ic, Star, TopNav } = window.MiraCore;
   const [p, setP] = useState(() => {
@@ -173,16 +99,11 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
   const [history, setHistory] = useState([]);
   const [histLoaded, setHistLoaded] = useState(false);
   const [viewTask, setViewTask] = useState(null);
-  const [bonus, setBonus] = useState(null);
-  const [bonusState, setBonusState] = useState('');
-  const [bonusToast, setBonusToast] = useState(false);
-  const [linkMode, setLinkMode] = useState(null);
-  const bonusRef = useRef(null);
+  const [section, setSection] = useState('account');
   const historyRef = useRef(null);
   const [historyPulse, setHistoryPulse] = useState(false);
   const saveTimerRef = useRef(null);
   const isTelegram = window.HubicxApi && window.HubicxApi.isTelegram();
-  const hasPassword = user && user.has_password;
   const tgProfile = (() => {
     try {
       var tgUser = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user;
@@ -228,17 +149,6 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
     return function() { alive = false; };
   }, []);
 
-  // Load bonus tasks on mount
-  useEffect(function() {
-    if (!window.HubicxApi || !window.HubicxApi.hasAuth() || !window.HubicxApi.bonuses) return;
-    var alive = true;
-    window.HubicxApi.bonuses().then(function(data) {
-      if (!alive) return;
-      setBonus(data && data.bonus_program ? data.bonus_program : data);
-    }).catch(function() {});
-    return function() { alive = false; };
-  }, []);
-
   // Generation history now lives in Profile on mobile.
   useEffect(function() {
     if (!window.HubicxApi || !window.HubicxApi.hasAuth()) { setHistLoaded(true); return; }
@@ -278,39 +188,6 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
     var code = LANG_MAP_REV[p.lang] || 'ru';
     if (window.HubicxI18n && window.HubicxI18n.setLang) window.HubicxI18n.setLang(code);
   }, [p.lang]);
-
-  var bonusTasks = (bonus && Array.isArray(bonus.tasks)) ? bonus.tasks : [];
-  var bonusBalance = bonus ? (typeof bonus.bonus_credits === 'number' ? bonus.bonus_credits : (typeof bonus.total_tokens === 'number' ? bonus.total_tokens : null)) : null;
-  var hasManualBonus = bonusTasks.some(function(t) { return t && !t.claimed && (t.claimable !== false || t.action_url); });
-  useEffect(function() {
-    if (!hasManualBonus) return;
-    var now = Date.now();
-    var last = 0;
-    try {
-      if (localStorage.getItem('hbx_onboarding_v1') !== 'done') return;
-      var finishedAt = parseInt(localStorage.getItem('hbx_onboarding_finished_at_v1') || '0', 10) || 0;
-      if (finishedAt && now - finishedAt < 2000) return;
-      last = parseInt(localStorage.getItem('hbx_bonus_toast_seen_v1') || '0', 10) || 0;
-    } catch(e) {}
-    if (now - last < 24 * 60 * 60 * 1000) return;
-    setBonusToast(true);
-    try { localStorage.setItem('hbx_bonus_toast_seen_v1', String(now)); } catch(e) {}
-  }, [hasManualBonus]);
-
-  const claimProfileBonus = (code) => {
-    if (!window.HubicxApi || !window.HubicxApi.claimBonus || !code) return;
-    setBonusState('Начисляем…');
-    window.HubicxApi.claimBonus(code).then(function() {
-      setBonusState('Бонус начислен');
-      return window.HubicxApi.bonuses ? window.HubicxApi.bonuses() : null;
-    }).then(function(data) {
-      if (data) setBonus(data && data.bonus_program ? data.bonus_program : data);
-      setTimeout(function() { setBonusState(''); }, 2200);
-    }).catch(function(e) {
-      setBonusState((e && e.message) || 'Не удалось начислить бонус');
-      setTimeout(function() { setBonusState(''); }, 3200);
-    });
-  };
 
   const openOpts = (field, title) => setEditor({ kind:'opts', field, title, options:OPTS[field] });
   const openText = (field, title, ph) => setEditor({ kind:'text', field, title, ph });
@@ -377,7 +254,16 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
     <TopNav active="profile" onTab={onTab}/>
     <div className="screen scr-enter" style={{ paddingTop:14 }}>
 
-      <div className="label-sec">Профиль</div>
+      <div className="pf-tabs" role="tablist" data-onb="mob-partner">
+        {[['account', 'Аккаунт'], ['partner', 'Партнёрство']].map(function(t) {
+          return <button key={t[0]} role="tab" aria-selected={section === t[0]} className={'pf-tab' + (section === t[0] ? ' on' : '')}
+            onClick={() => { if (window.tgHaptic) window.tgHaptic('selection'); setSection(t[0]); }}>{t[1]}</button>;
+        })}
+      </div>
+
+      {section === 'partner' && window.PartnerPanel && <window.PartnerPanel onSpend={onTopup}/>}
+
+      {section === 'account' && <React.Fragment>
       <div className="card mob-profile-hero" data-onb="mob-profile-card">
         <div className="mob-profile-avatar">
           {avatarUrl ? <img src={avatarUrl} alt=""/> : <span>{avatarInitial}</span>}
@@ -413,23 +299,6 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
             {user && user.email ? user.email : (isTelegram ? 'Telegram' : 'Email')}
           </span>
         </div>
-        <div className="divider"></div>
-        {isTelegram && !hasPassword && <>
-          <div style={{ padding:'14px 18px 6px', color:'var(--muted)', fontSize:13, lineHeight:1.42 }}>
-            Свяжите Telegram с email-аккаунтом, чтобы один баланс, история и подписка были доступны в Mini App и на сайте.
-          </div>
-          <div style={{ display:'grid', gap:10, padding:'8px 18px 16px' }}>
-            <button className="btn-primary" onClick={() => setLinkMode('link')}>Связать аккаунты</button>
-          </div>
-        </>}
-        {isTelegram && hasPassword && <div className="row-link locked">
-          <IconChip bg="#edf7e9"><Ic n="check" s={18} c="#5f9184"/></IconChip>
-          <span style={{ fontWeight:700, fontSize:15.5 }}>Вход на сайте</span>
-          <span className="muted" style={{ marginLeft:'auto', fontSize:13 }}>включен</span>
-        </div>}
-        {!isTelegram && <div style={{ padding:'14px 18px 16px', color:'var(--muted)', fontSize:13, lineHeight:1.42 }}>
-          Telegram привязывается через Mini App: откройте бота и в профиле свяжите этот email.
-        </div>}
       </div>
 
       <div ref={historyRef} className={'profile-history-anchor' + (historyPulse ? ' pulse' : '')}>
@@ -471,40 +340,7 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
       </div>
       </div>
 
-      {bonus && <div ref={bonusRef} className="card bonus-card-v2" data-onb="mob-bonuses" style={{ marginTop:18 }}>
-        <div className="bonus-head-v2">
-          <div style={{ display:'flex', alignItems:'flex-start', gap:12, minWidth:0 }}>
-            <IconChip bg="#fff2c7">🎁</IconChip>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:850, fontSize:17 }}>Бонусные токены</div>
-              <div className="muted" style={{ fontSize:13, lineHeight:1.35, marginTop:3 }}>{bonus.title || '50 токенов сразу + бонусы за задания после проверки'}</div>
-            </div>
-          </div>
-          {bonusBalance !== null && <div className="bonus-bal-v2"><b>{bonusBalance}</b><span>★</span></div>}
-        </div>
-        <div className="bonus-list-v2">
-          {bonusTasks.map(function(t) {
-            var claimed = !!t.claimed;
-            var manual = t.kind === 'manual_claim' && t.claimable !== false;
-            var url = t.action_url || '';
-            var status = t.status_label || (manual ? 'Доступно' : (t.kind === 'automatic' ? 'Авто' : 'Скоро'));
-            return <div className={'bonus-task-v2' + (claimed ? ' done' : '')} key={t.code}>
-              <div className="bonus-copy-v2">
-                <span>{t.title}</span>
-                <small>{t.description || ''}</small>
-              </div>
-              <div className="bonus-act-v2">
-                <b>+{t.tokens || t.credits || 0} ★</b>
-                {claimed ? <em>Готово</em>
-                  : manual ? <button onClick={() => claimProfileBonus(t.code)}>Забрать</button>
-                  : url ? <a href={url} target="_blank" rel="noopener noreferrer">{t.action_label || 'Открыть'}</a>
-                  : <em>{status}</em>}
-              </div>
-            </div>;
-          })}
-        </div>
-        {bonusState && <div className="muted" style={{ marginTop:8, fontSize:13 }}>{bonusState}</div>}
-      </div>}
+      </React.Fragment>}
 
       <div style={{ height:24 }}/>
 
@@ -515,16 +351,6 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUse
       current={p[editor.field]} onSave={v => set(editor.field, v)} onClose={() => setEditor(null)}/>}
     {editor && editor.kind === 'emoji' && <EmojiSheet current={p.emoji}
       onSave={v => set('emoji', v)} onClose={() => setEditor(null)}/>} 
-    {bonusToast && <div className="bonus-toast-top">
-      <div className="bonus-toast-ic">🎁</div>
-      <div className="bonus-toast-copy">
-        <b>У вас есть бесплатные токены</b>
-        <span>Заберите бонусы в профиле</span>
-      </div>
-      <button className="bonus-toast-main" onClick={function() { setBonusToast(false); if (bonusRef.current) bonusRef.current.scrollIntoView({ behavior:'smooth', block:'center' }); }}>Смотреть</button>
-      <button className="bonus-toast-x" onClick={() => setBonusToast(false)}>×</button>
-    </div>}
-    {linkMode && <MobileLinkAccountSheet onClose={() => setLinkMode(null)} onLinked={function(nextUser) { if (nextUser && onUserUpdate) onUserUpdate(nextUser); }}/>}
   </div>;
 }
 

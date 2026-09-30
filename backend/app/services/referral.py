@@ -18,6 +18,7 @@ from backend.app.db.models import (
     ReferralPayoutRequest,
     User,
 )
+from backend.app.services.business import PARTNER_COMMISSION_PERCENT
 from backend.app.utils.safe_logging import log_event
 
 
@@ -180,7 +181,15 @@ async def calculate_commission(
         )
         return None
 
-    rate = await get_commission_rate(session, payment.referral_partner_id, category)
+    partner_user_id = getattr(partner, "user_id", None)
+    if partner_user_id and partner_user_id == payment.user_id:
+        log_event(logger, logging.INFO, "REFERRAL_COMMISSION_SKIPPED", payment_id=payment.id, reason="self_referral")
+        return None
+    if partner_user_id:
+        # Per-user partners share one flat rate for every purchase.
+        rate = PARTNER_COMMISSION_PERCENT
+    else:
+        rate = await get_commission_rate(session, payment.referral_partner_id, category)
     if rate <= 0:
         log_event(
             logger,
@@ -228,97 +237,6 @@ def _utc_now() -> datetime:
 def mature_commission_cutoff(hold_days: int | None) -> datetime:
     days = max(0, int(hold_days if hold_days is not None else 14))
     return _utc_now() - timedelta(days=days)
-
-
-async def get_partner_payout_summary(session: AsyncSession, partner: ReferralPartner) -> dict:
-    cutoff = mature_commission_cutoff(partner.hold_days)
-
-    available_stmt = select(
-        func.coalesce(func.sum(ReferralCommission.commission_rub), 0)
-    ).where(
-        and_(
-            ReferralCommission.partner_id == partner.id,
-            ReferralCommission.status == "pending",
-            ReferralCommission.created_at <= cutoff,
-        )
-    )
-    pending_hold_stmt = select(
-        func.coalesce(func.sum(ReferralCommission.commission_rub), 0)
-    ).where(
-        and_(
-            ReferralCommission.partner_id == partner.id,
-            ReferralCommission.status == "pending",
-            ReferralCommission.created_at > cutoff,
-        )
-    )
-    processing_stmt = select(
-        func.coalesce(func.sum(ReferralPayoutRequest.amount_rub), 0)
-    ).where(
-        and_(
-            ReferralPayoutRequest.partner_id == partner.id,
-            ReferralPayoutRequest.status.in_(["requested", "approved"]),
-        )
-    )
-    paid_stmt = select(
-        func.coalesce(func.sum(ReferralPayoutRequest.amount_rub), 0)
-    ).where(
-        and_(
-            ReferralPayoutRequest.partner_id == partner.id,
-            ReferralPayoutRequest.status == "paid",
-        )
-    )
-
-    available = float((await session.execute(available_stmt)).scalar() or 0)
-    pending_hold = float((await session.execute(pending_hold_stmt)).scalar() or 0)
-    processing = float((await session.execute(processing_stmt)).scalar() or 0)
-    total_paid = float((await session.execute(paid_stmt)).scalar() or 0)
-    return {
-        "available_balance": round(available, 2),
-        "pending_hold": round(pending_hold, 2),
-        "processing": round(processing, 2),
-        "total_paid": round(total_paid, 2),
-        "hold_days": int(partner.hold_days if partner.hold_days is not None else 14),
-        "hold_until_hint": cutoff.isoformat(),
-    }
-
-
-async def create_payout_request(
-    session: AsyncSession,
-    partner: ReferralPartner,
-    payout_details: dict | None = None,
-) -> ReferralPayoutRequest:
-    cutoff = mature_commission_cutoff(partner.hold_days)
-    result = await session.execute(
-        select(ReferralCommission)
-        .where(
-            and_(
-                ReferralCommission.partner_id == partner.id,
-                ReferralCommission.status == "pending",
-                ReferralCommission.created_at <= cutoff,
-            )
-        )
-        .order_by(ReferralCommission.created_at)
-    )
-    commissions = result.scalars().all()
-    amount = round(sum(float(c.commission_rub or 0) for c in commissions), 2)
-    if amount <= 0:
-        from backend.app.utils.errors import AppError
-
-        raise AppError("no_available_payout_balance", "Нет доступной суммы для вывода с учётом холда", 422)
-
-    payout = ReferralPayoutRequest(
-        partner_id=partner.id,
-        amount_rub=amount,
-        status="requested",
-        payout_details=payout_details or partner.contact_info,
-    )
-    session.add(payout)
-    await session.flush()
-    for commission in commissions:
-        commission.status = "requested"
-        commission.payout_request_id = payout.id
-    await session.flush()
-    return payout
 
 
 async def set_payout_status(

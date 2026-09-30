@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,9 +22,12 @@ async def get_or_create_user(session: AsyncSession, tg_user: dict, ref_code: str
         await session.refresh(user)
         return user
 
+    from backend.app.services.partner_program import attribute_referral, parse_ref_payload
+
     referrer_id = None
-    if ref_code:
-        referrer = await session.scalar(select(User).where(User.ref_code == ref_code))
+    legacy_code = parse_ref_payload(ref_code)
+    if legacy_code:
+        referrer = await session.scalar(select(User).where(User.ref_code == legacy_code))
         if referrer and referrer.telegram_id != int(tg_user["id"]):
             referrer_id = referrer.id
     user = User(
@@ -43,7 +48,18 @@ async def get_or_create_user(session: AsyncSession, tg_user: dict, ref_code: str
         user = await session.scalar(select(User).where(User.telegram_id == int(tg_user["id"])))
         if user is None:
             raise
+        await session.refresh(user)
+        return user
     await session.refresh(user)
+    if ref_code:
+        try:
+            await attribute_referral(session, user, ref_code)
+            await session.commit()
+        except Exception:
+            # Attribution must never block sign-up.
+            logging.getLogger(__name__).exception("REFERRAL_ATTRIBUTION_FAILED user_id=%s", user.id)
+            await session.rollback()
+        await session.refresh(user)
     if user and SIGNUP_BONUS_TOKENS > 0:
         await award_bonus_tokens(
             session,

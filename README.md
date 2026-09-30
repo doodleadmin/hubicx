@@ -4,10 +4,9 @@ Hubicx is an AI creation service for people who want a result without learning m
 
 ## Product surfaces
 
-- `hubicx.ru` - landing and desktop workspace.
+- `hubicx.ru` - landing; every call to action opens the Telegram bot (the desktop workspace is switched off).
 - `webapp.hubicx.ru` - Telegram Mini App.
 - `admin.hubicx.ru` - operations and moderation admin panel.
-- `partners.hubicx.ru` - partner links, analytics, commissions and payouts.
 - `api.hubicx.ru` - FastAPI backend.
 
 Detailed service and flow documentation: [docs/services.md](docs/services.md). Visual and interaction rules: [docs/design-system.md](docs/design-system.md). Pricing economics: [docs/pricing-policy.md](docs/pricing-policy.md). Deployment handoff: [DEPLOYMENT_CONTEXT.md](DEPLOYMENT_CONTEXT.md).

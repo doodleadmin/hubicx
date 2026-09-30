@@ -25,6 +25,10 @@ MOCK_PREFIX = "/__mock/api"
 GENERATION_SECONDS = 8
 
 
+# Price data lives in backend.app.services.model_pricing_catalog (dependency-free).
+sys.path.insert(0, ROOT)
+
+
 def load_module(name: str, *parts: str):
     spec = importlib.util.spec_from_file_location(name, os.path.join(ROOT, *parts))
     module = importlib.util.module_from_spec(spec)
@@ -33,6 +37,7 @@ def load_module(name: str, *parts: str):
 
 
 seed_models = load_module("preview_seed_models", "backend", "seed_models.py")
+pricing_catalog = load_module("preview_pricing_catalog", "backend", "app", "services", "model_pricing_catalog.py")
 business = load_module("preview_business", "backend", "app", "services", "business.py")
 
 SHIM = """<script>
@@ -94,8 +99,9 @@ def public_models() -> list[dict]:
             "provider": model.get("provider"),
             "task_type": model.get("task_type"),
             "input_type": model.get("input_type"),
-            "price_credits": int(model.get("price_credits") or 0),
-            "price_rules": None,
+            # Same as production: model_pricing (seeded from the catalog) wins over the model's own price.
+            "price_credits": int(pricing_catalog.MODEL_PRICING.get(model["code"], {}).get("price_tokens") or model.get("price_credits") or 0),
+            "price_rules": pricing_catalog.MODEL_PRICING.get(model["code"], {}).get("price_rules"),
             "default_params": model.get("default_params"),
             "form_schema": model.get("form_schema"),
             "is_active": True,
@@ -158,8 +164,8 @@ class State:
             "photo_url": None,
             "language_code": "ru",
             "language_selected": True,
-            "balance_credits": 1240,
-            "bonus_credits": 50,
+            "balance_credits": 155,
+            "bonus_credits": 0,
             "is_admin": False,
             "is_banned": False,
             "ref_code": "DEMO2026",
@@ -189,6 +195,13 @@ class State:
             "persona_emoji": None,
         }
         self.claimed_bonuses: set[str] = set()
+        # Partner program demo: matured and on-hold commissions plus balance debits.
+        self.partner_matured = 3240.0
+        self.partner_hold = 486.0
+        self.partner_ops: list[dict] = [
+            {"id": 2, "kind": "purchase", "status": "paid", "amount_rub": 790.0, "details": "Шаблоны Mini", "created_at": iso(now() - timedelta(days=6))},
+            {"id": 1, "kind": "withdrawal", "status": "paid", "amount_rub": 1000.0, "details": "Карта •• 4242", "created_at": iso(now() - timedelta(days=12))},
+        ]
         self.tasks: dict[int, dict] = {}
         self.next_task_id = 1
         self.chats: dict[int, dict] = {}
@@ -262,6 +275,41 @@ class State:
             task["output_file_url"] = task["_pending_output"]
             task["completed_at"] = iso(now())
         return {k: v for k, v in task.items() if not k.startswith("_")}
+
+    def partner_payload(self) -> dict:
+        debited = sum(op["amount_rub"] for op in self.partner_ops if op["status"] in ("requested", "approved", "paid"))
+        def total(kind, statuses):
+            return sum(op["amount_rub"] for op in self.partner_ops if op["kind"] == kind and op["status"] in statuses)
+        return {
+            "code": "DEMO2026",
+            "link": "https://t.me/hubicx_bot?start=ref_DEMO2026",
+            "percent": business.PARTNER_COMMISSION_PERCENT,
+            "hold_days": business.PARTNER_HOLD_DAYS,
+            "min_payout_rub": business.PARTNER_MIN_PAYOUT_RUB,
+            "withdrawals_enabled": business.PARTNER_WITHDRAWALS_ENABLED,
+            "payout_methods": [{"code": c, "title": t} for c, t in business.PARTNER_PAYOUT_METHODS.items()],
+            "invited_count": 14,
+            "buyers_count": 5,
+            "balance": {
+                "available_rub": round(max(0.0, self.partner_matured - debited), 2),
+                "hold_rub": self.partner_hold,
+                "earned_total_rub": round(self.partner_matured + self.partner_hold, 2),
+                "withdrawn_rub": total("withdrawal", ("paid",)),
+                "withdrawal_processing_rub": total("withdrawal", ("requested", "approved")),
+                "spent_rub": total("purchase", ("paid",)),
+            },
+            "operations": sorted(self.partner_ops, key=lambda op: op["id"], reverse=True),
+        }
+
+    def partner_available(self) -> float:
+        return self.partner_payload()["balance"]["available_rub"]
+
+    def add_partner_op(self, kind: str, status: str, amount: float, details: str) -> None:
+        self.partner_ops.append({
+            "id": max((op["id"] for op in self.partner_ops), default=0) + 1,
+            "kind": kind, "status": status, "amount_rub": round(float(amount), 2),
+            "details": details, "created_at": iso(now()),
+        })
 
     def create_generation(self, payload: dict) -> dict:
         model = MODELS_BY_CODE.get(payload.get("model_code") or "")
@@ -435,6 +483,8 @@ class Handler(SimpleHTTPRequestHandler):
     def route_api(self, method: str, path: str, query: dict) -> None:
         s = STATE
         if method == "GET":
+            if path == "/partner":
+                return self.send_json(s.partner_payload())
             if path == "/auth/me":
                 return self.send_json(s.user)
             if path == "/pricing":
@@ -523,6 +573,42 @@ class Handler(SimpleHTTPRequestHandler):
                 if payload.get(key) is not None:
                     chat[key] = payload[key]
             return self.send_json({"chat": s.chat_detail(chat)})
+        if path == "/partner/withdraw" and not business.PARTNER_WITHDRAWALS_ENABLED:
+            return self.send_error_json(403, "withdrawals_disabled", "Вывод средств скоро будет доступен")
+        if path == "/partner/withdraw":
+            amount = float(payload.get("amount_rub") or 0)
+            details = payload.get("details") or {}
+            if amount < business.PARTNER_MIN_PAYOUT_RUB:
+                return self.send_error_json(422, "amount_too_low", f"Минимальная сумма вывода — {business.PARTNER_MIN_PAYOUT_RUB} ₽")
+            if amount > s.partner_available():
+                return self.send_error_json(422, "insufficient_partner_balance", "Недостаточно средств на партнёрском балансе")
+            if len(str(details.get("holder") or "").strip()) < 2:
+                return self.send_error_json(422, "invalid_payout_holder", "Укажите имя получателя")
+            if payload.get("method") == "card":
+                digits = "".join(ch for ch in str(details.get("card") or "") if ch.isdigit())
+                if len(digits) < 16:
+                    return self.send_error_json(422, "invalid_card_number", "Проверьте номер карты")
+                label = f"Карта •• {digits[-4:]}"
+            else:
+                digits = "".join(ch for ch in str(details.get("phone") or "") if ch.isdigit())
+                if len(digits) != 11:
+                    return self.send_error_json(422, "invalid_phone", "Укажите номер телефона в формате +7")
+                label = f"СБП {details.get('bank') or ''} •• {digits[-4:]}"
+            s.add_partner_op("withdrawal", "requested", amount, label)
+            return self.send_json({"ok": True, "status": "requested", "partner": s.partner_payload()})
+        if path == "/partner/purchase":
+            code = payload.get("package_code")
+            item = next((p for p in business.SUBSCRIPTION_PLANS_V2 if p["code"] == code), None)
+            item = item or next((p for p in business.TOKEN_PACKAGES_V2 if p["code"] == code), None)
+            price = float(item["price_rub"]) if item else float(payload.get("amount_rub") or 0)
+            credits = int((item or {}).get("tokens_per_month") or (item or {}).get("total_tokens") or price)
+            if price <= 0:
+                return self.send_error_json(422, "invalid_payment_package", "Выберите тариф или пакет")
+            if price > s.partner_available():
+                return self.send_error_json(422, "insufficient_partner_balance", "Недостаточно средств на партнёрском балансе")
+            s.add_partner_op("purchase", "paid", price, (item or {}).get("title") or f"{credits} токенов")
+            s.user["balance_credits"] += credits
+            return self.send_json({"ok": True, "credits": credits, "balance_credits": s.user["balance_credits"], "partner": s.partner_payload()})
         if path == "/payments/create":
             return self.send_error_json(400, "preview_mode", "Демо-режим: оплата отключена")
         return self.send_error_json(404, "not_found", "Нет в демо-режиме")

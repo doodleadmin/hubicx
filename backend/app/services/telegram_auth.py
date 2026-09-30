@@ -78,5 +78,6 @@ async def get_current_user(
     if not init_data:
         logger.warning("Telegram auth failed: initData header is missing")
         raise AppError("invalid_init_data", "Telegram initData header is required", 401)
-    tg_user = get_telegram_user_from_init_data(init_data)
-    return await get_or_create_user(session, tg_user)
+    parsed = validate_init_data(init_data)
+    # start_param carries the referral code when the Mini App is opened from a partner link.
+    return await get_or_create_user(session, parsed["user"], parsed.get("start_param"))

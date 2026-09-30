@@ -2,7 +2,7 @@
 Admin API for referral system: partners CRUD, commission rates, global stats.
 """
 from fastapi import APIRouter, Body, Depends, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.db.models import (
@@ -16,7 +16,8 @@ from backend.app.db.models import (
 )
 from backend.app.db.session import get_session
 from backend.app.api.routes.admin import current_admin_user
-from backend.app.services.referral import get_partner_stats, get_partner_payout_summary, set_payout_status
+from backend.app.services.partner_program import partner_balance
+from backend.app.services.referral import get_partner_stats, set_payout_status
 
 router = APIRouter(prefix="/admin/referral", tags=["admin-referral"])
 
@@ -28,7 +29,13 @@ async def list_partners(
     user: User = Depends(current_admin_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
-    stmt = select(ReferralPartner).order_by(ReferralPartner.created_at.desc())
+    # Every user gets a partner row; list manual partners and users who actually invited someone.
+    has_referrals = select(ReferralConversion.id).where(ReferralConversion.partner_id == ReferralPartner.id).exists()
+    stmt = (
+        select(ReferralPartner)
+        .where(or_(ReferralPartner.user_id.is_(None), has_referrals))
+        .order_by(ReferralPartner.created_at.desc())
+    )
     result = await session.execute(stmt)
     partners = result.scalars().all()
     rows = []
@@ -233,9 +240,10 @@ async def list_payouts(
     status: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=300),
 ) -> list[dict]:
+    # Purchases paid from a partner balance are settled instantly; only withdrawals need an admin.
     stmt = select(ReferralPayoutRequest, ReferralPartner).join(
         ReferralPartner, ReferralPartner.id == ReferralPayoutRequest.partner_id
-    )
+    ).where(ReferralPayoutRequest.kind == "withdrawal")
     if status:
         stmt = stmt.where(ReferralPayoutRequest.status == status)
     stmt = stmt.order_by(ReferralPayoutRequest.created_at.desc()).limit(limit)
@@ -292,7 +300,15 @@ async def partner_payout_summary(
         from backend.app.utils.errors import AppError
 
         raise AppError("partner_not_found", "Партнёр не найден", 404)
-    return await get_partner_payout_summary(session, partner)
+    balance = await partner_balance(session, partner)
+    return {
+        "available_balance": balance["available_rub"],
+        "pending_hold": balance["hold_rub"],
+        "processing": balance["withdrawal_processing_rub"],
+        "total_paid": balance["withdrawn_rub"],
+        "spent": balance["spent_rub"],
+        "hold_days": int(partner.hold_days if partner.hold_days is not None else 14),
+    }
 
 
 # ── Public tracking (user-authenticated) ──
