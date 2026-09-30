@@ -1,0 +1,485 @@
+/* ============================================================
+   Hubicx — Premium dark skin.
+   Layered on top of ma.css / ma-desktop.css; only recolours and
+   adds depth (glass, glow, highlights). No layout changes.
+   Scoped to the dark theme: html.theme-dark / body.theme-dark.
+   ============================================================ */
+
+html.theme-dark,
+body.theme-dark {
+  --bg: #07080b;
+  --bg2: #0b0c11;
+  --card: #101218;
+  --ink: #f5f6f8;
+  --muted: #9aa1ae;
+  --faint: #626977;
+  --line: rgba(255,255,255,.08);
+  --line2: rgba(255,255,255,.05);
+  --accent: #f7f86c;
+  --accent-ink: #14150a;
+  --acc-glow: rgba(247,248,108,.34);
+  --sage: #8fe3c8;
+  --lilac: #b9b0ff;
+  --grad: linear-gradient(100deg, #9be7cf 0%, #b9b0ff 55%, #f3c9ff 100%);
+  --soft: linear-gradient(135deg, rgba(143,227,200,.10), rgba(185,176,255,.10));
+  --link: #9be7cf;
+  --nav-bg: #050608;
+  --nav-active: #1a1d25;
+  --shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-sm: 0 8px 22px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.05);
+  --shadow-lg: 0 40px 100px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);
+
+  /* skin-only tokens */
+  --hx-glass: linear-gradient(135deg, rgba(255,255,255,.065) 0%, rgba(255,255,255,.018) 42%, rgba(255,255,255,.028) 100%);
+  --hx-glass-soft: linear-gradient(135deg, rgba(255,255,255,.045), rgba(255,255,255,.012) 60%);
+  --hx-edge: rgba(255,255,255,.09);
+  --hx-edge-hi: rgba(255,255,255,.16);
+  --hx-well: #0a0b10;
+  --hx-accent-grad: linear-gradient(180deg, #fdfe93 0%, #f2f452 100%);
+  --hx-accent-glow: 0 10px 30px rgba(247,248,108,.26), 0 0 0 1px rgba(247,248,108,.35), inset 0 1px 0 rgba(255,255,255,.7);
+  --hx-aurora:
+    radial-gradient(900px 520px at 88% -8%, rgba(247,248,108,.085), transparent 62%),
+    radial-gradient(760px 560px at -6% 4%, rgba(185,176,255,.12), transparent 60%),
+    radial-gradient(900px 700px at 50% 118%, rgba(143,227,200,.075), transparent 60%);
+}
+
+html.theme-dark, html.theme-dark body { background-color: var(--bg); }
+html.theme-dark ::selection { background: rgba(247,248,108,.3); color: #fff; }
+
+/* ── ambient backdrop ── */
+html.theme-dark .phone,
+html.theme-dark .dk {
+  background-color: var(--bg);
+  background-image: var(--hx-aurora);
+  background-attachment: fixed;
+}
+
+/* sticky bars become frosted glass over the backdrop */
+html.theme-dark .topnav,
+html.theme-dark .dk-top {
+  background: rgba(7,8,11,.66);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border-bottom-color: var(--line2);
+}
+
+/* ── gradient words ── */
+html.theme-dark .grad,
+html.theme-dark .dk-grad {
+  background-image: var(--grad);
+  filter: drop-shadow(0 0 18px rgba(185,176,255,.28));
+}
+
+/* ════════════ glass surfaces ════════════ */
+html.theme-dark .card,
+html.theme-dark .act-card,
+html.theme-dark .bal-card,
+html.theme-dark .hist-card,
+html.theme-dark .bonus-task-v2,
+html.theme-dark .home-cat-card,
+html.theme-dark .topup-card,
+html.theme-dark .sub-card,
+html.theme-dark .gen-queue-card,
+html.theme-dark .onb-card,
+html.theme-dark .mob-onb-sheet,
+html.theme-dark .dk-act,
+html.theme-dark .dk-panel,
+html.theme-dark .dk-card,
+html.theme-dark .dk-picker,
+html.theme-dark .dk-floating-menu,
+html.theme-dark .dk-drop-list,
+html.theme-dark .dk-agent-card,
+html.theme-dark .dk-starter,
+html.theme-dark .dk-sub-card,
+html.theme-dark .dk-pack {
+  background-color: var(--card);
+  background-image: var(--hx-glass);
+  border-color: var(--hx-edge);
+  box-shadow: var(--shadow);
+}
+
+/* small controls: quieter glass */
+html.theme-dark .tn-icon,
+html.theme-dark .dk-search,
+html.theme-dark .dk-tok,
+html.theme-dark .dk-theme-btn,
+html.theme-dark .dk-bell,
+html.theme-dark .dk-chip,
+html.theme-dark .dk-ask-pill,
+html.theme-dark .dk-user,
+html.theme-dark .mob-profile-topup,
+html.theme-dark .dk-newchat,
+html.theme-dark .dk-btn-sec {
+  background-color: rgba(255,255,255,.035);
+  background-image: var(--hx-glass-soft);
+  border-color: var(--hx-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+html.theme-dark .dk-chip:hover,
+html.theme-dark .dk-ask-pill:hover,
+html.theme-dark .dk-search:focus-within,
+html.theme-dark .dk-bell:hover,
+html.theme-dark .dk-theme-btn:hover,
+html.theme-dark .dk-user:hover,
+html.theme-dark .dk-btn-sec:hover,
+html.theme-dark .dk-newchat:hover {
+  background-color: rgba(255,255,255,.07);
+  border-color: var(--hx-edge-hi);
+}
+html.theme-dark .dk-search:focus-within {
+  box-shadow: 0 0 0 3px rgba(247,248,108,.10), inset 0 1px 0 rgba(255,255,255,.06);
+  border-color: rgba(247,248,108,.38);
+}
+
+/* recessed wells: inputs, segmented tracks, drop zones */
+html.theme-dark .tn-seg,
+html.theme-dark .dk-modes,
+html.theme-dark .bonus-bal-v2,
+html.theme-dark .hist-thumb,
+html.theme-dark .drop-zone,
+html.theme-dark .text-in,
+html.theme-dark .dk-ta,
+html.theme-dark .dk-drop,
+html.theme-dark .dk-ask,
+html.theme-dark .dk-conv-ask,
+html.theme-dark .dk-auth-in,
+html.theme-dark .dk-ref {
+  background-color: var(--hx-well);
+  border-color: var(--line);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,.45);
+}
+html.theme-dark .text-in:focus,
+html.theme-dark .dk-ta:focus,
+html.theme-dark .dk-auth-in:focus {
+  background-color: #0d0f15;
+  border-color: rgba(247,248,108,.42);
+  box-shadow: 0 0 0 3px rgba(247,248,108,.10), inset 0 2px 8px rgba(0,0,0,.45);
+}
+
+/* segmented control: lit active pill */
+html.theme-dark .tn-item.on,
+html.theme-dark .dk-mode.on {
+  background-color: #1b1e27;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 6px 18px rgba(0,0,0,.5);
+  color: var(--ink);
+}
+
+/* ════════════ accent (primary) buttons ════════════ */
+html.theme-dark .bb,
+html.theme-dark .dk-topup,
+html.theme-dark .dk-ask-cta,
+html.theme-dark .dk-cta:not(:disabled),
+html.theme-dark .topup-cta,
+html.theme-dark .onb-primary,
+html.theme-dark .mob-onb-primary,
+html.theme-dark .cta:not(:disabled),
+html.theme-dark .dk-tok-plus {
+  background-color: var(--accent);
+  background-image: var(--hx-accent-grad);
+  color: var(--accent-ink);
+  box-shadow: var(--hx-accent-glow);
+  transition: box-shadow .2s var(--ease), transform .2s var(--ease), filter .2s var(--ease);
+}
+html.theme-dark .bb:hover,
+html.theme-dark .dk-topup:hover,
+html.theme-dark .dk-ask-cta:hover,
+html.theme-dark .dk-cta:not(:disabled):hover,
+html.theme-dark .topup-cta:hover,
+html.theme-dark .onb-primary:hover {
+  filter: brightness(1.04);
+  box-shadow: 0 14px 44px rgba(247,248,108,.38), 0 0 0 1px rgba(247,248,108,.5), inset 0 1px 0 rgba(255,255,255,.75);
+}
+html.theme-dark .dk-tok-plus { box-shadow: 0 0 16px rgba(247,248,108,.38), inset 0 1px 0 rgba(255,255,255,.7); }
+html.theme-dark .dk-pro {
+  background-image: var(--hx-accent-grad);
+  box-shadow: 0 0 12px rgba(247,248,108,.35);
+}
+html.theme-dark .switch.on { background-image: var(--hx-accent-grad); box-shadow: 0 0 14px rgba(247,248,108,.35); }
+html.theme-dark .switch.on i { background: #14150a; }
+
+/* notification dots / counters */
+html.theme-dark .dk-badge,
+html.theme-dark .dk-bell-dot {
+  background: linear-gradient(180deg, #ff8a6b, #e2553a);
+  box-shadow: 0 0 12px rgba(226,85,58,.55);
+}
+
+/* ════════════ icon tiles (inline pastel → tinted glass) ════════════
+   One recipe for every icon plate: glass fill, hairline edge, top highlight,
+   glyph kept in its own hue but lifted for the dark background. */
+html.theme-dark .act-card .ic,
+html.theme-dark .dk-act-ic,
+html.theme-dark .dk-row-ic,
+html.theme-dark .card .ic,
+html.theme-dark .icon-chip,
+html.theme-dark .cr-detail-ic {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.035) 100%) !important;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(0,0,0,.25), 0 6px 16px rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+html.theme-dark .act-card .ic svg,
+html.theme-dark .dk-act-ic svg,
+html.theme-dark .dk-row-ic svg,
+html.theme-dark .card .ic svg,
+html.theme-dark .icon-chip svg,
+html.theme-dark .cr-detail-ic svg {
+  display: block;
+  flex: 0 0 auto;
+  filter: brightness(1.6) saturate(1.3);
+}
+
+/* ════════════ mobile specifics ════════════ */
+html.theme-dark .act-card { transition: border-color .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease); }
+html.theme-dark .act-card:active { border-color: rgba(247,248,108,.32); box-shadow: 0 0 0 1px rgba(247,248,108,.14), 0 14px 40px rgba(247,248,108,.08), inset 0 1px 0 rgba(255,255,255,.08); }
+
+html.theme-dark .thumb.tpl-card,
+html.theme-dark .home-mini-tpl,
+html.theme-dark .dk-tpl-img {
+  background-color: #0c0d12;
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 16px 36px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.04);
+}
+html.theme-dark .tpl-media { background-color: #0c0d12; }
+
+html.theme-dark .home-template-strip {
+  background-color: var(--card);
+  background-image: radial-gradient(120% 90% at 100% 0%, rgba(185,176,255,.12), transparent 60%), var(--hx-glass);
+  border-color: var(--hx-edge);
+  box-shadow: var(--shadow);
+}
+html.theme-dark .model-promo {
+  background-image:
+    radial-gradient(90% 120% at 100% 0%, rgba(247,248,108,.16), transparent 58%),
+    radial-gradient(90% 120% at 0% 100%, rgba(185,176,255,.22), transparent 60%),
+    linear-gradient(135deg, #14161f, #0c0d13);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.10);
+}
+html.theme-dark .idea-tile {
+  background: radial-gradient(120% 120% at 20% 10%, rgba(255,255,255,.12), rgba(255,255,255,.03) 65%) !important;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+html.theme-dark .idea-tile .l { color: var(--ink) !important; }
+html.theme-dark .idea-tile .ic {
+  background: rgba(255,255,255,.08) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+html.theme-dark .idea-tile .ic svg { filter: brightness(1.5) saturate(1.25); }
+
+html.theme-dark .card.mob-profile-hero,
+html.theme-dark .card.bonus-card-v2 {
+  background-image:
+    radial-gradient(110% 130% at 100% 0%, rgba(185,176,255,.16), transparent 58%),
+    radial-gradient(90% 120% at 0% 100%, rgba(143,227,200,.10), transparent 60%),
+    var(--hx-glass);
+  background-color: var(--card);
+  border-color: var(--hx-edge);
+}
+html.theme-dark .card.mob-sub-card.active {
+  background-image:
+    radial-gradient(120% 140% at 100% 0%, rgba(247,248,108,.16), transparent 55%),
+    var(--hx-glass);
+  background-color: var(--card);
+  border-color: rgba(247,248,108,.30);
+  box-shadow: 0 0 0 1px rgba(247,248,108,.10), 0 20px 50px rgba(247,248,108,.07), inset 0 1px 0 rgba(255,255,255,.08);
+}
+html.theme-dark .mob-profile-avatar { box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 12px 30px rgba(185,176,255,.28); }
+html.theme-dark .divider { background: var(--line2); }
+
+html.theme-dark .bonus-toast-top {
+  background: rgba(18,20,27,.86);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--hx-edge-hi);
+  box-shadow: 0 24px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.10);
+}
+html.theme-dark .bonus-toast-main { background-image: var(--hx-accent-grad); color: var(--accent-ink); box-shadow: var(--hx-accent-glow); }
+
+html.theme-dark .bubble.me {
+  background-image: var(--hx-accent-grad);
+  background-color: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 24px rgba(247,248,108,.16);
+}
+html.theme-dark .bubble.bot {
+  background-color: var(--card);
+  background-image: var(--hx-glass);
+  border-color: var(--hx-edge);
+  color: var(--ink);
+}
+
+/* ════════════ desktop specifics ════════════ */
+html.theme-dark .dk-side {
+  background-color: rgba(10,11,15,.72);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,0) 30%);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border-right-color: var(--line);
+}
+html.theme-dark .dk-logo { box-shadow: 0 0 0 1px rgba(255,255,255,.10), 0 10px 26px rgba(80,150,255,.28); }
+html.theme-dark .dk-nav:hover { background: rgba(255,255,255,.045); }
+html.theme-dark .dk-nav.on {
+  background-color: rgba(255,255,255,.06);
+  background-image: linear-gradient(90deg, rgba(247,248,108,.13), rgba(247,248,108,0) 62%);
+  box-shadow: inset 2px 0 0 var(--accent), inset 0 1px 0 rgba(255,255,255,.06);
+  color: var(--ink);
+}
+html.theme-dark .dk-nav.on .dk-ni { color: var(--accent); filter: drop-shadow(0 0 8px rgba(247,248,108,.55)); }
+html.theme-dark .dk-user.on { background-color: rgba(255,255,255,.07); border-color: var(--hx-edge-hi); }
+
+html.theme-dark .dk-hero {
+  background-color: #0f1117;
+  background-image:
+    radial-gradient(70% 130% at 92% -20%, rgba(247,248,108,.13), transparent 58%),
+    radial-gradient(60% 120% at 0% 0%, rgba(185,176,255,.17), transparent 56%),
+    radial-gradient(60% 110% at 55% 125%, rgba(143,227,200,.10), transparent 60%),
+    linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.012) 45%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 40px 100px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.10);
+}
+html.theme-dark .dk-askbar {
+  background-color: rgba(6,7,10,.62);
+  background-image: none;
+  border-color: rgba(255,255,255,.11);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.05);
+}
+html.theme-dark .dk-askbar:focus-within {
+  border-color: rgba(247,248,108,.45);
+  box-shadow: 0 0 0 4px rgba(247,248,108,.09), 0 0 44px rgba(247,248,108,.10), inset 0 2px 10px rgba(0,0,0,.5);
+}
+html.theme-dark .dk-askbar input,
+html.theme-dark .dk-askbar textarea { color: var(--ink); background: transparent; }
+html.theme-dark .dk-askbar input::placeholder,
+html.theme-dark .dk-askbar textarea::placeholder { color: var(--faint); }
+
+html.theme-dark .dk-act { transition: border-color .2s var(--ease), box-shadow .25s var(--ease), transform .25s var(--ease); }
+html.theme-dark .dk-act:hover {
+  border-color: rgba(247,248,108,.34);
+  box-shadow: 0 0 0 1px rgba(247,248,108,.12), 0 24px 60px rgba(247,248,108,.09), inset 0 1px 0 rgba(255,255,255,.09);
+  transform: translateY(-2px);
+}
+html.theme-dark .dk-tpl .dk-tpl-img { transition: border-color .2s var(--ease), box-shadow .25s var(--ease); }
+html.theme-dark .dk-tpl:hover .dk-tpl-img {
+  border-color: rgba(247,248,108,.42);
+  box-shadow: 0 0 0 1px rgba(247,248,108,.16), 0 22px 54px rgba(247,248,108,.12);
+}
+html.theme-dark .dk-tpl-fav,
+html.theme-dark .mob-tpl-fav {
+  background: rgba(8,9,12,.55);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.14);
+}
+
+html.theme-dark .dk-modal-ov,
+html.theme-dark .chat-settings-ov { background: rgba(3,4,6,.72); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+html.theme-dark .dk-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); }
+html.theme-dark .dk-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
+
+/* selected options pick up the accent instead of a flat grey */
+html.theme-dark .dk-pack.on,
+html.theme-dark .dk-sub-card.on,
+html.theme-dark .topup-opt.on,
+html.theme-dark .topup-plan.on {
+  border-color: rgba(247,248,108,.55);
+  box-shadow: 0 0 0 1px rgba(247,248,108,.18), 0 18px 46px rgba(247,248,108,.09), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* ── modals ── */
+html.theme-dark .dk-modal {
+  background-color: #0e1016;
+  background-image:
+    radial-gradient(80% 50% at 100% 0%, rgba(185,176,255,.13), transparent 60%),
+    radial-gradient(70% 40% at 0% 0%, rgba(247,248,108,.07), transparent 60%),
+    var(--hx-glass);
+  border: 1px solid var(--hx-edge-hi);
+  box-shadow: 0 50px 140px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.10);
+}
+html.theme-dark .dk-modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 8px; }
+html.theme-dark .dk-modal::-webkit-scrollbar-track { background: transparent; }
+html.theme-dark .dk-modal-x,
+html.theme-dark .chat-settings-close {
+  background-color: rgba(255,255,255,.05);
+  border: 1px solid var(--hx-edge);
+}
+html.theme-dark .dk-bonus-card,
+html.theme-dark .dk-bonus-task {
+  background-color: rgba(255,255,255,.03);
+  background-image: var(--hx-glass-soft);
+  border-color: var(--hx-edge);
+}
+html.theme-dark .dk-sub-badge,
+html.theme-dark .dk-pack-best {
+  background-image: var(--hx-accent-grad);
+  box-shadow: 0 0 14px rgba(247,248,108,.35);
+}
+
+/* ── leftovers that were flat grey or pastel ── */
+html.theme-dark .dk-ava {
+  background: linear-gradient(135deg, #b9b0ff, #8fe3c8) !important;
+  color: #0b0c11;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.16), 0 8px 20px rgba(185,176,255,.28);
+}
+html.theme-dark .dk-gen-tpl { background-color: #0c0d12; border-color: rgba(255,255,255,.12); }
+html.theme-dark .dk-agent-emoji {
+  background: radial-gradient(120% 120% at 25% 15%, rgba(255,255,255,.16), rgba(255,255,255,.04) 60%) !important;
+  border: 1px solid rgba(255,255,255,.10);
+}
+html.theme-dark .dk-chat-item.on,
+html.theme-dark .dk-ask-opt.on,
+html.theme-dark .dk-floating-opt.on,
+html.theme-dark .dk-picker-opt.on,
+html.theme-dark .dk-agent-card.on {
+  background-color: rgba(255,255,255,.06);
+  background-image: linear-gradient(90deg, rgba(247,248,108,.11), rgba(247,248,108,0) 70%);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+html.theme-dark .dk-chat-item:hover,
+html.theme-dark .dk-row:hover,
+html.theme-dark .dk-picker-opt:hover,
+html.theme-dark .dk-ask-opt:hover,
+html.theme-dark .dk-floating-opt:hover { background-color: rgba(255,255,255,.05); }
+html.theme-dark .dk-canvas-ph,
+html.theme-dark .dk-conv-empty-ic,
+html.theme-dark .dk-hist-img {
+  background-color: rgba(255,255,255,.04);
+  background-image: var(--hx-glass-soft);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+html.theme-dark .dk-cta:disabled,
+html.theme-dark .cta:disabled {
+  background: rgba(255,255,255,.05);
+  color: var(--faint);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+/* ── mobile buttons ── */
+html.theme-dark .btn-primary:not(:disabled) {
+  background-color: var(--accent);
+  background-image: var(--hx-accent-grad);
+  color: var(--accent-ink);
+  box-shadow: var(--hx-accent-glow);
+}
+html.theme-dark .btn-primary:disabled {
+  background: rgba(255,255,255,.05);
+  color: var(--faint);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+html.theme-dark .btn-secondary {
+  background-color: rgba(255,255,255,.05);
+  background-image: var(--hx-glass-soft);
+  border: 1px solid var(--hx-edge);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-dark .dk-act:hover { transform: none; }
+}

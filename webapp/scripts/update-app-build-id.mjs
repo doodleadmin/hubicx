@@ -27,7 +27,7 @@ function makeBuildId() {
 const buildId = makeBuildId();
 const appDir = path.join(root, "public", "app");
 const assetVersionRe =
-  /(\/app\/(?:loader\.css|ma\.css|ma-desktop\.css|loader\.js|desktop-bootstrap\.js)\?v=)[^"'<>\s]+/g;
+  /(\/app\/(?:loader\.css|ma\.css|ma-desktop\.css|hubicx-premium\.css|loader\.js|desktop-bootstrap\.js)\?v=)[^"'<>\s]+/g;
 const appBundleRe = /\/app\/assets\/app\.bundle(?:\.[^/"'<>\s?]+)?\.js(?:\?v=[^"'<>\s]+)?/g;
 
 async function updateTextFile(rel, transform) {

@@ -463,6 +463,9 @@ function LandingPage({ onAuthed, initialAuth = null }) {
       link.removeEventListener('load', markReady);
       document.documentElement.classList.remove('lp-active');
       document.body.classList.remove('lp-active');
+      // Back into the app, which is dark-only.
+      document.documentElement.classList.add('theme-dark');
+      document.body.classList.add('theme-dark');
       const l = document.getElementById('ma-landing-css');
       if (l) l.remove();
     };

@@ -1,6 +1,6 @@
 /* ============ Profile screen — full settings + personality ============ */
 function IconChip({ bg, children }) {
-  return <div style={{ width:38, height:38, borderRadius:11, background:bg, flex:'0 0 auto',
+  return <div className="icon-chip" style={{ width:38, height:38, borderRadius:11, background:bg, flex:'0 0 auto',
     display:'flex', alignItems:'center', justifyContent:'center' }}>{children}</div>;
 }
 
@@ -163,10 +163,8 @@ function MobileLinkAccountSheet({ onClose, onLinked }) {
   </HxSheet>;
 }
 
-function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, theme, onToggleTheme, user, onUserUpdate, focusHistorySignal }) {
+function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, user, onUserUpdate, focusHistorySignal }) {
   const { Ic, Star, TopNav } = window.MiraCore;
-  theme = theme || ((window.HubicxTheme && window.HubicxTheme.theme) || 'light');
-  onToggleTheme = onToggleTheme || (window.HubicxTheme && window.HubicxTheme.toggle) || function() {};
   const [p, setP] = useState(() => {
     try { return { ...PROF_DEFAULTS, ...(JSON.parse(localStorage.getItem(PROF_KEY)) || {}) }; }
     catch(e) { return { ...PROF_DEFAULTS }; }
@@ -405,17 +403,6 @@ function ProfileScreen({ tokens, onTopup, onTab, onRepeatGeneration, theme, onTo
           title="Мои токены" value={tokens} onClick={onTopup}/>
         <Row chip={<IconChip bg="#d0e8f5"><Ic n="globe" s={18} c="#2f80ed"/></IconChip>}
           title="Язык" value={p.lang} onClick={() => openOpts('lang','Язык')} last/>
-      </div>
-
-      <div className="card" style={{ overflow:'hidden', marginTop:14 }}>
-        <div className="row-link" onClick={onToggleTheme}>
-          <IconChip bg={theme === 'dark' ? '#323742' : '#fff6bf'}><Ic n={theme === 'dark' ? 'moon' : 'sun'} s={17} c={theme === 'dark' ? '#d8def0' : '#b79a18'}/></IconChip>
-          <span style={{ fontWeight:700, fontSize:15.5 }}>Тёмная тема</span>
-          <span className="muted" style={{ marginLeft:'auto', marginRight:10, fontSize:14 }}>
-            {theme === 'dark' ? 'Включена' : 'Выключена'}
-          </span>
-          <span className={'switch' + (theme === 'dark' ? ' on' : '')}><i></i></span>
-        </div>
       </div>
 
       <div className="card" style={{ overflow:'hidden', marginTop:14 }}>

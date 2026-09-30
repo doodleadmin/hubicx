@@ -2,15 +2,7 @@
 /* BUILD: 20260620-pricing2 */
 const { useState: uS, useEffect: uE, useRef: uR } = React;
 const DESKTOP = !!window.DESKTOP_MODE;
-const THEME_KEY = 'hbx_theme_v1';
 document.documentElement.classList.toggle('desktop', DESKTOP);
-function getInitialTheme() {
-  try {
-    var saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'dark' || saved === 'light') return saved;
-  } catch(e) {}
-  return 'light';
-}
 
 function DesktopWrap({ tab, onTab, tokens, onTopup, children }) {
   const { Ic, Star } = window.MiraCore;
@@ -431,7 +423,6 @@ function App() {
   const [topup, setTopup] = uS(false);
   const [topupRequired, setTopupRequired] = uS(null);
   const [paymentResult, setPaymentResult] = uS(null); // 'success' / 'fail' / null
-  const [theme, setTheme] = uS(getInitialTheme);
   const [accessBlock, setAccessBlock] = uS(null);
   const [mobileNotice, setMobileNotice] = uS(null);
   const [profileHistorySignal, setProfileHistorySignal] = uS(0);
@@ -446,13 +437,12 @@ function App() {
   // Desktop auth gate: true once we know whether the user is logged in
   const [authChecked, setAuthChecked] = uS(false);
 
+  // The app has a single (dark) theme; the landing page opts out while it is shown.
   uE(() => {
-    var dark = theme === 'dark';
-    document.documentElement.classList.toggle('theme-dark', dark);
-    document.body.classList.toggle('theme-dark', dark);
-    try { localStorage.setItem(THEME_KEY, theme); } catch(e) {}
-    window.HubicxTheme = { theme: theme, setTheme: setTheme, toggle: () => setTheme(t => t === 'dark' ? 'light' : 'dark') };
-  }, [theme]);
+    document.documentElement.classList.add('theme-dark');
+    document.body.classList.add('theme-dark');
+    try { localStorage.removeItem('hbx_theme_v1'); } catch(e) {}
+  }, []);
 
   uE(() => {
     var handler = function(e) {
@@ -492,8 +482,6 @@ function App() {
       }
     } catch(e) {}
   }, []);
-
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   const goDtab = (nextTab, opts) => {
     var tabId = nextTab || 'home';
@@ -898,7 +886,7 @@ function App() {
       onCreatePhoto={() => openCreate('photo')} onCreateVideo={(modelCode) => openCreate('video', null, modelCode ? { modelCode:modelCode } : null)}
       onTemplate={(t) => openCreate(t && t.type === 'video' ? 'video' : 'photo', t)} onTab={goTab}/>;
   } else {
-    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} onRepeatGeneration={repeatGeneration} theme={theme} onToggleTheme={toggleTheme} user={user} onUserUpdate={setUser} focusHistorySignal={profileHistorySignal}/>;
+    body = <ProfileScreen tokens={tokens} onTopup={() => setTopup(true)} onTab={goTab} onRepeatGeneration={repeatGeneration} user={user} onUserUpdate={setUser} focusHistorySignal={profileHistorySignal}/>;
   }
 
   const swipeDisabled = !!(createOpen || templatesOpen || activeChat || topup || paymentResult);
@@ -954,7 +942,7 @@ function App() {
       <DeskShell tab={dtab} onTab={goDtab} onProfile={() => goDtab('profile')}
         tokens={tokens} user={user} onTopup={() => setTopup(true)}
         title={meta[0]} subtitle={meta[1]} chatsBadge={chats.length || null}
-        theme={theme} onToggleTheme={toggleTheme} searchQuery={deskSearch} onSearchQuery={setDeskSearch}>
+        searchQuery={deskSearch} onSearchQuery={setDeskSearch}>
         {dbody}
       </DeskShell>
       {topup && <DeskTopup tokens={tokens} requiredCredits={topupRequired} onClose={() => { setTopup(false); setTopupRequired(null); }}/>}

@@ -449,7 +449,7 @@ function DeskAuth({ onAuthed }) {
 /* ============================================================
    Shell: sidebar + topbar + content slot
    ============================================================ */
-function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtitle, chatsBadge, theme, onToggleTheme, searchQuery, onSearchQuery, children }) {
+function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtitle, chatsBadge, searchQuery, onSearchQuery, children }) {
   const { Ic, Star } = window.MiraCore;
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifs, setNotifs] = useState([]);
@@ -520,7 +520,6 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
           <div className="dk-uname">{name} {user && user.subscription && user.subscription.is_active ? <span className="dk-pro">{user.subscription.title}</span> : null}</div>
           <div className="dk-uhandle">{uname}</div>
         </div>
-        <span className="dk-theme" title="Сменить тему" onClick={(e) => { e.stopPropagation(); if (onToggleTheme) onToggleTheme(); }}><Ic n={theme === 'dark' ? 'sun' : 'moon'} s={17} c="var(--faint)"/></span>
       </div>
     </aside>
 
@@ -541,9 +540,6 @@ function DeskShell({ tab, onTab, onProfile, tokens, user, onTopup, title, subtit
           <Star s={16} c="#c9c7f4"/> <span>{tokens}</span>
           <span className="dk-tok-plus"><Ic n="plus" s={15}/></span>
         </div>
-        <button className="dk-theme-btn" title="Сменить тему" onClick={(e) => { e.stopPropagation(); if (onToggleTheme) onToggleTheme(); }}>
-          <Ic n={theme === 'dark' ? 'sun' : 'moon'} s={19} c="var(--muted)"/>
-        </button>
         <div className="dk-bell-wrap">
           <div className="dk-bell" onClick={(e) => { e.stopPropagation(); setNotifOpen(o => !o); }}>
             <Ic n="bell" s={19} c="var(--muted)"/>
