@@ -75,10 +75,14 @@
     if (node.nodeType === 3) {
       const v = node.nodeValue;
       if (!v || !v.trim()) return;
-      if (!originals.has(node)) originals.set(node, v);
-      const base = originals.get(node);
-      const next = trText(base);
-      if (node.nodeValue !== next) node.nodeValue = next;
+      // Remember the source text and our last output. If the node now holds anything
+      // else, React updated it in place, so that becomes the new source text —
+      // otherwise live values (balances, counters) snap back to their first render.
+      let rec = originals.get(node);
+      if (!rec || v !== rec.out) rec = { base: v };
+      rec.out = trText(rec.base);
+      originals.set(node, rec);
+      if (v !== rec.out) node.nodeValue = rec.out;
       return;
     }
     if (node.nodeType !== 1) return;
@@ -87,8 +91,12 @@
     ['placeholder','title','aria-label'].forEach(function(attr){
       if (!node.hasAttribute || !node.hasAttribute(attr)) return;
       const key = '__hbx_i18n_' + attr;
-      if (!node[key]) node[key] = node.getAttribute(attr);
-      node.setAttribute(attr, trText(node[key]));
+      const v = node.getAttribute(attr);
+      let rec = node[key];
+      if (!rec || v !== rec.out) rec = { base: v };
+      rec.out = trText(rec.base);
+      node[key] = rec;
+      if (v !== rec.out) node.setAttribute(attr, rec.out);
     });
     for (let c=node.firstChild; c; c=c.nextSibling) translateNode(c);
   }
