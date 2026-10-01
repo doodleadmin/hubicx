@@ -4,8 +4,8 @@ No backend, database or Docker needed. Nothing is sent to api.hubicx.ru: a small
 script injected into every HTML page reroutes API requests to /__mock/api/* here.
 
 Run from the repository root:  python ops/preview/mock_server.py [port]
-  Desktop workspace:  http://localhost:3000/app/desktop.html
-  Mobile Mini App:    http://localhost:3000/app/index.html  (use a phone-sized viewport)
+  Telegram Mini App:  http://localhost:3000/            (opens /app/index.html; shown phone-sized on wide screens)
+  Site landing:       http://localhost:3000/app/desktop.html
 """
 import importlib.util
 import json
@@ -53,7 +53,17 @@ SHIM = """<script>
   };
   window.__HUBICX_PREVIEW_MOCK__ = true;
 })();
-</script>"""
+</script>
+<style>
+/* Preview only: on a wide screen show the Mini App phone-sized, as Telegram does. */
+@media (min-width: 600px) {
+  html:not(.desktop) body { background: #000 !important; }
+  html:not(.desktop) #root {
+    max-width: 430px; margin: 0 auto; min-height: 100vh;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 120px rgba(0,0,0,.6);
+  }
+}
+</style>"""
 
 # Analytics must not receive hits from a local preview.
 ANALYTICS_URLS = (
@@ -166,6 +176,7 @@ class State:
             "language_selected": True,
             "balance_credits": 155,
             "bonus_credits": 0,
+            "chat_credits": plan.get("chat_messages_per_month", 0),
             "is_admin": False,
             "is_banned": False,
             "ref_code": "DEMO2026",
@@ -443,7 +454,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path in ("", "/"):
             self.send_response(302)
-            self.send_header("Location", "/app/desktop.html")
+            self.send_header("Location", "/app/index.html")
             self.send_header("Content-Length", "0")
             self.end_headers()
             return
@@ -628,6 +639,10 @@ class Handler(SimpleHTTPRequestHandler):
             STATE.add_message(chat, "user", content)
             if chat["title"] == "Новый чат":
                 chat["title"] = content[:40]
+        if STATE.user["chat_credits"] > 0:
+            STATE.user["chat_credits"] -= 1
+        else:
+            STATE.user["balance_credits"] = max(0, STATE.user["balance_credits"] - 1)
         STATE.add_message(chat, "assistant", DEMO_REPLY)
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")

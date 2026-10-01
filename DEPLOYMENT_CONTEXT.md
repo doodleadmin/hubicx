@@ -1,6 +1,6 @@
 # Hubicx deployment context
 
-Current as of 2026-07-03.
+Current as of 2026-10-01.
 
 ## Repository
 
@@ -11,27 +11,27 @@ Current as of 2026-07-03.
 
 ## Production
 
-- Origin: `root@62.113.109.73`
-- Project path: `/opt/ai_aggregator`
-- Telegram Mini App KZ proxy: `root@45.139.29.127`
-- Origin services: PostgreSQL, Redis, backend, bot, worker, beat and webapp through Docker Compose.
+- Single origin server: `root@185.253.7.71` (Ubuntu 26.04, 2 vCPU, 5 GB RAM + 2 GB swap), project in `/opt/ai_aggregator`.
+- Docker Compose services: PostgreSQL, Redis, backend, bot (polling), worker, beat, webapp. Backend and webapp are published on `127.0.0.1` only; nginx (host) is the single entry point, config in `ops/origin-nginx/hubicx.conf`, TLS by certbot.
+- Secrets live only in `/opt/ai_aggregator/.env` on the server (never in git).
+- Daily database dump to `/opt/backups` (`ops/backup/pg-backup.sh`, 14 days).
+- The former KZ proxy (`ops/kz-webapp-proxy`) is not used.
 
 ## Domains
 
-- `hubicx.ru` - landing that sends visitors to the Telegram bot.
-- `webapp.hubicx.ru` - Telegram Mini App through KZ proxy.
+- `hubicx.ru`, `www.hubicx.ru` - landing that sends visitors to the Telegram bot.
+- `webapp.hubicx.ru` - Telegram Mini App.
 - `api.hubicx.ru` - FastAPI.
 - `admin.hubicx.ru` - admin panel.
 
 ## Standard deployment
 
-1. Make and verify changes locally.
+1. Make and verify changes locally (`npm run build` in `webapp/`, backend tests).
 2. Commit and push `main`.
-3. On origin run `cd /opt/ai_aggregator && git pull --ff-only`.
-4. Rebuild only affected Compose services.
-5. Apply committed Alembic migrations when present.
-6. For Mini App static changes, clear `/var/cache/nginx/hubicx_webapp_static/*` on the KZ proxy, validate nginx and reload it.
-7. Verify health, public build ID and affected endpoints.
+3. Put the code on the origin: `git pull --ff-only` in `/opt/ai_aggregator` once a read-only deploy key is set up there; until then upload the tree with `tar` over SSH (excluding `.git`, `node_modules`, `.env`).
+4. Rebuild affected services: `docker compose build <service> && docker compose up -d <service>`.
+5. Apply Alembic migrations: `docker compose run --rm backend alembic -c backend/alembic.ini upgrade head`; restart `worker` and `beat` after worker changes.
+6. Verify `https://api.hubicx.ru/health`, the public build ID and affected endpoints.
 
 Never edit project code or configuration directly on a server. Never write secrets to documentation or memory.
 

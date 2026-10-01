@@ -1917,3 +1917,22 @@ html.theme-dark .hx-chip--neutral{background:#20242c;color:#c5c7ce;border-color:
 .pt-seg-item { height: 38px; border: none; border-radius: 10px; background: transparent; color: var(--muted); font: inherit; font-weight: 750; cursor: pointer; }
 .pt-seg-item.on { background: var(--nav-active); color: var(--ink); }
 .topup-cta-partner { margin-bottom: 8px; background: transparent !important; color: var(--ink) !important; border: 1px solid rgba(247,248,108,.5) !important; box-shadow: none !important; }
+
+
+/* ── Top bar: home icon + balance pill ── */
+.tn-item-icon { flex: 0 0 52px; }
+.tn-balance {
+  flex: 0 0 auto; height: 42px; padding: 0 14px; border-radius: 13px;
+  display: flex; align-items: center; gap: 7px;
+  background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  color: var(--ink); font: inherit; font-size: 15px; font-weight: 800; cursor: pointer;
+}
+.tn-balance:active { transform: scale(.97); }
+
+/* ── Chat balance in the chat header ── */
+.chat-credits {
+  height: 32px; padding: 0 10px; border-radius: 10px; display: flex; align-items: center; gap: 6px;
+  background: var(--card); border: 1px solid var(--line); color: var(--ink);
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap;
+}
+.chat-credits.empty { color: var(--muted); }

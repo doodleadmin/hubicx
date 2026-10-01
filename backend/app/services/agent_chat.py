@@ -8,14 +8,15 @@ from typing import AsyncGenerator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.db.models import AgentChat, AgentChatMessage, AIModel, UserProfileSettings
+from backend.app.db.models import AgentChat, AgentChatMessage, AIModel, User, UserProfileSettings
 from backend.app.services.agent_modes import DEFAULT_MODE, get_system_prompt
 from backend.app.services.balance import apply_balance_operation
 from backend.app.utils.errors import AppError
 
 logger = logging.getLogger(__name__)
 
-AI_CHAT_COST = 1
+AI_CHAT_COST = 1  # tokens per message once the bundled chat messages run out
+NO_CHAT_BALANCE_MESSAGE = "Сообщения в чате закончились. Они входят в каждый тариф, а без тарифа сообщение стоит 1 токен."
 MAX_CONTEXT_MESSAGES = 20
 SUPPORTED_CHAT_MODELS = {"ai_chat", "prompt_helper"}
 
@@ -25,6 +26,38 @@ LANG_INSTRUCTIONS = {
     "es": "Responde en español.",
     "pt": "Responda em português.",
 }
+
+
+async def _charge_chat_message(session: AsyncSession, user_id: int, chat: AgentChat, model_code: str) -> str:
+    """Spend one bundled chat message, or 1 token when there are none. Returns the source."""
+    user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
+    if user and int(user.chat_credits or 0) > 0:
+        user.chat_credits = int(user.chat_credits) - 1
+        return "chat_credit"
+    try:
+        await apply_balance_operation(
+            session, user_id, -AI_CHAT_COST, "agent_chat_debit",
+            reason=f"Agent chat {chat.id} message",
+            metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode, "model": model_code},
+        )
+    except AppError as exc:
+        if exc.code == "not_enough_balance":
+            raise AppError("not_enough_chat_balance", NO_CHAT_BALANCE_MESSAGE, 402) from exc
+        raise
+    return "tokens"
+
+
+async def _refund_chat_message(session: AsyncSession, user_id: int, chat: AgentChat, source: str) -> None:
+    if source == "chat_credit":
+        user = await session.scalar(select(User).where(User.id == user_id).with_for_update())
+        if user:
+            user.chat_credits = int(user.chat_credits or 0) + 1
+        return
+    await apply_balance_operation(
+        session, user_id, AI_CHAT_COST, "agent_chat_refund",
+        reason=f"Refund for failed agent chat turn in chat {chat.id}",
+        metadata={"chat_id": chat.id},
+    )
 
 
 async def _resolve_model_id(session: AsyncSession, preferred_code: str | None) -> tuple[str, str]:
@@ -156,26 +189,15 @@ async def run_chat_turn(
     system_prompt = _build_system_prompt(chat.agent_mode, chat.language_code, profile)
     messages = _build_messages(system_prompt, chat.messages or [], content)
 
-    # Charge tokens (before call — same as existing behaviour)
-    balance_before, balance_after = await apply_balance_operation(
-        session, user_id, -AI_CHAT_COST, "agent_chat_debit",
-        reason=f"Agent chat {chat.id} message",
-        metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode, "model": model_code},
-    )
-    charged = True
+    # Charge before the call: a bundled chat message first, otherwise a token
+    source = await _charge_chat_message(session, user_id, chat, model_code)
 
     # Call LLM
     provider = OpenRouterProvider()
     result = await provider.generate_chat(provider_model_id, messages)
 
     if not result.success or not result.output_text:
-        # Refund on failure
-        await apply_balance_operation(
-            session, user_id, AI_CHAT_COST, "agent_chat_refund",
-            reason=f"Refund for failed agent chat turn in chat {chat.id}",
-            metadata={"chat_id": chat.id},
-        )
-        charged = False
+        await _refund_chat_message(session, user_id, chat, source)
         error_text = result.error or "Ошибка генерации"
         assistant_msg = AgentChatMessage(
             chat_id=chat.id,
@@ -202,7 +224,7 @@ async def run_chat_turn(
         user_id=user_id,
         role="assistant",
         content=result.output_text,
-        token_cost=AI_CHAT_COST,
+        token_cost=AI_CHAT_COST if source == "tokens" else 0,
     )
     session.add(assistant_msg)
     chat.last_message_at = now
@@ -211,8 +233,8 @@ async def run_chat_turn(
     await session.refresh(assistant_msg)
 
     logger.info(
-        "AGENT_CHAT_OK chat_id=%s user_id=%s model=%s balance=%s→%s",
-        chat.id, user_id, model_code, balance_before, balance_after,
+        "AGENT_CHAT_OK chat_id=%s user_id=%s model=%s paid_with=%s",
+        chat.id, user_id, model_code, source,
     )
     return user_msg, assistant_msg
 
@@ -262,11 +284,7 @@ async def stream_chat_turn(
     # Charge upfront — guard so a balance error becomes a clean SSE error event
     # instead of aborting the already-open stream ("Соединение прервано").
     try:
-        await apply_balance_operation(
-            session, user_id, -AI_CHAT_COST, "agent_chat_debit",
-            reason=f"Agent chat {chat.id} stream",
-            metadata={"chat_id": chat.id, "agent_mode": chat.agent_mode, "model": model_code},
-        )
+        source = await _charge_chat_message(session, user_id, chat, model_code)
         await session.commit()
     except AppError as exc:
         await session.rollback()
@@ -288,12 +306,7 @@ async def stream_chat_turn(
 
     # Re-open session for saving (session may have been used across yield points)
     if error or not full_text:
-        # Refund
-        await apply_balance_operation(
-            session, user_id, AI_CHAT_COST, "agent_chat_refund",
-            reason=f"Refund for failed stream in chat {chat.id}",
-            metadata={"chat_id": chat.id},
-        )
+        await _refund_chat_message(session, user_id, chat, source)
         err_visible = "Ошибка: не удалось получить ответ. Попробуй ещё раз."
         session.add(AgentChatMessage(
             chat_id=chat.id, user_id=user_id, role="assistant",
@@ -307,7 +320,7 @@ async def stream_chat_turn(
 
     session.add(AgentChatMessage(
         chat_id=chat.id, user_id=user_id, role="assistant",
-        content=full_text, token_cost=AI_CHAT_COST,
+        content=full_text, token_cost=AI_CHAT_COST if source == "tokens" else 0,
     ))
     chat.last_message_at = now
     await session.commit()

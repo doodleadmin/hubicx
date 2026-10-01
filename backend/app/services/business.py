@@ -27,6 +27,8 @@ TOKEN_PACKAGES_V2 = [
     {"code": "topup_10000", "title": "1 250 токенов", "price_rub": 5990, "base_tokens": 1250, "bonus_tokens": 0, "total_tokens": 1250, "sort_order": 40},
 ]
 
+# Every plan also includes AI-chat messages (≈ 1 per 3 ₽ of the price). They live in
+# users.chat_credits, are not shown in the token balance and are spent before tokens.
 SUBSCRIPTION_PLANS_V2 = [
     {
         "code": "templates_mini",
@@ -35,6 +37,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "period": "month",
         "category": "templates",
         "tokens_per_month": 100,
+        "chat_messages_per_month": 300,
         "features": ["Базовые шаблоны", "Фото-шаблоны", "Стартовый пакет токенов"],
         "badge": "Старт",
     },
@@ -45,6 +48,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "period": "month",
         "category": "templates",
         "tokens_per_month": 438,
+        "chat_messages_per_month": 900,
         "features": ["Все шаблоны", "Видео-шаблоны", "Больше токенов каждый месяц"],
         "badge": "Для контента",
     },
@@ -55,6 +59,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "period": "month",
         "category": "full",
         "tokens_per_month": 225,
+        "chat_messages_per_month": 500,
         "features": ["Фото и видео", "Базовые модели", "История генераций"],
         "badge": "Личный",
     },
@@ -65,6 +70,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "period": "month",
         "category": "full",
         "tokens_per_month": 813,
+        "chat_messages_per_month": 1300,
         "features": ["Все основные модели", "Премиум-шаблоны", "Регулярный контент"],
         "badge": "Популярный",
     },
@@ -75,6 +81,7 @@ SUBSCRIPTION_PLANS_V2 = [
         "period": "month",
         "category": "full",
         "tokens_per_month": 2250,
+        "chat_messages_per_month": 3300,
         "features": ["Командная работа", "Большой объём токенов", "Студийные сценарии"],
         "badge": "Для бизнеса",
     },

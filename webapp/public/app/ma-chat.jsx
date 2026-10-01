@@ -149,7 +149,7 @@ function chatProfileToServer(p) {
   };
 }
 
-function ChatScreen({ chat, onBack, onSend, onSetAgent }) {
+function ChatScreen({ chat, onBack, onSend, onSetAgent, chatCredits, onTopup }) {
   const { Ic } = window.MiraCore;
   const [val, setVal] = useState("");
   const [agentOpen, setAgentOpen] = useState(false);
@@ -194,7 +194,11 @@ function ChatScreen({ chat, onBack, onSend, onSetAgent }) {
           </div>
         </div>
       </div>
-      <div style={{ marginLeft:'auto', display:'flex', gap:4 }}>
+      <div style={{ marginLeft:'auto', display:'flex', gap:4, alignItems:'center' }}>
+        {chatCredits != null && <button className={'chat-credits' + (chatCredits > 0 ? '' : ' empty')} onClick={onTopup}
+          title={chatCredits > 0 ? 'Сообщения в чате по тарифу' : 'Сообщения закончились: 1 токен за сообщение'}>
+          <Ic n="chat" s={14}/>{chatCredits > 0 ? chatCredits : '1 ★'}
+        </button>}
         <button className="chat-agent-btn" style={{ marginLeft:0 }} onClick={() => setAgentOpen(true)} title="Выбрать агента"><Ic n="sliders" s={19}/></button>
         <button className="chat-agent-btn" style={{ marginLeft:0 }} onClick={() => setSettingsOpen(true)} title="Настройки чата"><Ic n="gear" s={19}/></button>
       </div>

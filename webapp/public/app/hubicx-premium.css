@@ -534,3 +534,17 @@ html.theme-dark .topup-plan.on .topup-plan-radio {
   box-shadow: inset 0 0 0 4px #14150f, 0 0 10px rgba(247,248,108,.45);
   background: var(--accent);
 }
+
+
+/* ── top bar balance and chat balance ── */
+html.theme-dark .tn-balance,
+html.theme-dark .chat-credits {
+  background-color: rgba(255,255,255,.04);
+  background-image: var(--hx-glass-soft);
+  border-color: var(--hx-edge);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 6px 18px rgba(0,0,0,.4);
+}
+html.theme-dark .tn-balance { border-color: rgba(247,248,108,.28); box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 18px rgba(247,248,108,.10); }
+html.theme-dark .tn-balance svg { filter: drop-shadow(0 0 6px rgba(247,248,108,.55)); }
+html.theme-dark .tn-item-icon svg { opacity: .75; }
+html.theme-dark .tn-item-icon.on svg { opacity: 1; }

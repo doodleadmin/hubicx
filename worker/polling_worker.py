@@ -83,7 +83,7 @@ async def _poll_fal_tasks() -> dict:
                             "poll: task %s timed out after %.0fs", task_fresh.id, age
                         )
                         await mark_failed_and_refund(session, task_fresh, "Превышено время ожидания генерации")
-                        await notify_user(task_fresh.user.telegram_id, "❌ Генерация не удалась: превышено время ожидания. Кредиты возвращены.")
+                        await notify_user(task_fresh.user.telegram_id, "❌ Генерация не удалась: превышено время ожидания. Токены возвращены.")
                         failed += 1
                         continue
 

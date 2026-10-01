@@ -51,6 +51,7 @@ function Ic({ n, s = 22, c = "currentColor", sw = 1.9, on = false, duo = "sage" 
     shield: <g><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></g>,
     play: <path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>,
     menu: <g><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></g>,
+    home: <g><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></g>,
   };
   var w = on ? 1.8 : (s < 18 && sw === 1.9 ? 2.1 : sw);
   return <svg width={s} height={s} viewBox="0 0 24 24"
@@ -128,68 +129,42 @@ function TokenBadge({ n }) {
 }
 
 /* ---- top segmented nav ---- */
-function mobileTimeAgo(iso) {
-  if (!iso) return '';
-  var d = new Date(iso); if (isNaN(d.getTime())) return '';
-  var sec = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (sec < 60) return 'только что';
-  var min = Math.floor(sec / 60); if (min < 60) return min + ' мин';
-  var hr = Math.floor(min / 60); if (hr < 24) return hr + ' ч';
-  var day = Math.floor(hr / 24); return day + ' д';
+// Balance shown in the top bar. The App publishes it; any TopNav instance listens.
+function useHubicxBalance() {
+  const [tokens, setTokens] = useState(window.__hbxTokens);
+  useEffect(function() {
+    var onBalance = function(e) { setTokens(e && e.detail ? e.detail.tokens : window.__hbxTokens); };
+    window.addEventListener('hubicx:balance', onBalance);
+    return function() { window.removeEventListener('hubicx:balance', onBalance); };
+  }, []);
+  return tokens;
 }
+
 function TopNav({ active, onTab }) {
   if (window.DESKTOP_MODE) return null;
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifs, setNotifs] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-
-  const toggleNotifs = function() {
-    var next = !notifOpen;
-    setNotifOpen(next);
-    if (next && !loaded && window.HubicxApi && window.HubicxApi.hasAuth()) {
-      window.HubicxApi.history().then(function(items) {
-        var list = (Array.isArray(items) ? items : []).slice(0, 8).map(function(it) {
-          var failed = it.status === 'refunded';
-          var done = it.status === 'completed';
-          return {
-            title: failed ? 'Генерация не удалась' : done ? 'Результат готов' : 'Генерация в работе',
-            sub: failed ? 'Токены возвращены на баланс' : (it.title || it.prompt || 'Фото или видео'),
-            time: mobileTimeAgo(it.created_at),
-            ic: failed ? 'close' : done ? 'check' : 'sparkle',
-            c: failed ? '#c0473e' : '#5f9184',
-            bg: failed ? '#fde0dc' : '#e6efe9'
-          };
-        });
-        setNotifs(list); setLoaded(true);
-      }).catch(function() { setLoaded(true); });
-    }
+  // Generation updates are delivered to the Telegram chat by the bot, so the bar
+  // keeps navigation and the balance only.
+  const tokens = useHubicxBalance();
+  const openTopup = function() {
+    if (window.tgHaptic) window.tgHaptic('selection');
+    window.dispatchEvent(new CustomEvent('hubicx:open-topup'));
   };
+  const tabs = [['agent', null, 'Главная'], ['gen', 'Генерация'], ['profile', 'Профиль']];
   return <div className="topnav" data-onb="mob-topnav">
     <div className="tn-seg">
-      {[['agent','Главная'],['gen','Генерация'],['profile','Профиль']].map(([id,l]) => (
-        <div key={id} data-onb={'mob-tab-' + id} className={'tn-item' + (active === id ? ' on' : '')}
-          onClick={() => { if (window.tgHaptic) window.tgHaptic('selection'); onTab(id); }}>{l}</div>
-      ))}
+      {tabs.map(function(t) {
+        var id = t[0];
+        return <div key={id} data-onb={'mob-tab-' + id} aria-label={t[2] || t[1]} role="tab" aria-selected={active === id}
+          className={'tn-item' + (t[1] ? '' : ' tn-item-icon') + (active === id ? ' on' : '')}
+          onClick={() => { if (window.tgHaptic) window.tgHaptic('selection'); onTab(id); }}>
+          {t[1] || <Ic n="home" s={19}/>}
+        </div>;
+      })}
     </div>
-    <div className="tn-icon" onClick={toggleNotifs}>
-      <Ic n="bell" s={20}/>
-      {notifs.length > 0 && <span className="tn-dot"></span>}
-      {notifOpen && <div className="m-notif" onClick={function(e) { e.stopPropagation(); }}>
-        <div className="m-notif-top">
-          <span>Уведомления</span>
-          <button onClick={function(e) { e.stopPropagation(); setNotifOpen(false); }}>×</button>
-        </div>
-        {!loaded && <div className="m-notif-empty">Загружаем…</div>}
-        {loaded && notifs.length === 0 && <div className="m-notif-empty">Пока нет уведомлений</div>}
-        {loaded && notifs.map(function(n, i) {
-          return <div key={i} className="m-notif-item">
-            <span className="m-notif-ic" style={{ background:n.bg }}><Ic n={n.ic} s={15} c={n.c}/></span>
-            <div className="m-notif-tx"><div className="m-notif-t">{n.title}</div><div className="m-notif-s">{n.sub}</div></div>
-            <div className="m-notif-time">{n.time}</div>
-          </div>;
-        })}
-      </div>}
-    </div>
+    <button className="tn-balance" onClick={openTopup} aria-label="Баланс и тарифы" data-onb="mob-balance">
+      <Star s={14} c="var(--accent)"/>
+      <span>{tokens == null ? '…' : tokens}</span>
+    </button>
   </div>;
 }
 

@@ -549,6 +549,15 @@ function App() {
   };
 
   const tokens = user ? user.balance_credits : '…';
+  uE(() => {
+    window.__hbxTokens = tokens;
+    try { window.dispatchEvent(new CustomEvent('hubicx:balance', { detail: { tokens: tokens } })); } catch(e) {}
+  }, [tokens]);
+  uE(() => {
+    var open = function() { setTopup(true); };
+    window.addEventListener('hubicx:open-topup', open);
+    return function() { window.removeEventListener('hubicx:open-topup', open); };
+  }, []);
   const refreshBalance = () => {
     if (window.HubicxApi && window.HubicxApi.hasAuth()) {
       window.HubicxApi.me().then(function(u) { setUser(u); }).catch(function() {});
@@ -753,8 +762,8 @@ function App() {
     streamCtrl.current = window.HubicxApi.agentStreamMessage(
       chatId, content,
       function(chunk) { appendBotChunk(chatId, chunk); },
-      function() { finishBotMsg(chatId); },
-      function(err) { errorBotMsg(chatId, err); }
+      function() { finishBotMsg(chatId); refreshBalance(); },
+      function(err) { errorBotMsg(chatId, err); refreshBalance(); }
     );
   };
 
@@ -899,7 +908,7 @@ function App() {
     direction={tabSwipeDir}
     onSwipe={(next, dir) => goTab(next, { swipeDir: dir })}>
     {body}
-    {curChat && <ChatScreen chat={curChat} onBack={() => setActiveChat(null)} onSend={sendInChat} onSetAgent={setChatAgent}/>}
+    {curChat && <ChatScreen chat={curChat} chatCredits={user ? user.chat_credits : null} onTopup={() => setTopup(true)} onBack={() => setActiveChat(null)} onSend={sendInChat} onSetAgent={setChatAgent}/>}
   </MobileTabSwipeLayer>;
 
   if (DESKTOP) {
@@ -1045,11 +1054,11 @@ function Topup({ tokens, requiredCredits, onClose, onPaid }) {
     { code:'topup_10000', title:'1 250 токенов',  tokens:1250,  price_rub:5990, bonus_tokens:0, total_tokens:1250,  effective_price_per_token:4.79 },
   ];
   const fallbackSubs = [
-    { code:'templates_mini', title:'Шаблоны Mini', price_rub:790, period:'month', tokens_per_month:100, badge:'Старт', features:['Базовые шаблоны','Фото-шаблоны'] },
-    { code:'templates_plus', title:'Шаблоны Plus', price_rub:2590, period:'month', tokens_per_month:438, badge:'Для контента', features:['Все шаблоны','Видео-шаблоны'] },
-    { code:'creator', title:'Creator', price_rub:1490, period:'month', tokens_per_month:225, badge:'Личный', features:['Фото и видео','Базовые модели'] },
-    { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:813, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
-    { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:2250, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
+    { code:'templates_mini', title:'Шаблоны Mini', price_rub:790, period:'month', tokens_per_month:100, chat_messages_per_month:300, badge:'Старт', features:['Базовые шаблоны','Фото-шаблоны'] },
+    { code:'templates_plus', title:'Шаблоны Plus', price_rub:2590, period:'month', tokens_per_month:438, chat_messages_per_month:900, badge:'Для контента', features:['Все шаблоны','Видео-шаблоны'] },
+    { code:'creator', title:'Creator', price_rub:1490, period:'month', tokens_per_month:225, chat_messages_per_month:500, badge:'Личный', features:['Фото и видео','Базовые модели'] },
+    { code:'creator_pro', title:'Creator Pro', price_rub:3990, period:'month', tokens_per_month:813, chat_messages_per_month:1300, badge:'Популярный', features:['Все основные модели','Премиум-шаблоны'] },
+    { code:'studio', title:'Studio', price_rub:9900, period:'month', tokens_per_month:2250, chat_messages_per_month:3300, badge:'Для бизнеса', features:['Большой объём токенов','Студийные сценарии'] },
   ];
   const [packs, setPacks] = uS(null); // null = loading; set by API or fallback on error
   const [subs, setSubs] = uS(fallbackSubs);
@@ -1196,7 +1205,7 @@ function Topup({ tokens, requiredCredits, onClose, onPaid }) {
                 <span className="topup-plan-radio"></span>
                 <span className="topup-plan-main">
                   <b>{p.title}</b>
-                  <small>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото</small>
+                  <small>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото{p.chat_messages_per_month ? ' · ' + p.chat_messages_per_month + ' сообщений в чате' : ''}</small>
                 </span>
                 <span className="topup-plan-side">
                   {p.badge && <em>{p.badge}</em>}
@@ -1217,7 +1226,7 @@ function Topup({ tokens, requiredCredits, onClose, onPaid }) {
                 var realIndex = templateSubs.length + i;
                 return <div className={'sub-card pay-choice' + (selectedSub && selectedSub.code === p.code && !customValid ? ' on' : '')} key={p.code} onClick={() => { setSubSel(realIndex); setCustomAmount(''); setCustomError(''); }}>
                   <div><b>{p.title}</b>{p.badge && <span>{p.badge}</span>}</div>
-                  <p>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото</p>
+                  <p>{p.tokens_per_month} токенов / месяц · примерно {approxPhotos(p.tokens_per_month)} фото{p.chat_messages_per_month ? ' · ' + p.chat_messages_per_month + ' сообщений в чате' : ''}</p>
                   <strong>{p.price_rub} ₽/мес</strong>
                 </div>;
               })}

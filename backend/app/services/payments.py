@@ -260,6 +260,11 @@ async def grant_confirmed_payment(session: AsyncSession, payment: Payment, reaso
     plan = _subscription_plan(pkg)
     if not plan:
         raise AppError("subscription_plan_not_found", f"Тариф {pkg} не найден", 500)
+    chat_messages = int(plan.get("chat_messages_per_month") or 0)
+    if chat_messages:
+        user = await session.scalar(select(User).where(User.id == payment.user_id).with_for_update())
+        if user:
+            user.chat_credits = int(user.chat_credits or 0) + chat_messages
     sub_kind = _subscription_kind(pkg)
     # Upsert: повторные webhook'и и повторная покупка того же тарифа не должны
     # падать на uq_user_subscriptions_user_code.
@@ -389,6 +394,11 @@ async def process_webhook(session: AsyncSession, event: dict) -> None:
                     payment_id=payment.id,
                 )
             if payment.package_code and payment.package_code in _TEMPLATE_CATEGORY_CODES | _FULL_CATEGORY_CODES:
+                chat_messages = int((_subscription_plan(payment.package_code) or {}).get("chat_messages_per_month") or 0)
+                if should_reverse_balance and chat_messages:
+                    refunded_user = await session.scalar(select(User).where(User.id == payment.user_id).with_for_update())
+                    if refunded_user:
+                        refunded_user.chat_credits = max(0, int(refunded_user.chat_credits or 0) - chat_messages)
                 sub = await session.scalar(
                     select(UserSubscription).where(
                         UserSubscription.user_id == payment.user_id,

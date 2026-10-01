@@ -304,7 +304,7 @@ async def _process_generation_task(task_id: int) -> None:
         if not provider:
             log_task(task, "refunded", f"Unknown provider: {task.provider}")
             await mark_failed_and_refund(session, task, f"Unknown provider: {task.provider}")
-            await notify_user(task.user.telegram_id, "❌ Генерация не удалась, кредиты возвращены")
+            await notify_user(task.user.telegram_id, "❌ Генерация не удалась, токены возвращены")
             return
 
         model = task.model
@@ -312,7 +312,7 @@ async def _process_generation_task(task_id: int) -> None:
         if not provider_model_configured(provider_model_id):
             log_task(task, "refunded", "Model provider ID is not configured")
             await mark_failed_and_refund(session, task, "Model provider ID is not configured")
-            await notify_user(task.user.telegram_id, "❌ Генерация не удалась, кредиты возвращены")
+            await notify_user(task.user.telegram_id, "❌ Генерация не удалась, токены возвращены")
             return
 
         prompt = task.prompt or ""

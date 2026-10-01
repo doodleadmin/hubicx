@@ -28,6 +28,8 @@ class User(Base, TimestampMixin):
     language_selected: Mapped[bool] = mapped_column(Boolean, default=False)
     balance_credits: Mapped[int] = mapped_column(Integer, default=0)
     bonus_credits: Mapped[int] = mapped_column(Integer, default=0)
+    # AI-chat messages bundled with plans; separate from the token balance, spent first in chat.
+    chat_credits: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
     ban_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
